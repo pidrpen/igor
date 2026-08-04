@@ -1,0 +1,206 @@
+﻿[
+    {
+        "classId":  "warrior",
+        "specId":  "arms",
+        "name":  "Оружие",
+        "role":  "dps"
+    },
+    {
+        "classId":  "warrior",
+        "specId":  "fury",
+        "name":  "Неистовство",
+        "role":  "dps"
+    },
+    {
+        "classId":  "warrior",
+        "specId":  "protection",
+        "name":  "Защита",
+        "role":  "tank"
+    },
+    {
+        "classId":  "paladin",
+        "specId":  "holy",
+        "name":  "Свет",
+        "role":  "healer"
+    },
+    {
+        "classId":  "paladin",
+        "specId":  "protection",
+        "name":  "Защита",
+        "role":  "tank"
+    },
+    {
+        "classId":  "paladin",
+        "specId":  "retribution",
+        "name":  "Воздаяние",
+        "role":  "dps"
+    },
+    {
+        "classId":  "hunter",
+        "specId":  "beast_mastery",
+        "name":  "Повелитель зверей",
+        "role":  "dps"
+    },
+    {
+        "classId":  "hunter",
+        "specId":  "marksmanship",
+        "name":  "Стрельба",
+        "role":  "dps"
+    },
+    {
+        "classId":  "hunter",
+        "specId":  "survival",
+        "name":  "Выживание",
+        "role":  "dps"
+    },
+    {
+        "classId":  "rogue",
+        "specId":  "assassination",
+        "name":  "Ликвидация",
+        "role":  "dps"
+    },
+    {
+        "classId":  "rogue",
+        "specId":  "combat",
+        "name":  "Бой",
+        "role":  "dps"
+    },
+    {
+        "classId":  "rogue",
+        "specId":  "subtlety",
+        "name":  "Скрытность",
+        "role":  "dps"
+    },
+    {
+        "classId":  "priest",
+        "specId":  "discipline",
+        "name":  "Послушание",
+        "role":  "healer"
+    },
+    {
+        "classId":  "priest",
+        "specId":  "holy",
+        "name":  "Свет",
+        "role":  "healer"
+    },
+    {
+        "classId":  "priest",
+        "specId":  "shadow",
+        "name":  "Тьма",
+        "role":  "dps"
+    },
+    {
+        "classId":  "deathknight",
+        "specId":  "blood",
+        "name":  "Кровь",
+        "role":  "tank"
+    },
+    {
+        "classId":  "deathknight",
+        "specId":  "frost",
+        "name":  "Лёд",
+        "role":  "dps"
+    },
+    {
+        "classId":  "deathknight",
+        "specId":  "unholy",
+        "name":  "Нечестивость",
+        "role":  "dps"
+    },
+    {
+        "classId":  "shaman",
+        "specId":  "elemental",
+        "name":  "Стихии",
+        "role":  "dps"
+    },
+    {
+        "classId":  "shaman",
+        "specId":  "enhancement",
+        "name":  "Совершенствование",
+        "role":  "dps"
+    },
+    {
+        "classId":  "shaman",
+        "specId":  "restoration",
+        "name":  "Исцеление",
+        "role":  "healer"
+    },
+    {
+        "classId":  "mage",
+        "specId":  "arcane",
+        "name":  "Тайная магия",
+        "role":  "dps"
+    },
+    {
+        "classId":  "mage",
+        "specId":  "fire",
+        "name":  "Огонь",
+        "role":  "dps"
+    },
+    {
+        "classId":  "mage",
+        "specId":  "frost",
+        "name":  "Лёд",
+        "role":  "dps"
+    },
+    {
+        "classId":  "warlock",
+        "specId":  "affliction",
+        "name":  "Колдовство",
+        "role":  "dps"
+    },
+    {
+        "classId":  "warlock",
+        "specId":  "demonology",
+        "name":  "Демонология",
+        "role":  "dps"
+    },
+    {
+        "classId":  "warlock",
+        "specId":  "destruction",
+        "name":  "Разрушение",
+        "role":  "dps"
+    },
+    {
+        "classId":  "monk",
+        "specId":  "brewmaster",
+        "name":  "Хмелевар",
+        "role":  "tank"
+    },
+    {
+        "classId":  "monk",
+        "specId":  "mistweaver",
+        "name":  "Ткач туманов",
+        "role":  "healer"
+    },
+    {
+        "classId":  "monk",
+        "specId":  "windwalker",
+        "name":  "Танцующий с ветром",
+        "role":  "dps"
+    },
+    {
+        "classId":  "druid",
+        "specId":  "balance",
+        "name":  "Баланс",
+        "role":  "dps"
+    },
+    {
+        "classId":  "druid",
+        "specId":  "feral",
+        "name":  "Сила зверя",
+        "role":  "dps"
+    },
+    {
+        "classId":  "druid",
+        "specId":  "guardian",
+        "name":  "Страж",
+        "role":  "tank"
+    },
+    {
+        "classId":  "druid",
+        "specId":  "restoration",
+        "name":  "Исцеление",
+        "role":  "healer"
+    }
+]
