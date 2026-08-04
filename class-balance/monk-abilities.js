@@ -15,8 +15,8 @@
 (function (global) {
   'use strict';
 
-  function A(o) {
-    return {
+function A(o) {
+    const ab = {
       id: o.id,
       name: o.n,
       nameEn: o.en || o.n,
@@ -33,6 +33,20 @@
       desc: o.d || '',
       spellId: o.sid || 0,
     };
+    const keys = [
+      'flat','freeAction','maxCharges','applyDot','applyHot','dmgReduce','blockChanceAdd','blockValueAdd',
+      'armorMod','armorStacksMax','critBonus','critMod','atkMod','lifesteal','vuln','hits','cleaveFlat',
+      'school','maxHpPct','buffTurns','aoeBounce','shieldFromDmg','enemyDmgMod','grantBlock','holyShock',
+      'purifyPct','healAmp','nextHealCharges','abilityCharges','staggerBonus','chainDecay','summonOnCast',
+    ];
+    for (const k of keys) if (o[k] !== undefined) ab[k] = o[k];
+    if (o.fl != null) ab.flat = o.fl;
+    if (o.fa) ab.freeAction = true;
+    if (o.bt != null) ab.buffTurns = o.bt;
+    if (o.dr != null) ab.dmgReduce = o.dr;
+    if (o.cm != null) ab.critMod = o.cm;
+    if (o.ch != null) ab.maxCharges = o.ch;
+    return ab;
   }
 
   /**
@@ -164,52 +178,44 @@
         abilities: [
           A({
             id: 'jab', n: 'Джаб', en: 'Jab', i: '👊',
-            c: 40, gs: 1, t: 'damage', p: 0.9,
-            d: 'Генератор: 40 энергии, +1 ци.', sid: 100780,
+            c: 20, gs: 1, t: 'damage', fl: 20, school: 'physical', d: '', sid: 100780,
           }),
           A({
             id: 'keg_smash', n: 'Удар бочонком', en: 'Keg Smash', i: '🍺',
-            c: 40, gs: 2, cd: 1, t: 'aoe', p: 0.9,
-            d: 'Генератор: 40 энергии, +2 ци, AoE.', sid: 121253,
+            c: 40, gs: 2, cd: 1, t: 'aoe', fl: 40, school: 'physical', d: '', sid: 121253,
           }),
           A({
             id: 'blackout', n: 'Удар чёрного лотоса', en: 'Blackout Kick', i: '🦶',
-            cs: 2, t: 'damage', p: 1.3,
-            d: 'Расход 2 ци — урон (Shuffle: engineNeeds).', sid: 100784,
+            cs: 0, cd: 1, t: 'damage', fl: 45, school: 'physical', d: '', sid: 100784,
           }),
           A({
             id: 'breath', n: 'Дыхание огня', en: 'Breath of Fire', i: '🔥',
-            cs: 2, t: 'aoe', p: 0.85,
-            d: 'Расход 2 ци — AoE.', sid: 115181,
+            cs: 1, t: 'aoe', fl: 17, school: 'fire',
+            enemyDmgMod: 0.1, bt: 5,
+            applyDot: { flat: 3, turns: 5, name: 'Дыхание огня', school: 'fire' },
+            d: '', sid: 115181,
           }),
           A({
             id: 'guard', n: 'Защита', en: 'Guard', i: '🛡️',
-            cs: 2, cd: 2, t: 'shield', p: 0.45,
-            d: 'Расход 2 ци — щит-поглощение.', sid: 115295,
+            cs: 2, cd: 0, t: 'shield', p: 0.45, d: '', sid: 115295,
           }),
-          // cleanse ≠ heal; default cast = no-op until stagger engineNeeds
           A({
             id: 'purifying', n: 'Очищающий отвар', en: 'Purifying Brew', i: '🍵',
-            cs: 1, t: 'cleanse', p: 1.0,
-            d: 'Расход 1 ци — снимает пошатывание (не лечение).', sid: 119582,
+            c: 20, cs: 0, t: 'cleanse', p: 1.0, fa: 1, purifyPct: 0.5, d: '', sid: 119582,
           }),
-          // interim: shield absorb (NOT buff→ATK). Preferred DEF via engineNeeds.elusive_def
           A({
             id: 'elusive', n: 'Отвар неуловимости', en: 'Elusive Brew', i: '💨',
-            cd: 2, t: 'shield', p: 0.28,
-            d: 'Митигация (уклонение/DEF; lite = absorb). Не усиливает атаку.', sid: 115308,
+            cd: 0, t: 'shield', fl: 30, d: '', sid: 115308,
           }),
           A({
             id: 'provoke', n: 'Вызов', en: 'Provoke', i: '📢',
-            cd: 2, t: 'taunt', p: 0,
-            d: 'Провокация.', sid: 115546,
+            cd: 2, t: 'taunt', p: 0, fa: 1, d: '', sid: 115546,
           }),
           A({
             id: 'fort_brew', n: 'Отвар железной шкуры', en: 'Fortifying Brew', i: '🏋️',
-            cd: 5, t: 'shield', p: 0.48,
-            d: 'Сильный щит (большой КД).', sid: 115203,
+            cd: 6, t: 'buff', fa: 1, staggerBonus: 0.5, dr: 0.3, bt: 3, d: '', sid: 115203,
           }),
-        ],
+],
       },
 
       // ═════════════════════════════════════

@@ -16,8 +16,8 @@
 (function (global) {
   'use strict';
 
-  function A(o) {
-    return {
+function A(o) {
+    const ab = {
       id: o.id,
       name: o.n,
       nameEn: o.en || o.n,
@@ -34,6 +34,20 @@
       desc: o.d || '',
       spellId: o.sid || 0,
     };
+    const keys = [
+      'flat','freeAction','maxCharges','applyDot','applyHot','dmgReduce','blockChanceAdd','blockValueAdd',
+      'armorMod','armorStacksMax','critBonus','critMod','atkMod','lifesteal','vuln','hits','cleaveFlat',
+      'school','maxHpPct','buffTurns','aoeBounce','shieldFromDmg','enemyDmgMod','grantBlock','holyShock',
+      'purifyPct','healAmp','nextHealCharges','abilityCharges','staggerBonus','chainDecay','summonOnCast',
+    ];
+    for (const k of keys) if (o[k] !== undefined) ab[k] = o[k];
+    if (o.fl != null) ab.flat = o.fl;
+    if (o.fa) ab.freeAction = true;
+    if (o.bt != null) ab.buffTurns = o.bt;
+    if (o.dr != null) ab.dmgReduce = o.dr;
+    if (o.cm != null) ab.critMod = o.cm;
+    if (o.ch != null) ab.maxCharges = o.ch;
+    return ab;
   }
 
   /** Engine integration notes (do not require mythic-key.html edits if already true). */
@@ -122,16 +136,15 @@
           ],
         },
         abilities: [
-          A({ id: 'shadow_bolt', n: 'Стрела Тьмы', en: 'Shadow Bolt', i: '🌑', c: 7, gs: 1, t: 'damage', p: 1.15, d: 'Заполнитель + 1 осколок (упрощ. fury).', sid: 686 }),
-          A({ id: 'soul_fire', n: 'Ожог души', en: 'Soul Fire', i: '🔥', c: 12, cs: 1, t: 'damage', p: 1.7, d: 'Расход 1 осколка — сильный удар.', sid: 6353 }),
-          A({ id: 'corruption', n: 'Порча', en: 'Corruption', i: '🟢', c: 5, t: 'dot', p: 0.55, d: 'DoT.', sid: 172 }),
-          A({ id: 'hand_guldan', n: 'Длань Гул\'дана', en: "Hand of Gul'dan", i: '✋', c: 10, gs: 1, cd: 2, t: 'aoe', p: 0.95, d: 'AoE + бесы + 1 осколок.', sid: 105174 }),
-          A({ id: 'hellfire', n: 'Адское пламя', en: 'Hellfire', i: '🔥', c: 10, t: 'aoe', p: 0.8, d: 'AoE вокруг себя.', sid: 1949 }),
-          A({ id: 'metamorphosis', n: 'Метаморфоза', en: 'Metamorphosis', i: '👹', cs: 1, cd: 4, t: 'buff', p: 0.28, d: 'Расход 1 осколка: +атака/защита 4 хода.', sid: 103958 }),
-          A({ id: 'doom', n: 'Рок', en: 'Doom', i: '💀', c: 8, cd: 2, t: 'dot', p: 0.75, d: 'Долгий DoT.', sid: 603 }),
-          A({ id: 'dark_soul', n: 'Тёмная душа: Знание', en: 'Dark Soul: Knowledge', i: '😈', cd: 5, t: 'buff', p: 0.3, d: '+30% атаки.', sid: 113861 }),
-          A({ id: 'felstorm', n: 'Буря Скверны (страж)', en: 'Felstorm', i: '🌪️', cd: 3, t: 'aoe', p: 0.85, d: 'Страж бьёт по области.', sid: 89751 }),
-        ],
+          A({ id: 'shadow_bolt', n: 'Стрела Тьмы', en: 'Shadow Bolt', i: '🌑', c: 7, gs: 1, t: 'damage', p: 1.15, school: 'shadow', d: '', sid: 686 }),
+          A({ id: 'soul_fire', n: 'Ожог души', en: 'Soul Fire', i: '🔥', c: 7, cs: 1, t: 'damage', p: 1.7, school: 'fire', d: '', sid: 6353 }),
+          A({ id: 'corruption', n: 'Порча', en: 'Corruption', i: '🟢', c: 5, t: 'dot', fl: 13, school: 'shadow',
+            applyDot: { flat: 5, turns: 5, name: 'Порча', school: 'shadow' }, d: '', sid: 172 }),
+          A({ id: 'hand_guldan', n: 'Длань Гул\'дана', en: "Hand of Gul'dan", i: '✋', c: 0, cs: 2, gs: 0, cd: 0, t: 'aoe', p: 0.95, school: 'shadow', d: '', sid: 105174 }),
+          A({ id: 'metamorphosis', n: 'Метаморфоза', en: 'Metamorphosis', i: '👹', c: 0, cs: 0, cd: 5, t: 'buff', fa: 1, atkMod: 0.3, bt: 2, d: '', sid: 103958 }),
+          A({ id: 'dark_soul', n: 'Тёмная душа: Знание', en: 'Dark Soul: Knowledge', i: '😈', c: 0, cd: 10, t: 'buff', fa: 1, d: '', sid: 113861 }),
+          A({ id: 'felstorm', n: 'Буря Скверны (страж)', en: 'Felstorm', i: '🌪️', cd: 3, t: 'aoe', fl: 30, school: 'shadow', d: '', sid: 89751 }),
+],
       },
       {
         id: 'destruction',

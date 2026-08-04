@@ -23,8 +23,8 @@
 (function (global) {
   'use strict';
 
-  function A(o) {
-    return {
+function A(o) {
+    const ab = {
       id: o.id,
       name: o.n,
       nameEn: o.en || o.n,
@@ -41,6 +41,20 @@
       desc: o.d || '',
       spellId: o.sid || 0,
     };
+    const keys = [
+      'flat','freeAction','maxCharges','applyDot','applyHot','dmgReduce','blockChanceAdd','blockValueAdd',
+      'armorMod','armorStacksMax','critBonus','critMod','atkMod','lifesteal','vuln','hits','cleaveFlat',
+      'school','maxHpPct','buffTurns','aoeBounce','shieldFromDmg','enemyDmgMod','grantBlock','holyShock',
+      'purifyPct','healAmp','nextHealCharges','abilityCharges','staggerBonus','chainDecay','summonOnCast',
+    ];
+    for (const k of keys) if (o[k] !== undefined) ab[k] = o[k];
+    if (o.fl != null) ab.flat = o.fl;
+    if (o.fa) ab.freeAction = true;
+    if (o.bt != null) ab.buffTurns = o.bt;
+    if (o.dr != null) ab.dmgReduce = o.dr;
+    if (o.cm != null) ab.critMod = o.cm;
+    if (o.ch != null) ab.maxCharges = o.ch;
+    return ab;
   }
 
   /** Features the lite engine does not implement — do not claim in ability desc. */
@@ -353,109 +367,47 @@
         },
         abilities: [
           A({
-            id: 'riptide',
-            n: 'Быстрина',
-            en: 'Riptide',
-            i: '🌊',
-            c: 10,
-            cd: 1,
-            t: 'heal',
-            p: 0.4,
-            d: 'Hit + HoT (HOT_SPELLS) — лучшая цена за ману.',
-            sid: 61295,
+            id: 'riptide', n: 'Быстрина', en: 'Riptide', i: '🌊',
+            c: 4, cd: 1, t: 'heal', fl: 22,
+            applyHot: { flat: 3, turns: 5, name: 'Быстрина' },
+            nextHealCharges: 0, // tidal waves stacks handled as abilityCharges on cast
+            d: '', sid: 61295,
           }),
           A({
-            id: 'ch',
-            n: 'Цепное исцеление',
-            en: 'Chain Heal',
-            i: '🔗',
-            c: 15,
-            t: 'heal_aoe',
-            p: 0.26,
-            d: 'Основной хил по области (скачки).',
-            sid: 1064,
+            id: 'ch', n: 'Цепное исцеление', en: 'Chain Heal', i: '🔗',
+            c: 13, t: 'heal_aoe', fl: 40, chainDecay: 0.1, d: '', sid: 1064,
           }),
           A({
-            id: 'hw',
-            n: 'Волна исцеления',
-            en: 'Healing Wave',
-            i: '🌊',
-            c: 12,
-            t: 'heal',
-            p: 0.5,
-            d: 'Сильное экономичное лечение.',
-            sid: 331,
+            id: 'hw', n: 'Волна исцеления', en: 'Healing Wave', i: '🌊',
+            c: 8, t: 'heal', p: 0.5, d: '', sid: 331,
           }),
           A({
-            id: 'chw',
-            n: 'Исцеляющий всплеск',
-            en: 'Healing Surge',
-            i: '💧',
-            c: 13,
-            t: 'heal',
-            p: 0.42,
-            d: 'Быстрое лечение (дороже / слабее волны).',
-            sid: 8004,
+            id: 'chw', n: 'Исцеляющий всплеск', en: 'Healing Surge', i: '💧',
+            c: 13, t: 'heal', p: 0.42, d: '', sid: 8004,
           }),
           A({
-            id: 'hs',
-            n: 'Исцеляющий ливень',
-            en: 'Healing Rain',
-            i: '🌧️',
-            c: 15,
-            cd: 2,
-            t: 'heal_aoe',
-            p: 0.27,
-            d: 'Зональный хил (КД; p/c ≈ Chain Heal).',
-            sid: 73920,
+            id: 'hs', n: 'Исцеляющий ливень', en: 'Healing Rain', i: '🌧️',
+            c: 15, cd: 2, t: 'heal_aoe', fl: 0,
+            applyHot: { flat: 7, turns: 5, name: 'Исцеляющий ливень' }, d: '', sid: 73920,
           }),
           A({
-            id: 'hst',
-            n: 'Тотем целительного потока',
-            en: 'Healing Stream Totem',
-            i: '⛲',
-            c: 8,
-            cd: 2,
-            t: 'heal_aoe',
-            p: 0.18,
-            d: 'Слабый хил по отряду (упрощ. one-shot, не multi-tick).',
-            sid: 5394,
+            id: 'hst', n: 'Тотем целительного потока', en: 'Healing Stream Totem', i: '⛲',
+            c: 5, cd: 2, t: 'summon', p: 1, d: '', sid: 5394,
           }),
           A({
-            id: 'unleash',
-            n: 'Высвободить жизнь',
-            en: 'Unleash Life',
-            i: '✨',
-            c: 6,
-            cd: 2,
-            t: 'heal',
-            p: 0.32,
-            d: 'Мгновенный хил (без баффа «след. хил» — нет в движке).',
-            sid: 73685,
+            id: 'unleash', n: 'Высвободить жизнь', en: 'Unleash Life', i: '✨',
+            c: 6, cd: 2, t: 'heal', fl: 15, fa: 1, healAmp: 0.2, nextHealCharges: 2, d: '', sid: 73685,
           }),
           A({
-            id: 'flame_shock',
-            n: 'Огненный шок',
-            en: 'Flame Shock',
-            i: '🔥',
-            c: 6,
-            t: 'dot',
-            p: 0.5,
-            d: 'Заполнитель урона.',
-            sid: 8050,
+            id: 'flame_shock', n: 'Огненный шок', en: 'Flame Shock', i: '🔥',
+            c: 6, t: 'dot', fl: 7, school: 'fire',
+            applyDot: { flat: 4, turns: 6, name: 'Огненный шок', school: 'fire' }, d: '', sid: 8050,
           }),
           A({
-            id: 'spirit_link',
-            n: 'Тотем духовной связи',
-            en: 'Spirit Link Totem',
-            i: '🔗',
-            cd: 5,
-            t: 'heal_aoe',
-            p: 0.22,
-            d: 'Аварийный хил по отряду (без маны).',
-            sid: 98008,
+            id: 'spirit_link', n: 'Тотем духовной связи', en: 'Spirit Link Totem', i: '🔗',
+            c: 0, cd: 5, t: 'heal_aoe', fl: 15, dr: 0.1, bt: 3, d: '', sid: 98008,
           }),
-        ],
+],
       },
     ],
   };

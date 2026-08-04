@@ -4320,6 +4320,7 @@
     hunter_pet: { name: 'Питомец', icon: '🐺', hp: 100, atk: 16, def: 5, speed: 13, role: 'dps' },
     felguard:   { name: 'Страж Скверны', icon: '👹', hp: 125, atk: 17, def: 7, speed: 11, role: 'dps' },
     imp:        { name: 'Бес', icon: '👿', hp: 55, atk: 14, def: 2, speed: 14, role: 'dps' },
+    water_totem:{ name: 'Водяной тотем', icon: '⛲', hp: 40, atk: 8, def: 2, speed: 10, role: 'healer' },
     voidwalker: { name: 'Демон Бездны', icon: '👤', hp: 150, atk: 12, def: 9, speed: 8, role: 'tank' },
     ghoul:      { name: 'Вурдалак', icon: '🧟', hp: 105, atk: 16, def: 5, speed: 12, role: 'dps' },
     shadowfiend:{ name: 'Исчадие Тьмы', icon: '👾', hp: 75, atk: 18, def: 2, speed: 15, role: 'dps' },
@@ -4375,9 +4376,10 @@
     deploy_turret:      [{ def: 'turret', n: 1, turns: 4 }],
     call_siege_walker:  [{ def: 'siege_walker', n: 1, turns: 4 }],
     deploy_bomb_drone:  [{ def: 'bomb_drone', n: 2, turns: 3 }],
-    rocket_chicken:     [{ def: 'rocket_chicken', n: 1, turns: 3 }],
-    world_destroyer:    [{ def: 'world_destroyer', n: 1, turns: 3 }],
-    scrap_swarm:        [{ def: 'scrap_bot', n: 3, turns: 2 }],
+    rocket_chicken:     [{ def: 'rocket_chicken', n: 2, turns: 3 }],
+    world_destroyer:    [{ def: 'world_destroyer', n: 1, turns: 2 }],
+    scrap_swarm:        [{ def: 'scrap_bot', n: 2, turns: 5 }],
+    hst:                [{ def: 'water_totem', n: 1, turns: 3 }],
   };
   const toast = (msg, ms = 2400) => {
     const el = document.getElementById('toast');
@@ -6373,6 +6375,7 @@
     felguard:   0.40,   // Demo
     ghoul:      0.36,   // Unholy (also Blood/Frost permanent ghoul)
     imp:        0.28,   // Affli / Destro baseline
+    water_totem:0.20,
     voidwalker: 0.22,
     shadowfiend:0.48,   // short CD burst pet
     dire:       0.38,
@@ -6482,8 +6485,10 @@
             { id: 'pet_rend', name: 'Взрывной кудах', icon: '💥', power: 1.4, cd: 2 },
           ],
           world_destroyer: [
-            { id: 'pet_claw', name: 'Плазмопушка', icon: '☢️', power: 1.12 },
-            { id: 'pet_rend', name: 'Суперлазер', icon: '🔶', power: 1.55, cd: 2 },
+            { id: 'pet_aoe', name: 'Осадный залп', icon: '☢️', power: 1.2, type: 'aoe' },
+          ],
+          water_totem: [
+            { id: 'totem_heal', name: 'Поток', icon: '💧', power: 1, flat: 20, type: 'heal' },
           ],
           scrap_bot: [
             { id: 'pet_claw', name: 'Цап', icon: '⚙️', power: 0.95 },
@@ -6497,8 +6502,8 @@
         return kit.map((k) => ({
           id: k.id, name: k.name, icon: k.icon || '⚙️',
           cost: 0, gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0,
-          cd: k.cd || 0, baseCd: k.cd || 0, curCd: 0, type: 'damage',
-          power: k.power, desc: 'Атака механизма',
+          cd: k.cd || 0, baseCd: k.cd || 0, curCd: 0, type: k.type || 'damage',
+          power: k.power, flat: k.flat, desc: k.desc || 'Атака',
         }));
       })(),
       buffs: [],
@@ -6530,6 +6535,17 @@
     const pet = createPetUnit(owner, defKey, turnsLeft);
     combat.pets.push(pet);
     log(`${owner?.name || 'Призыв'}: ${pet.icon} ${pet.name}${turnsLeft ? ` (${turnsLeft} р.)` : ''}`, 'system');
+    // Водяной тотем: при появлении ослабленное «цепное» 20т (50% от 40т)
+    if (defKey === 'water_totem' && owner) {
+      const allies = (run?.party || []).filter(p => p.alive && p.hp < p.maxHp).sort((a, b) => (a.hp/a.maxHp) - (b.hp/b.maxHp));
+      let mult = 0.5;
+      for (const al of (allies.length ? allies : (run?.party || []).filter(p => p.alive)).slice(0, 4)) {
+        const amt = Math.round(40 * STAT_SCALE * mult);
+        const h = healUnit(al, amt, owner, { exact: true });
+        if (h) log(`${pet.name}: поток → ${al.name} (+${fmt(h)})`, 'heal');
+        mult *= 0.9;
+      }
+    }
     return pet;
   }
 
@@ -7294,6 +7310,23 @@
             }
           }
         }
+        if (ability.id === 'death_ray') {
+          for (const e of foes) {
+            if (!e.alive) continue;
+            applyStatus(e, {
+              id: 'dot_radiation', name: 'Радиация', icon: '☢️',
+              turns: 2, dot: Math.round(5 * STAT_SCALE), fromUid: actor.uid, periodic: true, school: 'fire',
+            });
+            applyStatus(e, {
+              id: 'edm_radiation', name: 'Радиация', icon: '☢️',
+              turns: 2, enemyDmgMod: 0.05,
+            });
+          }
+          log(`${actor.name}: Радиация на всех (5т×2, −5% урон)`, cls);
+        }
+        if (target && target.alive && actor.side === 'ally' && !actor.isPet) {
+          actor.lastAttackUid = target.uid;
+        }
         break;
       }
       case 'aoe': {
@@ -7328,6 +7361,13 @@
               icon: ad.icon || ability.icon || '☀️', turns: Number(ad.turns) || 4,
               dot: tick, fromUid: actor.uid, periodic: true,
               school: ad.school || ability.school || 'physical',
+            });
+          }
+          if (ability.enemyDmgMod && enemy.alive) {
+            applyStatus(enemy, {
+              id: 'edm_' + ability.id, name: ability.name, icon: ability.icon || '🔥',
+              turns: Number(ability.buffTurns) || 5,
+              enemyDmgMod: Number(ability.enemyDmgMod) || 0,
             });
           }
         });
@@ -7431,7 +7471,8 @@
         const mode = ability.ccMode || 'stun';
         if (target.casting) interruptCast(target, actor);
         if (mode === 'stun') {
-          applyStatus(target, { id: 'stun', name: 'Оглушение', icon: '💫', turns: 1, ccMode: 'stun' });
+          const stTurns = Number(ability.buffTurns) || Number(ability.ccTurns) || 1;
+          applyStatus(target, { id: 'stun', name: 'Оглушение', icon: '💫', turns: stTurns, ccMode: 'stun' });
           log(`${actor.name}: ${ability.name} → ${target.name} (стан 1 ход)`, 'player');
           toast('💫 Стан');
         } else {
@@ -7446,14 +7487,16 @@
         break;
       }
       case 'cleanse': {
-        // Brewmaster Purifying Brew — снимает пошатывание, не хилит
         playSkillAnim(actor, ability, [actor]);
         const before = actor.stagger || 0;
+        const pct = ability.purifyPct != null ? Number(ability.purifyPct) : 1;
         if (before > 0) {
-          actor.stagger = 0;
-          log(`${actor.name}: ${ability.name} — снято пошатывание ${fmt(before)}`, 'heal');
-          toast('Пошатывание снято: ' + fmt(before));
-          floatText(actor.uid, 'чист ' + fmt(before), 'heal');
+          const cleared = Math.max(1, Math.round(before * Math.min(1, Math.max(0, pct))));
+          actor.stagger = Math.max(0, before - cleared);
+          actor.purifyStacks = Math.min(2, (actor.purifyStacks || 0) + 1);
+          log(`${actor.name}: ${ability.name} — −${fmt(cleared)} шат (остаток ${fmt(actor.stagger)})`, 'heal');
+          toast('Пошатывание −' + fmt(cleared));
+          floatText(actor.uid, 'чист ' + fmt(cleared), 'heal');
         } else {
           log(`${actor.name}: ${ability.name} — пошатывания нет`, 'system');
           toast('Пошатывания нет');
@@ -7488,6 +7531,21 @@
         } else {
           amount = Math.round(target.maxHp * power * healMult * (1 + lootHeal));
         }
+        for (const b of (actor.buffs || [])) {
+          if (!b || !b.healAmp || !(b.abilityCharges > 0)) continue;
+          amount = Math.round(amount * (1 + Number(b.healAmp)));
+          b.abilityCharges -= 1;
+          if (b.abilityCharges <= 0) b.turns = 0;
+        }
+        if (ability.id === 'hw' || ability.id === 'chw') {
+          const tw = (actor.buffs || []).find(b => b && b.id === 'tidal_waves' && b.abilityCharges > 0);
+          if (tw) {
+            if (ability.id === 'hw') amount = Math.round(amount * 1.1);
+            if (ability.id === 'chw' && Math.random() < 0.5) amount = Math.round(amount * critMult(actor));
+            tw.abilityCharges -= 1;
+            if (tw.abilityCharges <= 0) tw.turns = 0;
+          }
+        }
         if (ability.critBonus && Math.random() < critChance(actor) + Number(ability.critBonus)) {
           amount = Math.round(amount * critMult(actor));
         }
@@ -7521,6 +7579,15 @@
             log(`${actor.name}: HoT ${ad.name || ability.name} ${fmt(tick)}/р · ${turns}р`, 'heal');
           }
         }
+        if (ability.id === 'riptide') {
+          applyStatus(actor, { id: 'tidal_waves', name: 'Прилив', icon: '🌊', turns: 6, abilityCharges: 2 });
+        }
+        if (ability.healAmp && ability.nextHealCharges) {
+          applyStatus(actor, {
+            id: 'unleash_life', name: ability.name, icon: ability.icon || '✨',
+            turns: 6, healAmp: Number(ability.healAmp), abilityCharges: Number(ability.nextHealCharges),
+          });
+        }
         break;
       }
       case 'heal_aoe': {
@@ -7528,13 +7595,46 @@
         fxTargets = targets.length ? targets : friends.slice();
         playSkillAnim(actor, ability, fxTargets);
         const hm = ((actor.side === 'ally' && te.healMult) || 1) * (1 + lootHeal);
-        for (const t of fxTargets) {
+        let targets = fxTargets.slice();
+        if (ability.chainDecay != null) {
+          targets = targets.filter(u => u.alive && u.hp < u.maxHp).sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+          if (!targets.length) targets = fxTargets.slice();
+        }
+        let chainMult = 1;
+        for (const tt of targets) {
           const useF = ability.flat != null && Number.isFinite(Number(ability.flat));
           let amt = useF
-            ? Math.round(Number(ability.flat) * STAT_SCALE)
-            : Math.round(t.maxHp * power * hm);
-          const h = healUnit(t, amt, actor, useF ? { exact: true } : null);
-          log(`${actor.name}: ${ability.name} → ${t.name} (+${fmt(h)})`, 'heal');
+            ? Math.round(Number(ability.flat) * STAT_SCALE * chainMult)
+            : Math.round(tt.maxHp * power * hm * chainMult);
+          for (const b of (actor.buffs || [])) {
+            if (b && b.healAmp && b.abilityCharges > 0) {
+              amt = Math.round(amt * (1 + Number(b.healAmp)));
+              b.abilityCharges -= 1;
+              if (b.abilityCharges <= 0) b.turns = 0;
+              break;
+            }
+          }
+          if (!(useF && Number(ability.flat) === 0 && ability.applyHot)) {
+            const h = healUnit(tt, amt, actor, useF ? { exact: true } : null);
+            log(`${actor.name}: ${ability.name} → ${tt.name} (+${fmt(h)})`, 'heal');
+          }
+          if (ability.applyHot) {
+            const ad = ability.applyHot;
+            const tick = Math.max(1, Math.round(Number(ad.flat || 0) * STAT_SCALE));
+            applyStatus(tt, {
+              id: 'hot_' + ability.id, name: ad.name || ability.name, icon: ability.icon || '🌿',
+              turns: Number(ad.turns) || 5, hot: tick, fromUid: actor.uid, periodic: true,
+            });
+          }
+          if (ability.chainDecay != null) chainMult *= (1 - Number(ability.chainDecay));
+        }
+        if (ability.dmgReduce && ability.id === 'spirit_link') {
+          for (const al of friends.filter(f => !f.isPet && f.alive)) {
+            applyStatus(al, {
+              id: 'spirit_link', name: ability.name, icon: ability.icon || '🔗',
+              turns: Number(ability.buffTurns) || 3, dmgReduce: Number(ability.dmgReduce),
+            });
+          }
         }
         break;
       }
@@ -7559,10 +7659,18 @@
           log(`${actor.name}: ${ability.name} +DEF и 🛡${fmt(amount)} (на себя)`, 'heal');
           break;
         }
-        const useShieldFlat = ability.flat != null && Number.isFinite(Number(ability.flat));
-        let amount = useShieldFlat
-          ? Math.round(Number(ability.flat) * STAT_SCALE)
-          : Math.round(target.maxHp * power);
+        let useShieldFlat = ability.flat != null && Number.isFinite(Number(ability.flat));
+        let amount;
+        if (ability.id === 'elusive') {
+          const stacks = Math.min(2, actor.purifyStacks || 0);
+          amount = Math.round((30 + stacks * 70) * STAT_SCALE);
+          actor.purifyStacks = 0;
+          useShieldFlat = true;
+        } else if (useShieldFlat) {
+          amount = Math.round(Number(ability.flat) * STAT_SCALE);
+        } else {
+          amount = Math.round(target.maxHp * power);
+        }
         if (actor.side === 'ally' && !useShieldFlat) {
           amount = Math.round(amount * masteryShieldMult(actor) * versHealMult(actor));
         }
@@ -7595,12 +7703,20 @@
           });
           log(`${actor.name}: ${ability.name} · блок ↑ · ${bTurns}х`, cls);
         }
-        if (ability.dmgReduce && (ability.id === 'shield_wall' || ability.id === 'ardent')) {
+        if (ability.dmgReduce && (ability.id === 'shield_wall' || ability.id === 'ardent' || ability.id === 'fort_brew' || ability.staggerBonus)) {
           applyStatus(actor, {
             id: 'dr_' + ability.id, name: ability.name, icon: ability.icon || '🏰', turns: bTurns,
             dmgReduce: Number(ability.dmgReduce) || 0,
+            staggerBonus: Number(ability.staggerBonus) || 0,
           });
           log(`${actor.name}: ${ability.name} −${Math.round((Number(ability.dmgReduce)||0)*100)}% · ${bTurns}х`, cls);
+        }
+        if (ability.id === 'dark_soul') {
+          for (const p of (combat?.pets || []).filter(x => x.alive && x.ownerUid === actor.uid)) {
+            if (p.petTurnsLeft != null) p.petTurnsLeft += 3;
+            else p.petTurnsLeft = 3;
+          }
+          log(`${actor.name}: ${ability.name} — питомцы +3 хода`, cls);
         }
         if (ability.armorMod && !ability.armorStacksMax) {
           applyStatus(actor, {
@@ -7784,8 +7900,11 @@
         if (ability.id === 'purifying') {
           playSkillAnim(actor, ability, [actor]);
           const before = actor.stagger || 0;
-          actor.stagger = 0;
-          log(`${actor.name}: ${ability.name} — снято ${fmt(before)} пошатывания`, 'heal');
+          const pct = ability.purifyPct != null ? Number(ability.purifyPct) : 1;
+          const cleared = before > 0 ? Math.max(1, Math.round(before * Math.min(1, pct))) : 0;
+          actor.stagger = Math.max(0, before - cleared);
+          if (cleared > 0) actor.purifyStacks = Math.min(2, (actor.purifyStacks || 0) + 1);
+          log(`${actor.name}: ${ability.name} — −${fmt(cleared)} шат`, 'heal');
           break;
         }
         playSkillAnim(actor, ability, target ? [target] : []);
@@ -7896,6 +8015,13 @@
 
   function dealDmg(target, raw, attacker, ctx) {
     if (!target?.alive) return 0;
+    if (attacker && attacker.buffs && attacker.buffs.length) {
+      let cut = 0;
+      for (const b of attacker.buffs) {
+        if (b && b.enemyDmgMod) cut += Number(b.enemyDmgMod) || 0;
+      }
+      if (cut > 0) raw = Math.max(1, Math.round(raw * (1 - Math.min(0.9, cut))));
+    }
     // Школа удара: physical vs magic (fire/frost/shadow/…)
     let school = (ctx && ctx.school) || null;
     if (!school && attacker && ctx && ctx.abilityId) {
@@ -7993,7 +8119,11 @@
     }
     // Brewmaster Stagger: часть урона в пул (не сразу в HP)
     if (dmg > 0 && target.side === 'ally' && target.classId === 'monk' && target.specId === 'brewmaster') {
-      const frac = 0.35;
+      let frac = 0.35;
+      for (const b of (target.buffs || [])) {
+        if (b && b.staggerBonus) frac += Number(b.staggerBonus) || 0;
+      }
+      frac = Math.min(0.75, frac);
       const cap = Math.round(target.maxHp * 0.6);
       const toStagger = Math.min(Math.round(dmg * frac), Math.max(0, cap - (target.stagger || 0)));
       if (toStagger > 0) {
@@ -8188,10 +8318,28 @@
     const friends = actor.side === 'ally' ? livingHeroes() : living('enemy');
     // Pets: simple auto-attack
     if (actor.isPet) {
-      const t = lowest(foes) || pick(foes);
-      if (!t) return;
-      const ab = actor.abilities.find(a => a.curCd <= 0 && a.type === 'damage' && a.power >= 1.2) || actor.abilities[0];
-      if (ab) castAbility(actor, ab, t);
+      const ab = actor.abilities.find(a => a.curCd <= 0 && (a.type === 'aoe' || a.type === 'heal' || (a.type === 'damage' && a.power >= 1.2)))
+        || actor.abilities.find(a => a.curCd <= 0)
+        || actor.abilities[0];
+      if (!ab) return;
+      if (ab.type === 'aoe') {
+        castAbility(actor, ab, null);
+        return;
+      }
+      if (ab.type === 'heal' || ab.type === 'heal_aoe') {
+        const injured = living('ally').filter(u => !u.isPet && u.alive && u.hp < u.maxHp);
+        const ht = lowest(injured) || lowest(living('ally').filter(u => !u.isPet));
+        if (ht) castAbility(actor, ab, ht);
+        return;
+      }
+      let tt = null;
+      if (actor.petKey === 'scrap_bot' && actor.ownerUid) {
+        const owner = run?.party?.find(p => p.uid === actor.ownerUid);
+        if (owner?.lastAttackUid) tt = living('enemy').find(e => e.uid === owner.lastAttackUid) || null;
+      }
+      tt = tt || lowest(foes) || pick(foes);
+      if (!tt) return;
+      castAbility(actor, ab, tt);
       return;
     }
     const usable = actor.abilities.filter(a => canPay(actor, a));
