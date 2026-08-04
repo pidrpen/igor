@@ -7635,6 +7635,7 @@
               turns: Number(ability.buffTurns) || 3, dmgReduce: Number(ability.dmgReduce),
             });
           }
+          equalizePartyHpByPct('каст');
         }
         break;
       }
@@ -8013,6 +8014,30 @@
     }
   }
 
+  function partyHasSpiritLink() {
+    return (run?.party || []).some(p =>
+      p && p.alive && !p.isPet && (p.buffs || []).some(b => b && b.id === 'spirit_link' && (b.turns == null || b.turns > 0))
+    );
+  }
+
+  /** Spirit Link: выровнять % HP всего отряда (после просадки / при касте). */
+  function equalizePartyHpByPct(reason) {
+    if (!run?.party) return;
+    const allies = run.party.filter(p => p && p.alive && !p.isPet && p.maxHp > 0);
+    if (allies.length < 2) return;
+    const avg = allies.reduce((s, p) => s + p.hp / p.maxHp, 0) / allies.length;
+    let moved = 0;
+    for (const p of allies) {
+      const want = Math.max(1, Math.min(p.maxHp, Math.round(p.maxHp * avg)));
+      moved += Math.abs(want - p.hp);
+      p.hp = want;
+    }
+    if (moved > 0) {
+      log(`Духовная связь: HP отряда выровнены по %${reason ? ' (' + reason + ')' : ''}`, 'heal');
+      for (const p of allies) floatText(p.uid, 'связь ' + fmt(p.hp), 'heal');
+    }
+  }
+
   function dealDmg(target, raw, attacker, ctx) {
     if (!target?.alive) return 0;
     if (attacker && attacker.buffs && attacker.buffs.length) {
@@ -8180,6 +8205,10 @@
     if (t.hp <= 0) { t.hp = 0; killUnit(t, source || null); }
     updateVignette();
     meterOnDamage(source || null, t, d);
+    // Spirit Link: если кто-то из отряда «просел» — выровнять % HP
+    if (d > 0 && t.side === 'ally' && !t.isPet && t.alive && partyHasSpiritLink()) {
+      equalizePartyHpByPct(t.name);
+    }
     return d;
   }
   function healUnit(t, amount, healer, opts) {
