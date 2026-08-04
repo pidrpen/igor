@@ -192,7 +192,7 @@ function A(o) {
             cs: 1, t: 'aoe', fl: 17, school: 'fire',
             enemyDmgMod: 0.1, bt: 5,
             applyDot: { flat: 3, turns: 5, name: 'Дыхание огня', school: 'fire' },
-            d: 'DoT 3т/ход · 5х, −10% урон врагов', sid: 115181,
+            d: '', sid: 115181,
           }),
           A({
             id: 'guard', n: 'Защита', en: 'Guard', i: '🛡️',

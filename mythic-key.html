@@ -3947,7 +3947,7 @@
     }
     return list;
   }
-  const INTERRUPT_IDS = new Set(['kick', 'pummel', 'counterspell', 'wind_shear', 'mind_freeze', 'spear_hand', 'rebuke', 'shock_wrench']);
+  const INTERRUPT_IDS = new Set(['kick', 'pummel', 'counterspell', 'wind_shear', 'mind_freeze', 'spear_hand', 'rebuke']);
   const SAVE_KEY = 'mythicKeySave_v5';
   const HIST_KEY = 'mythicKeyHistory_v1';
   const DEATH_PENALTY = 5;
@@ -4663,49 +4663,12 @@
   function abilityMetaLine(ab) {
     if (!ab) return '';
     const bits = [];
-    // Цифры flat/HoT только в estimateAbility — здесь не дублируем
+    // Только метки UI, не цифры урона/баффов (они в estimateAbility)
     if (ab.maxCharges) bits.push((ab.charges != null ? ab.charges : ab.maxCharges) + '/' + ab.maxCharges + ' зар.');
     if (ab.freeAction) bits.push('Не тратит ход');
     if (ab.holyShock) bits.push('союзник/враг');
-    if (ab.critMod) bits.push('+' + Math.round(Number(ab.critMod) * 100) + '% крит');
-    if (ab.atkMod) bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% ATK');
-    if (ab.petAtkMod) bits.push('+' + Math.round(Number(ab.petAtkMod) * 100) + '% урон петов');
-    if (ab.staggerBonus) bits.push('+' + Math.round(Number(ab.staggerBonus) * 100) + '% stagger');
-    if (ab.healAmp) bits.push('+' + Math.round(Number(ab.healAmp) * 100) + '% след. хилы ×' + (ab.nextHealCharges || 1));
-    if (ab.chainDecay != null) bits.push('цепь −' + Math.round(Number(ab.chainDecay) * 100) + '%/скачок');
     if (ab.chainPrimary) bits.push('сначала выбранная цель');
-    if (ab.applyDot && ab.applyDot.flat != null) bits.push('DoT ' + ab.applyDot.flat + 'т×' + (ab.applyDot.turns || 4));
-    if (ab.purifyPct != null && ab.purifyPct < 1) bits.push('−' + Math.round(Number(ab.purifyPct) * 100) + '% шат');
-    if (ab.type === 'cc' && (ab.buffTurns || ab.ccTurns)) bits.push('стан ' + (ab.buffTurns || ab.ccTurns) + 'х');
-    if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% урон');
-    if (ab.armorMod) bits.push('+' + Math.round(Number(ab.armorMod) * 100) + '% броня');
-    if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% HP');
-    if (ab.blockChanceAdd) bits.push('+' + Math.round(Number(ab.blockChanceAdd) * 100) + '% блок');
-    if (ab.enemyDmgMod) bits.push('−' + Math.round(Number(ab.enemyDmgMod) * 100) + '% урон врагов');
-    if (ab.critBonus) bits.push('+' + Math.round(Number(ab.critBonus) * 100) + '% шанс крита');
-    if (ab.lifesteal != null && Number(ab.lifesteal) > 0) {
-      bits.push('Вампиризм ' + Math.round(Number(ab.lifesteal) * 100) + '%');
-    } else if (ab.id === 'bt' && ab.lifesteal == null) {
-      bits.push('Вампиризм 10%');
-    } else if (ab.id === 'death_strike') {
-      bits.push('Вампиризм 25%');
-    }
-    if (ab.cleaveFlat != null) bits.push('+' + ab.cleaveFlat + 'т бокам');
-    if (ab.vuln) {
-      const pct = Math.round((ab.vuln.amount || 0.2) * 100);
-      const turns = ab.vuln.turns || 3;
-      const onlyPhys = ab.vuln.physical !== false; // по умолчанию физ. (колосс)
-      bits.push(onlyPhys
-        ? `+${pct}% физ. урон ${turns} хода`
-        : `+${pct}% урон ${turns} хода`);
-    }
-    if (ab.applyDot) {
-      const ad = ab.applyDot;
-      bits.push((ad.name || 'DoT') + ' ' + (ad.flat || 0) + 'т×' + (ad.turns || 4));
-    }
-    if (ab.abilityCharges) bits.push('след. ' + ab.abilityCharges + ' спос.');
-    if (typeof EXECUTE_IDS !== 'undefined' && EXECUTE_IDS.has(ab.id)) bits.push('≤35% HP');
-    if (ab.hits > 1) bits.push(ab.hits + ' удара');
+    if (ab.holyShock === false && ab.targetFlex) bits.push(String(ab.targetFlex));
     return bits.join(' · ');
   }
 
@@ -4743,6 +4706,10 @@
       let s = hits > 1
         ? `~${fmt(d)}×${hits}` + (ab.type === 'aoe' ? ' АоЕ' : ' урона')
         : `~${fmt(d)}` + (ab.type === 'aoe' ? ' АоЕ' : ' урона');
+      if (ab.applyDot && ab.applyDot.flat != null) {
+        s += ` + DoT ${ab.applyDot.flat}т×${ab.applyDot.turns || 4}`;
+      }
+      if (ab.enemyDmgMod) s += ` · −${Math.round(Number(ab.enemyDmgMod) * 100)}% урон врагов`;
       if (PET_SUMMONS[ab.id]) s += ' + питомец';
       return s;
     }
@@ -4757,21 +4724,27 @@
       return `~${fmt(hit)} + ${fmt(tick)}/р · ${PERIODIC_ROUNDS}р DoT`;
     }
     if (ab.type === 'buff') {
+      if (ab.id === 'dark_soul') return 'питомцы +3 хода';
+      if (ab.id === 'metamorphosis') {
+        // один раз: ATK себе + петам, длительность
+        const pct = Math.round((Number(ab.atkMod) || Number(ab.petAtkMod) || 0.3) * 100);
+        const turns = Number(ab.buffTurns) || 2;
+        return `+${pct}% урон себе и бесам · ${turns}х`;
+      }
       const bits = [];
       if (ab.critMod) bits.push('+' + Math.round(Number(ab.critMod) * 100) + '% крит');
-      if (ab.atkMod) bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% ATK');
-      if (ab.petAtkMod) bits.push('+' + Math.round(Number(ab.petAtkMod) * 100) + '% урон петов');
+      if (ab.atkMod && ab.id !== 'metamorphosis') bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% ATK');
+      if (ab.petAtkMod && ab.id !== 'metamorphosis') bits.push('+' + Math.round(Number(ab.petAtkMod) * 100) + '% урон петов');
       if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% урон');
       if (ab.staggerBonus) bits.push('+' + Math.round(Number(ab.staggerBonus) * 100) + '% stagger');
       if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% HP');
-      if (ab.id === 'dark_soul') return 'питомцы +3 хода';
-      if (ab.id === 'metamorphosis') return (bits.length ? bits.join(', ') : '+30% урон себе и бесам') + ' · 2х';
+      if (ab.buffTurns && bits.length) bits.push(Number(ab.buffTurns) + 'х');
       if (ab.id === 'last_stand' || ab.id === 'vampiric_blood') return `+${Math.round((ab.maxHpPct || ab.power || 0) * 100)}% HP`;
       if (ab.id === 'evocation') return '+мана';
       if (ab.id === 'prem') return '+2 к серии';
-      if (bits.length) return bits.join(', ');
+      if (bits.length) return bits.join(' · ');
       if (ab.power && ab.power !== 1) return `+${Math.round(ab.power * 100)}%`;
-      return ab.desc || 'бафф';
+      return 'бафф';
     }
     if (ab.type === 'debuff') {
       const pct = Math.round(Math.abs(ab.power || 0) * 100);
@@ -7017,16 +6990,40 @@
       const est = estimateAbility(actor, ab);
       const cost = costLabel(actor, ab);
       const tags = abilityMetaLine(ab);
-      // Одна плотная жёлтая строка: цена · кд · урон · метки (без пустых кусков)
-      const yellow = [
-        (cost && String(cost).trim()) || '',
-        ab.curCd > 0 ? ('перезарядка ' + ab.curCd) : '',
-        rule === 'self_only' ? 'на себя' : '',
-        (est && String(est).trim()) || '',
-        (tags && String(tags).trim()) || '',
-      ].filter(s => s && String(s).trim()).join(' · ');
+      // Одна жёлтая строка без повторов
+      const yellowParts = [];
+      const seen = new Set();
+      const pushY = (s) => {
+        s = (s && String(s).trim()) || '';
+        if (!s) return;
+        const key = s.toLowerCase();
+        if (seen.has(key)) return;
+        // не дублировать, если кусок уже внутри другого
+        for (const p of yellowParts) {
+          if (p.toLowerCase().includes(key) || key.includes(p.toLowerCase())) return;
+        }
+        seen.add(key);
+        yellowParts.push(s);
+      };
+      pushY(cost);
+      if (ab.curCd > 0) pushY('перезарядка ' + ab.curCd);
+      // buff «на себя» не показываем если estimate уже всё сказал
+      if (rule === 'self_only' && ab.type !== 'buff' && ab.type !== 'shield' && ab.type !== 'cleanse' && ab.type !== 'taunt') {
+        pushY('на себя');
+      }
+      pushY(est);
+      if (tags) tags.split(' · ').forEach(pushY);
+      const yellow = yellowParts.join(' · ');
       const cdHtml = ab.curCd > 0 ? `<div class="cd-overlay">${ab.curCd}</div>` : '';
-      const prose = (ab.desc && String(ab.desc).trim()) ? String(ab.desc).trim() : '';
+      let prose = (ab.desc && String(ab.desc).trim()) ? String(ab.desc).trim() : '';
+      // не дублировать серым то, что уже в жёлтой строке
+      if (prose && yellow) {
+        const ylow = yellow.toLowerCase();
+        const plow = prose.toLowerCase();
+        if (ylow.includes(plow) || plow.includes(ylow) || ylow.replace(/[^0-9a-zа-я%+−·\s]/gi,'').includes(plow.replace(/[^0-9a-zа-я%+−·\s]/gi,'').slice(0, 12))) {
+          prose = '';
+        }
+      }
       if (!ab.school) stampAbilitySchool(ab, actor.classId, actor.specId);
       const schoolNote = abilitySchoolNote(ab, actor);
       const schoolCss = abilitySchoolCss(ab, actor);
