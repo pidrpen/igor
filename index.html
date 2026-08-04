@@ -985,17 +985,15 @@
       width: 100%;
     }
     .ability {
-      width: 100%; min-width: 0; max-width: none; height: auto; min-height: 64px;
+      width: 100%; min-width: 0; max-width: none; height: auto; min-height: 52px;
       background: linear-gradient(135deg, #222820 0%, #141810 100%);
       border: 2px solid #5a5030; border-radius: 8px;
-      padding: .35rem .45rem;
+      padding: .38rem .48rem;
       color: var(--text); text-align: left; position: relative; overflow: hidden;
       display: grid;
-      grid-template-columns: 36px 1fr;
-      grid-template-rows: auto;
-      column-gap: .4rem;
-      row-gap: .08rem;
-      align-items: start;
+      grid-template-columns: 38px minmax(0, 1fr);
+      column-gap: .45rem;
+      align-items: center; /* иконка по центру высоты карточки, не вверху */
       transition: border-color .15s, box-shadow .15s;
     }
     .ability:hover:not(:disabled) {
@@ -1008,35 +1006,46 @@
       background: rgba(0,0,0,.35); border-radius: 4px; padding: 0 4px;
     }
     .ability .a-ico {
-      grid-row: 1 / -1; grid-column: 1;
-      width: 36px; height: 36px; align-self: center;
-      font-size: 1.25rem; line-height: 1;
+      grid-column: 1;
+      width: 36px; height: 36px;
+      font-size: 1.2rem; line-height: 1;
       display: flex; align-items: center; justify-content: center;
       border-radius: 8px;
       background: radial-gradient(circle at 30% 25%, #3a4030, #12160f);
       border: 1px solid #6a6040;
+      flex-shrink: 0;
+    }
+    /* Текст справа: название → цифры → тип — без пустых рядов grid */
+    .ability .a-body {
+      grid-column: 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: .08rem;
+      min-width: 0;
+      padding-right: 1.05rem;
     }
     .ability .a-name {
-      grid-column: 2;
       font-weight: 700; font-size: .78rem; line-height: 1.2;
-      max-width: none; overflow: visible; text-overflow: unset; white-space: normal;
-      margin: 0; padding-right: 1.1rem; color: var(--gold-bright);
+      margin: 0; color: var(--gold-bright);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .ability .a-cost {
-      grid-column: 2;
-      font-size: .68rem; color: #c0b090; line-height: 1.2;
+      font-size: .66rem; color: #c0b090; line-height: 1.25;
+      margin: 0;
+      white-space: normal;
+      word-break: break-word;
     }
     .ability .a-meta {
-      grid-column: 2;
-      display: block !important;
-      font-size: .66rem; color: var(--muted); line-height: 1.25;
-      white-space: normal; overflow: visible;
+      font-size: .64rem; color: var(--muted); line-height: 1.25;
+      margin: 0;
+      white-space: normal;
     }
     .ability .a-school {
-      grid-column: 2;
-      font-size: .62rem; font-weight: 600; line-height: 1.2;
+      font-size: .6rem; font-weight: 600; line-height: 1.2;
       color: #8eb4d4;
       letter-spacing: 0.01em;
+      margin: 0;
     }
     .ability .a-school.sch-phys { color: #c8d0da; }
     .ability .a-school.sch-fire { color: #ff9a6b; }
@@ -6857,28 +6866,30 @@
       const est = estimateAbility(actor, ab);
       const cost = costLabel(actor, ab);
       const tags = abilityMetaLine(ab);
-      // Всё в жёлтой строке a-cost: цена · кд · урон · Вампиризм / free-ход / …
+      // Одна плотная жёлтая строка: цена · кд · урон · метки (без пустых кусков)
       const yellow = [
-        cost || '',
-        ab.curCd ? ('перезарядка ' + ab.curCd) : '',
+        (cost && String(cost).trim()) || '',
+        ab.curCd > 0 ? ('перезарядка ' + ab.curCd) : '',
         rule === 'self_only' ? 'на себя' : '',
-        est || '',
-        tags || '',
-      ].filter(Boolean).join(' · ');
+        (est && String(est).trim()) || '',
+        (tags && String(tags).trim()) || '',
+      ].filter(s => s && String(s).trim()).join(' · ');
       const cdHtml = ab.curCd > 0 ? `<div class="cd-overlay">${ab.curCd}</div>` : '';
-      // a-meta: описание (если есть). Ниже — тип урона (всегда)
-      const prose = (ab.desc && String(ab.desc).trim()) ? ab.desc : '';
+      const prose = (ab.desc && String(ab.desc).trim()) ? String(ab.desc).trim() : '';
       if (!ab.school) stampAbilitySchool(ab, actor.classId, actor.specId);
       const schoolNote = abilitySchoolNote(ab, actor);
       const schoolCss = abilitySchoolCss(ab, actor);
-      btn.innerHTML = `
-        ${keyHint !== '' ? `<span class="hk">${keyHint}</span>` : ''}
-        <span class="a-ico">${ab.icon || '✨'}</span>
-        <span class="a-name">${ab.name}</span>
-        <span class="a-cost">${yellow}</span>
-        ${prose ? `<span class="a-meta">${prose}</span>` : ''}
-        <span class="a-school ${schoolCss}">${schoolNote}</span>
-        ${cdHtml}`;
+      // Иконка слева по центру; текст в .a-body — единый блок для всех скиллов
+      btn.innerHTML =
+        (keyHint !== '' ? `<span class="hk">${keyHint}</span>` : '') +
+        `<span class="a-ico">${ab.icon || '✨'}</span>` +
+        `<span class="a-body">` +
+          `<span class="a-name">${ab.name || ''}</span>` +
+          (yellow ? `<span class="a-cost">${yellow}</span>` : '') +
+          (prose ? `<span class="a-meta">${prose}</span>` : '') +
+          (schoolNote ? `<span class="a-school ${schoolCss}">${schoolNote}</span>` : '') +
+        `</span>` +
+        cdHtml;
       btn.addEventListener('click', () => {
         sfx('click');
         if (!canPay(actor, ab)) return;
