@@ -140,11 +140,11 @@ function A(o) {
           A({ id: 'soul_fire', n: 'Ожог души', en: 'Soul Fire', i: '🔥', c: 7, cs: 1, t: 'damage', p: 1.7, school: 'fire', d: '', sid: 6353 }),
           A({ id: 'corruption', n: 'Порча', en: 'Corruption', i: '🟢', c: 5, t: 'dot', fl: 13, school: 'shadow',
             applyDot: { flat: 5, turns: 5, name: 'Порча', school: 'shadow' }, d: '', sid: 172 }),
-          A({ id: 'hand_guldan', n: 'Длань Гул\'дана', en: "Hand of Gul'dan", i: '✋', c: 0, cs: 2, gs: 0, cd: 0, t: 'aoe', p: 0.95, school: 'shadow', d: '', sid: 105174 }),
+          A({ id: 'hand_guldan', n: "Длань Гул'дана", en: "Hand of Gul'dan", i: '✋', c: 0, cs: 2, gs: 0, cd: 3, t: 'aoe', p: 0.95, school: 'shadow', d: '', sid: 105174 }),
           A({ id: 'metamorphosis', n: 'Метаморфоза', en: 'Metamorphosis', i: '👹', c: 0, cs: 0, cd: 5, t: 'buff', fa: 1, atkMod: 0.3, petAtkMod: 0.3, bt: 2, d: '', sid: 103958 }),
           A({ id: 'dark_soul', n: 'Тёмная душа: Знание', en: 'Dark Soul: Knowledge', i: '😈', c: 0, cd: 10, t: 'buff', fa: 1, d: '', sid: 113861 }),
           A({ id: 'felstorm', n: 'Буря Скверны (страж)', en: 'Felstorm', i: '🌪️', cd: 3, t: 'aoe', fl: 30, school: 'shadow', d: '', sid: 89751 }),
-          A({ id: 'imp_leader', n: 'Главарь бесов', en: 'Imp Gang Boss', i: '👑', c: 0, cd: 8, t: 'summon', fa: 1, d: 'Бес-главарь 4х · АоЕ 15т/ход', sid: 90101 }),
+          A({ id: 'imp_leader', n: 'Главарь бесов', en: 'Imp Gang Boss', i: '👑', c: 0, cd: 8, t: 'summon', fa: 1, d: '', sid: 90101 }),
 ],
       },
       {

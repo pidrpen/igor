@@ -4383,7 +4383,7 @@
     world_destroyer:    [{ def: 'world_destroyer', n: 1, turns: 2 }],
     scrap_swarm:        [{ def: 'scrap_bot', n: 2, turns: 5 }],
     hst:                [{ def: 'water_totem', n: 1, turns: 3 }],
-    imp_leader:         [{ def: 'imp_boss', n: 1, turns: 4 }],
+    imp_leader:         [{ def: 'imp_boss', n: 1, turns: 3 }],
   };
   const toast = (msg, ms = 2400) => {
     const el = document.getElementById('toast');
@@ -6508,7 +6508,7 @@
             { id: 'pet_claw', name: 'Цап', icon: '⚙️', power: 1, flat: 14, type: 'damage' },
           ],
           imp_boss: [
-            { id: 'pet_aoe', name: 'Огонь бесов', icon: '🔥', power: 1, flat: 15, type: 'aoe' },
+            { id: 'pet_aoe', name: 'Огонь бесов', icon: '🔥', power: 1, flat: 7.5, type: 'aoe' },
           ],
         };
         const kit = kits[defKey] || [
@@ -6543,15 +6543,18 @@
     return combat.pets.some(p => p.alive && p.hp > 0 && p.ownerUid === owner.uid && p.petKey === defKey);
   }
   function canSummonAbility(owner, abilityId) {
+    // Лимит «пока жив — не ресам» только у гнома-инженера
+    if (!owner || owner.classId !== 'engineer') return true;
     const list = PET_SUMMONS[abilityId];
-    if (!list || !owner) return true;
+    if (!list) return true;
     for (const s of list) if (ownerHasPetType(owner, s.def)) return false;
     return true;
   }
   function addPet(owner, defKey, turnsLeft) {
     if (!combat) return null;
     if (!combat.pets) combat.pets = [];
-    if (owner && ownerHasPetType(owner, defKey)) return null;
+    // Тот же тип не дублируем только у инженера (локу/другим — можно)
+    if (owner && owner.classId === 'engineer' && ownerHasPetType(owner, defKey)) return null;
     const alive = combat.pets.filter(p => p.alive).length;
     if (alive >= 12) return null;
     const pet = createPetUnit(owner, defKey, turnsLeft);
@@ -7785,11 +7788,14 @@
           log(`${actor.name}: ${ability.name} −${Math.round((Number(ability.dmgReduce)||0)*100)}% · ${bTurns}х`, cls);
         }
         if (ability.id === 'dark_soul') {
-          for (const p of (combat?.pets || []).filter(x => x.alive && x.ownerUid === actor.uid)) {
+          // не на Главаря бесов
+          for (const p of (combat?.pets || []).filter(x =>
+            x.alive && x.ownerUid === actor.uid && x.petKey !== 'imp_boss'
+          )) {
             if (p.petTurnsLeft != null) p.petTurnsLeft += 3;
             else p.petTurnsLeft = 3;
           }
-          log(`${actor.name}: ${ability.name} — питомцы +3 хода`, cls);
+          log(`${actor.name}: ${ability.name} — бесы/демоны +3 хода (не главарь)`, cls);
         }
         if (ability.armorMod && !ability.armorStacksMax) {
           applyStatus(actor, {
