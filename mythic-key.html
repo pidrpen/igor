@@ -7591,17 +7591,17 @@
         break;
       }
       case 'heal_aoe': {
-        const targets = friends.filter(f => !f.isPet);
-        fxTargets = targets.length ? targets : friends.slice();
+        const healAllies = friends.filter(f => !f.isPet);
+        fxTargets = healAllies.length ? healAllies : friends.slice();
         playSkillAnim(actor, ability, fxTargets);
         const hm = ((actor.side === 'ally' && te.healMult) || 1) * (1 + lootHeal);
-        let targets = fxTargets.slice();
+        let chainTargets = fxTargets.slice();
         if (ability.chainDecay != null) {
-          targets = targets.filter(u => u.alive && u.hp < u.maxHp).sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
-          if (!targets.length) targets = fxTargets.slice();
+          chainTargets = chainTargets.filter(u => u.alive && u.hp < u.maxHp).sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+          if (!chainTargets.length) chainTargets = fxTargets.slice();
         }
         let chainMult = 1;
-        for (const tt of targets) {
+        for (const tt of chainTargets) {
           const useF = ability.flat != null && Number.isFinite(Number(ability.flat));
           let amt = useF
             ? Math.round(Number(ability.flat) * STAT_SCALE * chainMult)
