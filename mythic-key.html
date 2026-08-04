@@ -6542,6 +6542,18 @@
     if (!combat?.pets || !owner) return false;
     return combat.pets.some(p => p.alive && p.hp > 0 && p.ownerUid === owner.uid && p.petKey === defKey);
   }
+
+  /** Демонология: пет атакует → 65% +1 осколок. */
+  function maybeDemoPetShard(pet) {
+    if (!pet || !pet.isPet || !pet.ownerUid || !run?.party) return;
+    const owner = run.party.find(p => p.uid === pet.ownerUid);
+    if (!owner || !owner.alive || owner.classId !== 'warlock' || owner.specId !== 'demonology') return;
+    if (!owner.res?.secondary || owner.res.secondary.type !== 'soul_shards') return;
+    if (Math.random() >= 0.65) return;
+    owner.res.secondary.current = clamp(owner.res.secondary.current + 1, 0, owner.res.secondary.max);
+    log(`${pet.name}: осколок → ${owner.name} (${owner.res.secondary.current})`, 'player');
+    floatText(owner.uid, '+осколок', 'buff');
+  }
   function canSummonAbility(owner, abilityId) {
     // Лимит «пока жив — не ресам» только у гнома-инженера
     if (!owner || owner.classId !== 'engineer') return true;
@@ -8467,6 +8479,7 @@
       if (!ab) return;
       if (ab.type === 'aoe') {
         castAbility(actor, ab, null);
+        maybeDemoPetShard(actor);
         return;
       }
       if (ab.type === 'heal' || ab.type === 'heal_aoe') {
@@ -8483,6 +8496,7 @@
       tt = tt || lowest(foes) || pick(foes);
       if (!tt) return;
       castAbility(actor, ab, tt);
+      maybeDemoPetShard(actor);
       return;
     }
     const usable = actor.abilities.filter(a => canPay(actor, a));

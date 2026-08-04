@@ -737,7 +737,7 @@
           abilities: [
             A({ id: 'zap_gun', n: 'Электропушка', en: 'Zap Gun', i: '⚡', g: 20, gs: 1, t: 'damage', fl: 13, school: 'arcane', d: '', sid: 90021 }),
             A({ id: 'flux_bolt', n: 'Поток флюкса', en: 'Flux Bolt', i: '🌀', c: 0, g: 15, gs: 1, t: 'damage', fl: 30, school: 'arcane', d: '', sid: 90022 }),
-            A({ id: 'death_ray', n: 'Гномский луч смерти', en: 'Gnomish Death Ray', i: '☢️', c: 50, cd: 3, t: 'damage', fl: 64, school: 'fire', d: '', sid: 90023 }),
+            A({ id: 'death_ray', n: 'Гномский луч смерти', en: 'Gnomish Death Ray', i: '☢️', c: 50, cd: 3, t: 'damage', fl: 64, school: 'fire', gs: 2, d: '', sid: 90023 }),
             A({ id: 'rocket_chicken', n: 'Ракета-курица', en: 'Rocket Chicken', i: '🐔', c: 30, cs: 1, cd: 4, t: 'aoe', fl: 10, school: 'fire', d: '', sid: 90024 }),
             A({ id: 'world_destroyer', n: 'Личный разрушитель миров', en: 'World Destroyer', i: '🤖', c: 50, cs: 3, cd: 5, t: 'summon', p: 1, d: '', sid: 90025 }),
             A({ id: 'shrink_ray', n: 'Уменьшающий луч', en: 'Shrink Ray', i: '🔬', c: 25, cd: 3, t: 'debuff', p: 0.15, d: '', sid: 90026 }),

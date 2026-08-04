@@ -147,7 +147,7 @@
           A({ id: 'templar', n: 'Вердикт храмовника', en: "Templar's Verdict", i: '⚖️',
             cs: 3, t: 'damage', fl: 38, school: 'holy', d: '', sid: 85256 }),
           A({ id: 'divine_storm', n: 'Божественная буря', en: 'Divine Storm', i: '🌪️',
-            cs: 3, t: 'aoe', fl: 50, school: 'holy', d: '', sid: 53385 }),
+            cs: 4, t: 'aoe', fl: 40, school: 'holy', d: '', sid: 53385 }),
           A({ id: 'hot_w', n: 'Молот гнева', en: 'Hammer of Wrath', i: '⚡',
             c: 6, gs: 1, t: 'damage', p: 1.45, school: 'holy', d: '', sid: 24275 }),
           A({ id: 'inquisition', n: 'Инквизиция', en: 'Inquisition', i: '📜',
