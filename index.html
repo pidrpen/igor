@@ -4703,7 +4703,8 @@
     if (ab.type === 'heal' || ab.type === 'heal_aoe') {
       const mult = (te.healMult || 1);
       if (ab.flat != null && Number.isFinite(Number(ab.flat))) {
-        let s = `~${fmt(Math.round(Number(ab.flat) * STAT_SCALE * mult))} лечения`;
+        // exact «т» as written — replaces old %maxHp, not added to it
+        let s = `~${fmt(Math.round(Number(ab.flat) * STAT_SCALE))} лечения`;
         if (ab.applyHot) {
           const tick = Math.round(Number(ab.applyHot.flat || 0) * STAT_SCALE);
           const turns = Number(ab.applyHot.turns) || 5;
@@ -7480,10 +7481,12 @@
         if (!target.buffs) target.buffs = [];
         fxTargets = [target];
         playSkillAnim(actor, ability, fxTargets);
+        // flat «т» = ПОЛНАЯ замена старого maxHp×power, не «плюс к старому»
         const healMult = (actor.side === 'ally' && te.healMult) ? te.healMult : 1;
         let amount;
-        if (ability.flat != null && Number.isFinite(Number(ability.flat))) {
-          amount = Math.round(Number(ability.flat) * STAT_SCALE * healMult * (1 + lootHeal));
+        const useFlat = ability.flat != null && Number.isFinite(Number(ability.flat));
+        if (useFlat) {
+          amount = Math.round(Number(ability.flat) * STAT_SCALE);
         } else {
           amount = Math.round(target.maxHp * power * healMult * (1 + lootHeal));
         }
@@ -7491,7 +7494,9 @@
           amount = Math.round(amount * critMult(actor));
         }
         if (!Number.isFinite(amount) || amount < 1) amount = Math.max(1, Math.round(STAT_SCALE));
-        const hotCfg = hotConfig(ability.id);
+
+        // Legacy HoT-split (renew etc.) — только если НЕТ flat и НЕТ applyHot
+        const hotCfg = (!useFlat && !ability.applyHot) ? hotConfig(ability.id) : null;
         if (hotCfg) {
           const direct = Math.max(1, Math.round(amount * (hotCfg.direct || 0.35)));
           let tick = Math.max(Math.round(STAT_SCALE * 0.5), Math.round(amount * (hotCfg.tick || 0.25)));
@@ -7515,6 +7520,7 @@
               id: 'hot_' + ability.id, name: ad.name || ability.name, icon: ability.icon || '✨',
               turns, hot: tick, fromUid: actor.uid, periodic: true,
             });
+            log(`${actor.name}: HoT ${ad.name || ability.name} ${fmt(tick)}/р · ${turns}р`, 'heal');
           }
         }
         break;
@@ -7525,8 +7531,9 @@
         playSkillAnim(actor, ability, fxTargets);
         const hm = ((actor.side === 'ally' && te.healMult) || 1) * (1 + lootHeal);
         for (const t of fxTargets) {
+          // flat «т» = вместо maxHp×power, без умножения на healMult/loot
           let amt = (ability.flat != null && Number.isFinite(Number(ability.flat)))
-            ? Math.round(Number(ability.flat) * STAT_SCALE * hm)
+            ? Math.round(Number(ability.flat) * STAT_SCALE)
             : Math.round(t.maxHp * power * hm);
           const h = healUnit(t, amt, actor);
           log(`${actor.name}: ${ability.name} → ${t.name} (+${fmt(h)})`, 'heal');
