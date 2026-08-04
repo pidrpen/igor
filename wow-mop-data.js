@@ -9,7 +9,7 @@
 
   // shorthand ability builder
   function A(o) {
-    return {
+    const ab = {
       id: o.id,
       name: o.n,
       nameEn: o.en || o.n,
@@ -18,7 +18,7 @@
       gen: o.g ?? 0,
       costSec: o.cs ?? 0,
       genSec: o.gs ?? 0,
-      costRunes: o.r || null, // { b, f, u, any }
+      costRunes: o.r || null,
       genRunic: o.rp ?? 0,
       cd: o.cd ?? 0,
       type: o.t,
@@ -26,6 +26,25 @@
       desc: o.d || '',
       spellId: o.sid || 0,
     };
+    const extra = [
+      'flat', 'freeAction', 'maxCharges', 'applyDot', 'applyHot',
+      'dmgReduce', 'blockChanceAdd', 'blockValueAdd', 'armorMod', 'armorStacksMax',
+      'critBonus', 'critMod', 'atkMod', 'lifesteal', 'vuln', 'hits', 'cleaveFlat',
+      'school', 'maxHpPct', 'buffTurns', 'aoeBounce', 'shieldFromDmg',
+      'enemyDmgMod', 'grantBlock', 'targetFlex', 'holyShock', 'physOnly',
+    ];
+    for (const k of extra) {
+      if (o[k] !== undefined) ab[k] = o[k];
+    }
+    if (o.fa) ab.freeAction = true;
+    if (o.fl != null) ab.flat = o.fl;
+    if (o.ch != null) ab.maxCharges = o.ch;
+    if (o.dr != null) ab.dmgReduce = o.dr;
+    if (o.bt != null) ab.buffTurns = o.bt;
+    if (o.am != null) ab.armorMod = o.am;
+    if (o.cm != null) ab.critMod = o.cm;
+    if (o.hpPct != null) ab.maxHpPct = o.hpPct;
+    return ab;
   }
 
   const WOW_CLASSES = [
@@ -72,16 +91,15 @@
           id: 'protection', name: 'Защита', nameEn: 'Protection', role: 'tank', icon: '🛡️',
           stats: { hp: 170, atk: 12, def: 12, speed: 8 },
           abilities: [
-            A({ id: 'shield_slam', n: 'Удар щитом', en: 'Shield Slam', i: '🛡️', g: 15, cd: 1, t: 'damage', p: 1.15, d: 'Генератор: +15 ярости.', sid: 23922 }),
-            A({ id: 'revenge', n: 'Реванш', en: 'Revenge', i: '↩️', g: 10, cd: 1, t: 'damage', p: 1.05, d: 'Генератор: +10 ярости.', sid: 6572 }),
-            A({ id: 'devastate', n: 'Разрушение', en: 'Devastate', i: '💥', g: 5, t: 'damage', p: 0.9, d: 'Заполнитель: +5 ярости.', sid: 20243 }),
-            A({ id: 'thunder', n: 'Удар грома', en: 'Thunder Clap', i: '⛈️', c: 20, cd: 1, t: 'aoe', p: 0.9, d: 'Расход 20 — урон по области.', sid: 6343 }),
-            A({ id: 'shield_block', n: 'Блок щитом', en: 'Shield Block', i: '🧱', c: 50, cd: 2, t: 'shield', p: 0.45, d: 'Расход 50 — сильный щит.', sid: 2565 }),
-            A({ id: 'shield_wall', n: 'Глухая оборона', en: 'Shield Wall', i: '🏰', cd: 5, t: 'shield', p: 0.5, d: 'Большой щит (перезарядка).', sid: 871 }),
-            A({ id: 'last_stand', n: 'Ни шагу назад', en: 'Last Stand', i: '❤️', cd: 5, t: 'buff', p: 0.3, d: '+макс. здоровье на 3 хода.', sid: 12975 }),
-            A({ id: 'taunt', n: 'Провокация', en: 'Taunt', i: '📢', cd: 2, t: 'taunt', p: 0, d: 'Агро.', sid: 355 }),
-            A({ id: 'heroic_leap', n: 'Героический прыжок', en: 'Heroic Leap', i: '🦘', c: 15, cd: 3, t: 'aoe', p: 0.75, d: 'Расход 15 — прыжок + урон.', sid: 6544 }),
-            A({ id: 'demo_shout', n: 'Деморализующий крик', en: 'Demoralizing Shout', i: '😨', cd: 3, t: 'debuff', p: 0.2, d: '−атака врагов.', sid: 1160 }),
+            A({ id: 'shield_slam', n: 'Удар щитом', en: 'Shield Slam', i: '🛡️', g: 30, t: 'damage', fl: 18, d: '18т · +30 ярости', sid: 23922 }),
+            A({ id: 'revenge', n: 'Реванш', en: 'Revenge', i: '↩️', c: 15, cd: 2, t: 'aoe', fl: 17, d: '17т AoE · 15 ярости · авто при блоке', sid: 6572 }),
+            A({ id: 'thunder', n: 'Удар грома', en: 'Thunder Clap', i: '⛈️', g: 10, cd: 2, t: 'aoe', fl: 20, fa: 1, d: '20т AoE · +10 ярости · без хода', sid: 6343 }),
+            A({ id: 'shield_block', n: 'Блок щитом', en: 'Shield Block', i: '🧱', c: 10, cd: 5, t: 'buff', fa: 1, ch: 2, blockChanceAdd: 0.5, blockValueAdd: 0.2, bt: 2, d: '2 заряда · +50% блок / +20% сила · 2 хода · без хода', sid: 2565 }),
+            A({ id: 'shield_wall', n: 'Глухая оборона', en: 'Shield Wall', i: '🏰', cd: 8, t: 'buff', fa: 1, dr: 0.6, bt: 2, d: '−60% весь урон · 2 хода · без хода', sid: 871 }),
+            A({ id: 'last_stand', n: 'Ни шагу назад', en: 'Last Stand', i: '❤️', cd: 10, t: 'buff', fa: 1, hpPct: 0.5, bt: 3, grantBlock: 1, d: '+50% макс. HP · Блок щитом · 3 хода · без хода', sid: 12975 }),
+            A({ id: 'taunt', n: 'Провокация', en: 'Taunt', i: '📢', cd: 2, t: 'taunt', p: 0, fa: 1, d: 'Агро · без хода', sid: 355 }),
+            A({ id: 'heroic_leap', n: 'Героический прыжок', en: 'Heroic Leap', i: '🦘', cd: 5, t: 'aoe', fl: 2, fa: 1, dr: 0.05, bt: 2, d: '2т AoE · −5% урон 2 хода · без хода', sid: 6544 }),
+            A({ id: 'demo_shout', n: 'Деморализующий крик', en: 'Demoralizing Shout', i: '😨', c: 40, cd: 3, t: 'debuff', enemyDmgMod: 0.15, bt: 3, d: '−15% урон врагов · 40 ярости', sid: 1160 }),
           ],
         },
       ],
@@ -98,46 +116,47 @@
         {
           id: 'holy', name: 'Свет', nameEn: 'Holy', role: 'healer', icon: '🌟',
           stats: { hp: 95, atk: 8, def: 5, speed: 10 },
+          resourceOverride: { type: 'mana', name: 'Мана', icon: '💧', max: 100, start: 100, regen: 4 },
           abilities: [
-            A({ id: 'holy_shock', n: 'Шок небес', en: 'Holy Shock', i: '✨', c: 8, gs: 1, cd: 1, t: 'heal', p: 0.4, d: 'Лечение + 1 энергия Света.', sid: 20473 }),
-            A({ id: 'word_glory', n: 'Слово славы', en: 'Word of Glory', i: '💫', cs: 3, t: 'heal', p: 0.58, d: 'Расход 3 энергии Света — сильное лечение.', sid: 85673 }),
-            A({ id: 'holy_light', n: 'Свет небес', en: 'Holy Light', i: '🔆', c: 16, t: 'heal', p: 0.52, d: 'Сильное лечение за ману.', sid: 635 }),
-            A({ id: 'flash', n: 'Вспышка Света', en: 'Flash of Light', i: '⚡', c: 12, t: 'heal', p: 0.42, d: 'Быстрое лечение.', sid: 19750 }),
-            A({ id: 'holy_radiance', n: 'Сияние света', en: 'Holy Radiance', i: '🌅', c: 16, cd: 1, t: 'heal_aoe', p: 0.22, d: 'Лечение по области.', sid: 82327 }),
-            A({ id: 'light_dawn', n: 'Свет зари', en: 'Light of Dawn', i: '🌄', cs: 3, cd: 2, t: 'heal_aoe', p: 0.32, d: 'Расход 3 энергии Света — хил по области.', sid: 85222 }),
-            A({ id: 'crusader', n: 'Удар воина Света', en: 'Crusader Strike', i: '⚔️', c: 5, gs: 1, t: 'damage', p: 0.9, d: '+1 энергия Света.', sid: 35395 }),
-            A({ id: 'divine_prot', n: 'Божественная защита', en: 'Divine Protection', i: '🛡️', cd: 4, t: 'shield', p: 0.3, d: 'Щит.', sid: 498 }),
-            A({ id: 'avenging', n: 'Гнев карателя', en: 'Avenging Wrath', i: '😇', cd: 5, t: 'buff', p: 0.25, d: '+атака (и хилы через силу).', sid: 31884 }),
+            A({ id: 'holy_shock', n: 'Шок небес', en: 'Holy Shock', i: '✨', c: 3, gs: 1, cd: 2, t: 'heal', fl: 27, critBonus: 0.2, holyShock: 1, applyHot: { flat: 7, turns: 5, name: 'Шок небес' }, d: '27т хил + 7т×5 HoT · или 12т DoT по врагу · +1 ES · +20% крит', sid: 20473 }),
+            A({ id: 'word_glory', n: 'Слово славы', en: 'Word of Glory', i: '💫', cs: 3, t: 'heal', fl: 80, d: '80т · 3 ES', sid: 85673 }),
+            A({ id: 'holy_light', n: 'Свет небес', en: 'Holy Light', i: '🔆', c: 16, t: 'heal', fl: 45, d: '45т · 16 маны', sid: 635 }),
+            A({ id: 'flash', n: 'Вспышка Света', en: 'Flash of Light', i: '⚡', c: 12, t: 'heal', fl: 37, d: '37т · 12 маны', sid: 19750 }),
+            A({ id: 'holy_radiance', n: 'Сияние света', en: 'Holy Radiance', i: '🌅', c: 16, t: 'heal_aoe', fl: 21, d: '21т по группе · 16 маны', sid: 82327 }),
+            A({ id: 'light_dawn', n: 'Свет зари', en: 'Light of Dawn', i: '🌄', cs: 2, cd: 2, t: 'heal_aoe', fl: 34, d: '34т по группе · 2 ES', sid: 85222 }),
+            A({ id: 'crusader', n: 'Удар воина Света', en: 'Crusader Strike', i: '⚔️', c: 2, gs: 1, t: 'damage', fl: 10, d: '10т · 2 маны · +1 ES', sid: 35395 }),
+            A({ id: 'divine_prot', n: 'Божественная защита', en: 'Divine Protection', i: '🛡️', cd: 6, t: 'shield', fl: 40, fa: 1, d: 'Щит 40т · без хода', sid: 498 }),
+            A({ id: 'avenging', n: 'Гнев карателя', en: 'Avenging Wrath', i: '😇', cd: 7, t: 'buff', fa: 1, cm: 0.3, bt: 4, d: '+30% крит · 4 хода · без хода', sid: 31884 }),
           ],
         },
         {
           id: 'protection', name: 'Защита', nameEn: 'Protection', role: 'tank', icon: '🛡️',
           stats: { hp: 168, atk: 12, def: 12, speed: 8 },
+          resourceOverride: { type: 'mana', name: 'Мана', icon: '💧', max: 100, start: 100, regen: 10 },
           abilities: [
-            A({ id: 'crusader', n: 'Удар воина Света', en: 'Crusader Strike', i: '⚔️', c: 5, gs: 1, t: 'damage', p: 1.0, d: '+1 энергия Света.', sid: 35395 }),
-            A({ id: 'judgment', n: 'Правосудие', en: 'Judgment', i: '⚖️', c: 6, gs: 1, cd: 1, t: 'damage', p: 1.05, d: '+1 энергия Света.', sid: 20271 }),
-            A({ id: 'avengers', n: 'Щит мстителя', en: "Avenger's Shield", i: '🛡️', c: 8, cd: 2, t: 'damage', p: 1.2, d: 'Дальний удар щитом.', sid: 31935 }),
-            A({ id: 'hot_r', n: 'Молот праведника', en: 'Hammer of the Righteous', i: '🔨', c: 5, gs: 1, t: 'aoe', p: 0.7, d: 'По области + 1 энергия Света.', sid: 53595 }),
-            A({ id: 'sot_r', n: 'Щит праведника', en: 'Shield of the Righteous', i: '🧱', cs: 3, t: 'shield', p: 0.42, d: 'Расход 3 энергии Света — щит.', sid: 53600 }),
-            A({ id: 'consecrate', n: 'Освящение', en: 'Consecration', i: '☀️', c: 10, cd: 2, t: 'aoe', p: 0.7, d: 'Зональный урон.', sid: 26573 }),
-            A({ id: 'hot_w', n: 'Молот гнева', en: 'Hammer of Wrath', i: '⚡', c: 6, gs: 1, t: 'damage', p: 1.4, d: '+1 энергия Света. Добивание ≤35%.', sid: 24275 }),
-            A({ id: 'ardent', n: 'Ревностный защитник', en: 'Ardent Defender', i: '❤️', cd: 5, t: 'buff', p: 0.2, d: '+атака (упрощ. выживаемость).', sid: 31850 }),
-            A({ id: 'taunt', n: 'Длань расплаты', en: 'Hand of Reckoning', i: '📢', cd: 2, t: 'taunt', p: 0, d: 'Провокация.', sid: 62124 }),
+            A({ id: 'crusader', n: 'Удар воина Света', en: 'Crusader Strike', i: '⚔️', c: 2, gs: 1, t: 'damage', p: 1.0, am: 0.04, armorStacksMax: 2, bt: 3, d: '2 маны · +1 ES · броня +4% (2 стака)', sid: 35395 }),
+            A({ id: 'judgment', n: 'Правосудие', en: 'Judgment', i: '⚖️', c: 4, gs: 1, t: 'damage', fl: 15, vuln: { amount: 0.05, turns: 4, physical: false }, school: 'holy', d: '15т · 4 маны · +1 ES · +5% свет 4х', sid: 20271 }),
+            A({ id: 'avengers', n: 'Щит мстителя', en: "Avenger's Shield", i: '🛡️', c: 5, cd: 1, t: 'aoe', fl: 13, aoeBounce: 0.05, shieldFromDmg: 0.25, school: 'holy', d: '13т AoE −5%/цель · щит 25% урона', sid: 31935 }),
+            A({ id: 'hot_r', n: 'Молот праведника', en: 'Hammer of the Righteous', i: '🔨', cs: 3, t: 'damage', fl: 43, school: 'holy', d: '43т СТ · 3 ES', sid: 53595 }),
+            A({ id: 'sot_r', n: 'Щит праведника', en: 'Shield of the Righteous', i: '🧱', cs: 3, t: 'buff', am: 0.7, bt: 2, d: '+70% брони · 2 хода · 3 ES', sid: 53600 }),
+            A({ id: 'consecrate', n: 'Освящение', en: 'Consecration', i: '☀️', c: 5, cd: 5, t: 'aoe', fl: 0, applyDot: { flat: 3, turns: 4, name: 'Освящение', school: 'holy' }, school: 'holy', d: 'DoT 3т×4 · 5 маны · КД 5', sid: 26573 }),
+            A({ id: 'hot_w', n: 'Молот гнева', en: 'Hammer of Wrath', i: '⚡', c: 6, gs: 1, t: 'damage', p: 1.4, d: '+1 ES · ≤35% HP', sid: 24275 }),
+            A({ id: 'ardent', n: 'Ревностный защитник', en: 'Ardent Defender', i: '❤️', cd: 6, t: 'buff', fa: 1, dr: 0.6, bt: 3, d: '−60% весь урон · 3 хода · без хода', sid: 31850 }),
+            A({ id: 'taunt', n: 'Длань расплаты', en: 'Hand of Reckoning', i: '📢', cd: 2, t: 'taunt', p: 0, fa: 1, d: 'Агро · без хода', sid: 62124 }),
           ],
         },
         {
           id: 'retribution', name: 'Воздаяние', nameEn: 'Retribution', role: 'dps', icon: '🔨',
           stats: { hp: 105, atk: 17, def: 5, speed: 11 },
+          resourceOverride: { type: 'mana', name: 'Мана', icon: '💧', max: 100, start: 100, regen: 10 },
           abilities: [
-            A({ id: 'crusader', n: 'Удар воина Света', en: 'Crusader Strike', i: '⚔️', c: 5, gs: 1, t: 'damage', p: 1.1, d: '+1 энергия Света.', sid: 35395 }),
-            A({ id: 'judgment', n: 'Правосудие', en: 'Judgment', i: '⚖️', c: 6, gs: 1, cd: 1, t: 'damage', p: 1.1, d: '+1 энергия Света.', sid: 20271 }),
-            A({ id: 'exorcism', n: 'Экзорцизм', en: 'Exorcism', i: '👻', c: 8, gs: 1, cd: 1, t: 'damage', p: 1.2, d: 'Дальний урон + 1 энергия Света.', sid: 879 }),
-            A({ id: 'templar', n: 'Вердикт храмовника', en: "Templar's Verdict", i: '⚖️', cs: 3, t: 'damage', p: 1.75, d: 'Главный расход 3 энергии Света.', sid: 85256 }),
-            A({ id: 'divine_storm', n: 'Божественная буря', en: 'Divine Storm', i: '🌪️', cs: 3, t: 'aoe', p: 1.0, d: 'Расход 3 — по области.', sid: 53385 }),
-            A({ id: 'hot_w', n: 'Молот гнева', en: 'Hammer of Wrath', i: '⚡', c: 6, gs: 1, t: 'damage', p: 1.45, d: '+1 энергия Света. ≤35% HP.', sid: 24275 }),
-            A({ id: 'inquisition', n: 'Инквизиция', en: 'Inquisition', i: '📜', cs: 3, cd: 1, t: 'buff', p: 0.28, d: 'Расход 3 — +атака на 3 хода.', sid: 84963 }),
-            A({ id: 'avenging', n: 'Гнев карателя', en: 'Avenging Wrath', i: '😇', cd: 5, t: 'buff', p: 0.3, d: '+атака на 3 хода.', sid: 31884 }),
-            A({ id: 'holy_avenger', n: 'Святой мститель', en: 'Holy Avenger', i: '🔥', cd: 5, t: 'buff', p: 0.22, d: '+атака (вместо фанатизма).', sid: 105809 }),
+            A({ id: 'crusader', n: 'Удар воина Света', en: 'Crusader Strike', i: '⚔️', c: 5, gs: 1, t: 'damage', p: 1.1, d: '+1 ES · 5 маны', sid: 35395 }),
+            A({ id: 'judgment', n: 'Правосудие', en: 'Judgment', i: '⚖️', c: 6, gs: 1, cd: 1, t: 'damage', fl: 23, d: '23т · +1 ES', sid: 20271 }),
+            A({ id: 'templar', n: 'Вердикт храмовника', en: "Templar's Verdict", i: '⚖️', cs: 3, t: 'damage', fl: 38, d: '38т · 3 ES', sid: 85256 }),
+            A({ id: 'divine_storm', n: 'Божественная буря', en: 'Divine Storm', i: '🌪️', cs: 3, t: 'aoe', fl: 19, d: '19т AoE · 3 ES', sid: 53385 }),
+            A({ id: 'hot_w', n: 'Молот гнева', en: 'Hammer of Wrath', i: '⚡', c: 6, gs: 1, t: 'damage', p: 1.45, d: '+1 ES · ≤35% HP', sid: 24275 }),
+            A({ id: 'inquisition', n: 'Инквизиция', en: 'Inquisition', i: '📜', cd: 4, t: 'buff', fa: 1, atkMod: 0.15, bt: 2, d: '+15% ATK · 2 хода · без хода', sid: 84963 }),
+            A({ id: 'avenging', n: 'Гнев карателя', en: 'Avenging Wrath', i: '😇', cd: 5, t: 'buff', fa: 1, cm: 0.3, bt: 3, d: '+30% крит · 3 хода · без хода', sid: 31884 }),
           ],
         },
       ],

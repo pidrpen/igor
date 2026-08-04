@@ -4054,7 +4054,13 @@
   /** Crit chance 0–1 from points (base 12%). */
   function critChance(u) {
     const s = getUnitSec(u);
-    return clamp(0.12 + (s.crit || 0) * 0.008, 0.05, 0.55);
+    let base = 0.12 + (s.crit || 0) * 0.008;
+    if (u && u.buffs) {
+      for (const b of u.buffs) {
+        if (b && b.critMod) base += Number(b.critMod) || 0;
+      }
+    }
+    return clamp(base, 0.05, 0.75);
   }
   /** Crit damage multiplier (base 1.5). */
   function critMult(u) {
@@ -4649,6 +4655,8 @@
   function abilityMetaLine(ab) {
     if (!ab) return '';
     const bits = [];
+    if (ab.flat != null && Number(ab.flat) > 0) bits.push(ab.flat + 'т');
+    if (ab.maxCharges) bits.push((ab.charges != null ? ab.charges : ab.maxCharges) + '/' + ab.maxCharges + ' зар.');
     if (ab.freeAction) bits.push('Не тратит ход');
     if (ab.lifesteal != null && Number(ab.lifesteal) > 0) {
       bits.push('Вампиризм ' + Math.round(Number(ab.lifesteal) * 100) + '%');
@@ -5100,7 +5108,10 @@
   }
 
   function canPay(u, ab, target) {
-    if (ab.curCd > 0.05) return false;
+    if (ab.maxCharges) {
+      if (ab.charges == null) ab.charges = ab.maxCharges;
+      if (ab.charges <= 0) return false;
+    } else if (ab.curCd > 0.05) return false;
     const free = hasFreeCast(u);
     if (ab.costRunes) {
       if (!u.res.runes) return false;
@@ -5733,6 +5744,9 @@
     hero._baseSecMastery = hero.sec.mastery;
     hero._baseSecVers = hero.sec.vers;
     applyGearToHero(hero);
+    for (const a of hero.abilities || []) {
+      if (a.maxCharges && a.charges == null) a.charges = a.maxCharges;
+    }
     return hero;
   }
 
@@ -6658,7 +6672,12 @@
       scheduleProcessTurn(Math.max(80, Math.round(200 / gameSpeed)));
       return;
     }
-    actor.abilities.forEach(a => { if (a.curCd > 0) a.curCd--; });
+    actor.abilities.forEach(a => {
+      if (a.curCd > 0) {
+        a.curCd--;
+        if (a.curCd <= 0 && a.maxCharges) a.charges = a.maxCharges;
+      }
+    });
     regenResources(actor);
     const resP = actor.res && actor.res.primary;
     document.getElementById('phase-sub').textContent =
@@ -7112,7 +7131,13 @@
       }
     }
     payAbility(actor, ability);
-    if (ability.cd) ability.curCd = ability.cd;
+    if (ability.maxCharges) {
+      if (ability.charges == null) ability.charges = ability.maxCharges;
+      ability.charges = Math.max(0, ability.charges - 1);
+      if (ability.charges <= 0 && ability.cd) ability.curCd = ability.cd;
+    } else if (ability.cd) {
+      ability.curCd = ability.cd;
+    }
 
     const te = talentEffects();
     if (!actor.buffs) actor.buffs = [];
@@ -7205,6 +7230,7 @@
             'system'
           );
         }
+        if (ability.armorMod && actor.alive) applyArmorStack(actor, ability);
         // DoT поверх урона (Героический удар → кровотечение)
         if (ability.applyDot && target.alive) {
           const ad = ability.applyDot;
@@ -7245,19 +7271,45 @@
         playSkillAnim(actor, ability, fxTargets);
         const aoeCtx = {
           type: 'aoe', isAoe: true, abilityId: ability.id,
-          school: abilityDamageSchool(actor, ability),
+          school: ability.school || abilityDamageSchool(actor, ability),
         };
         const hits = Math.max(1, Number(ability.hits) || 1);
-        for (const t of foes.slice()) {
-          if (!t.alive) continue;
+        const hasFlatZero = ability.flat === 0 || ability.flat === '0';
+        let totalAll = 0;
+        foes.slice().forEach((enemy, idx) => {
+          if (!enemy.alive) return;
+          let fall = 1;
+          if (ability.aoeBounce != null && idx > 0) fall = Math.max(0.15, 1 - Number(ability.aoeBounce) * idx);
           let total = 0;
-          for (let hi = 0; hi < hits; hi++) {
-            if (!t.alive) break;
-            let dmg = abilityDamageRaw(actor, ability, mult);
-            total += dealDmg(t, dmg, actor, aoeCtx);
+          if (!hasFlatZero) {
+            for (let hi = 0; hi < hits; hi++) {
+              if (!enemy.alive) break;
+              total += dealDmg(enemy, abilityDamageRaw(actor, ability, mult * fall), actor, aoeCtx);
+            }
+            if (total > 0) log(`${actor.name}: ${ability.name} → ${enemy.name} (−${fmt(total)})`, cls);
           }
-          const hitNote = hits > 1 ? ` ×${hits}` : '';
-          log(`${actor.name}: ${ability.name} → ${t.name} (−${fmt(total)}${hitNote})`, cls);
+          totalAll += total;
+          if (ability.applyDot && enemy.alive) {
+            const ad = ability.applyDot;
+            const tick = Math.max(1, Math.round(Number(ad.flat || 0) * STAT_SCALE));
+            applyStatus(enemy, {
+              id: 'dot_' + (ad.id || ability.id), name: ad.name || ability.name,
+              icon: ad.icon || ability.icon || '☀️', turns: Number(ad.turns) || 4,
+              dot: tick, fromUid: actor.uid, periodic: true,
+              school: ad.school || ability.school || 'physical',
+            });
+          }
+        });
+        if (ability.shieldFromDmg && totalAll > 0) {
+          const sh = Math.round(totalAll * Number(ability.shieldFromDmg));
+          actor.shield = (actor.shield || 0) + sh;
+          log(`${actor.name}: щит ${fmt(sh)} от ${ability.name}`, cls);
+        }
+        if (ability.dmgReduce && ability.id === 'heroic_leap') {
+          applyStatus(actor, {
+            id: 'dr_heroic_leap', name: ability.name, icon: ability.icon || '🦘',
+            turns: Number(ability.buffTurns) || 2, dmgReduce: Number(ability.dmgReduce) || 0,
+          });
         }
         break;
       }
@@ -7378,6 +7430,18 @@
         break;
       }
       case 'heal': {
+        if (ability.holyShock && target && target.side !== actor.side && target.alive) {
+          playSkillAnim(actor, ability, [target]);
+          let dealt = Math.round(12 * STAT_SCALE);
+          if (Math.random() < critChance(actor) + (Number(ability.critBonus) || 0)) dealt = Math.round(dealt * critMult(actor));
+          dealt = dealDmg(target, dealt, actor, { type: 'damage', abilityId: ability.id, school: 'holy', skipBlock: true });
+          applyStatus(target, {
+            id: 'dot_holy_shock', name: 'Шок небес', icon: ability.icon || '✨',
+            turns: 5, dot: Math.round(2 * STAT_SCALE), fromUid: actor.uid, periodic: true, school: 'holy',
+          });
+          log(`${actor.name}: ${ability.name} → ${target.name} (−${fmt(dealt)} + DoT)`, cls);
+          break;
+        }
         if (abilityTargetRule(ability) === 'self_only') target = actor;
         else target = target || lowest(friends.filter(f => !f.isPet)) || lowest(friends) || actor;
         if (!target || target.side !== actor.side) target = actor;
@@ -7385,7 +7449,15 @@
         fxTargets = [target];
         playSkillAnim(actor, ability, fxTargets);
         const healMult = (actor.side === 'ally' && te.healMult) ? te.healMult : 1;
-        let amount = Math.round(target.maxHp * power * healMult * (1 + lootHeal));
+        let amount;
+        if (ability.flat != null && Number.isFinite(Number(ability.flat))) {
+          amount = Math.round(Number(ability.flat) * STAT_SCALE * healMult * (1 + lootHeal));
+        } else {
+          amount = Math.round(target.maxHp * power * healMult * (1 + lootHeal));
+        }
+        if (ability.critBonus && Math.random() < critChance(actor) + Number(ability.critBonus)) {
+          amount = Math.round(amount * critMult(actor));
+        }
         if (!Number.isFinite(amount) || amount < 1) amount = Math.max(1, Math.round(STAT_SCALE));
         const hotCfg = hotConfig(ability.id);
         if (hotCfg) {
@@ -7403,6 +7475,15 @@
         } else {
           const h = healUnit(target, amount, actor);
           log(`${actor.name}: ${ability.name} → ${target.name} (+${fmt(h)})`, 'heal');
+          if (ability.applyHot) {
+            const ad = ability.applyHot;
+            const tick = Math.max(1, Math.round(Number(ad.flat || 0) * STAT_SCALE));
+            const turns = Number(ad.turns) || 5;
+            applyStatus(target, {
+              id: 'hot_' + ability.id, name: ad.name || ability.name, icon: ability.icon || '✨',
+              turns, hot: tick, fromUid: actor.uid, periodic: true,
+            });
+          }
         }
         break;
       }
@@ -7410,8 +7491,12 @@
         const targets = friends.filter(f => !f.isPet);
         fxTargets = targets.length ? targets : friends.slice();
         playSkillAnim(actor, ability, fxTargets);
+        const hm = ((actor.side === 'ally' && te.healMult) || 1) * (1 + lootHeal);
         for (const t of fxTargets) {
-          const h = healUnit(t, Math.round(t.maxHp * power * ((actor.side === 'ally' && te.healMult) || 1) * (1 + lootHeal)), actor);
+          let amt = (ability.flat != null && Number.isFinite(Number(ability.flat)))
+            ? Math.round(Number(ability.flat) * STAT_SCALE * hm)
+            : Math.round(t.maxHp * power * hm);
+          const h = healUnit(t, amt, actor);
           log(`${actor.name}: ${ability.name} → ${t.name} (+${fmt(h)})`, 'heal');
         }
         break;
@@ -7437,7 +7522,9 @@
           log(`${actor.name}: ${ability.name} +DEF и 🛡${fmt(amount)} (на себя)`, 'heal');
           break;
         }
-        let amount = Math.round(target.maxHp * power);
+        let amount = (ability.flat != null && Number.isFinite(Number(ability.flat)))
+          ? Math.round(Number(ability.flat) * STAT_SCALE)
+          : Math.round(target.maxHp * power);
         if (actor.side === 'ally') {
           amount = Math.round(amount * masteryShieldMult(actor) * versHealMult(actor));
         }
@@ -7461,8 +7548,58 @@
       }
       case 'buff': {
         playSkillAnim(actor, ability, [actor]);
+        const bTurns = Number(ability.buffTurns) || 3;
+        if (ability.blockChanceAdd || ability.blockValueAdd) {
+          applyStatus(actor, {
+            id: 'shield_block_buff', name: ability.name, icon: ability.icon || '🧱', turns: bTurns,
+            blockChanceAdd: Number(ability.blockChanceAdd) || 0,
+            blockValueAdd: Number(ability.blockValueAdd) || 0,
+          });
+          log(`${actor.name}: ${ability.name} · блок ↑ · ${bTurns}х`, cls);
+        }
+        if (ability.dmgReduce && (ability.id === 'shield_wall' || ability.id === 'ardent')) {
+          applyStatus(actor, {
+            id: 'dr_' + ability.id, name: ability.name, icon: ability.icon || '🏰', turns: bTurns,
+            dmgReduce: Number(ability.dmgReduce) || 0,
+          });
+          log(`${actor.name}: ${ability.name} −${Math.round((Number(ability.dmgReduce)||0)*100)}% · ${bTurns}х`, cls);
+        }
+        if (ability.armorMod && !ability.armorStacksMax) {
+          applyStatus(actor, {
+            id: 'armor_' + ability.id, name: ability.name, icon: ability.icon || '🛡️', turns: bTurns,
+            armorMod: Number(ability.armorMod) || 0,
+          });
+          log(`${actor.name}: ${ability.name} +${Math.round((Number(ability.armorMod)||0)*100)}% брони`, cls);
+        }
+        if (ability.critMod) {
+          applyStatus(actor, {
+            id: 'crit_' + ability.id, name: ability.name, icon: ability.icon || '😇', turns: bTurns,
+            critMod: Number(ability.critMod) || 0,
+          });
+          log(`${actor.name}: ${ability.name} +${Math.round((Number(ability.critMod)||0)*100)}% крит`, cls);
+        }
+        if (ability.atkMod) {
+          applyStatus(actor, {
+            id: 'atk_' + ability.id, name: ability.name, icon: ability.icon || '📜', turns: bTurns,
+            atkMod: Number(ability.atkMod) || 0,
+          });
+          log(`${actor.name}: ${ability.name} +${Math.round((Number(ability.atkMod)||0)*100)}% ATK`, cls);
+        }
+        if (ability.maxHpPct) {
+          const bonus = Math.round(actor.maxHp * Number(ability.maxHpPct));
+          actor.maxHp += bonus;
+          actor.hp = clamp(actor.hp + bonus, 1, actor.maxHp);
+          applyStatus(actor, { id: ability.id + '_hp', name: ability.name, icon: ability.icon || '❤️', turns: bTurns, tempHp: bonus });
+          log(`${actor.name}: ${ability.name} (+${fmt(bonus)} HP)`, cls);
+        }
+        if (ability.grantBlock) {
+          applyStatus(actor, {
+            id: 'shield_block_buff', name: 'Блок щитом', icon: '🧱', turns: bTurns,
+            blockChanceAdd: 0.5, blockValueAdd: 0.2,
+          });
+        }
         // Special buffs that aren't just "+ATK"
-        if (ability.id === 'last_stand' || ability.id === 'vampiric_blood') {
+        if ((ability.id === 'last_stand' || ability.id === 'vampiric_blood') && !ability.maxHpPct) {
           const bonus = Math.round(actor.maxHp * power);
           actor.maxHp += bonus;
           actor.hp = clamp(actor.hp + bonus, 1, actor.maxHp);
@@ -7555,13 +7692,28 @@
         break;
       }
       case 'debuff': {
+        const turns = Number(ability.buffTurns) || 3;
+        if (ability.enemyDmgMod != null || ability.id === 'demo_shout') {
+          const mod = Number(ability.enemyDmgMod != null ? ability.enemyDmgMod : power) || 0.15;
+          fxTargets = foes.slice();
+          playSkillAnim(actor, ability, fxTargets);
+          for (const e of foes) {
+            if (!e.alive) continue;
+            applyStatus(e, {
+              id: 'deb_' + ability.id, name: ability.name, icon: ability.icon || '😨',
+              turns, atkMod: -Math.abs(mod),
+            });
+          }
+          log(`${actor.name}: ${ability.name} — враги −${Math.round(Math.abs(mod)*100)}% · ${turns}х`, cls);
+          break;
+        }
         target = target || pick(foes);
         if (!target) return;
         fxTargets = [target];
         playSkillAnim(actor, ability, fxTargets);
         applyStatus(target, {
           id: 'deb_' + ability.id, name: ability.name, icon: ability.icon || '⬇️',
-          turns: 3, atkMod: -Math.abs(power), defMod: -0.1,
+          turns, atkMod: -Math.abs(power), defMod: -0.1,
         });
         log(`${actor.name}: ${ability.name} → ${target.name} (−${Math.round(Math.abs(power) * 100)}% ATK)`, cls);
         break;
@@ -7651,6 +7803,51 @@
     }
   }
 
+
+  function applyArmorStack(unit, ability) {
+    if (!unit || !ability || !ability.armorMod) return;
+    const turns = Number(ability.buffTurns) || 3;
+    const maxS = Number(ability.armorStacksMax) || 99;
+    const stackId = 'armor_' + (ability.id || 'x');
+    if (!unit.buffs) unit.buffs = [];
+    const existing = unit.buffs.filter(b => b && b.id === stackId);
+    if (existing.length >= maxS) {
+      for (const b of existing) b.turns = turns;
+      log(unit.name + ': броня обновлена (' + existing.length + '×)', 'system');
+      return;
+    }
+    applyStatus(unit, {
+      id: stackId,
+      name: 'Броня' + (ability.name ? ' · ' + ability.name : ''),
+      icon: '🛡️',
+      turns,
+      armorMod: Number(ability.armorMod) || 0,
+    });
+    log(unit.name + ': +' + Math.round((Number(ability.armorMod) || 0) * 100) + '% брони · ' + turns + 'х', 'system');
+  }
+
+  function triggerProtRevenge(tank) {
+    if (!tank || !tank.alive || !combat) return;
+    if (combat._revengeLock) return;
+    combat._revengeLock = true;
+    try {
+      const ab = (tank.abilities || []).find(a => a.id === 'revenge');
+      if (!ab) return;
+      const foes = living(tank.side === 'ally' ? 'enemy' : 'ally');
+      if (!foes.length) return;
+      const raw = abilityDamageRaw(tank, ab);
+      const ctx = { type: 'aoe', isAoe: true, abilityId: 'revenge', school: 'physical', skipBlock: true, freeRevenge: true };
+      try { playSkillAnim(tank, ab, foes.slice()); } catch (_) {}
+      for (const e of foes.slice()) {
+        if (!e.alive) continue;
+        const dealt = dealDmg(e, raw, tank, ctx);
+        if (dealt) log(tank.name + ': Реванш (блок) → ' + e.name + ' (−' + fmt(dealt) + ')', 'player');
+      }
+    } finally {
+      combat._revengeLock = false;
+    }
+  }
+
   function dealDmg(target, raw, attacker, ctx) {
     if (!target?.alive) return 0;
     // Школа удара: physical vs magic (fire/frost/shadow/…)
@@ -7664,6 +7861,47 @@
     // Броня: физ. режется сильно, магия — слабо (тип урона влияет на геймплей)
     const armorFactor = isPhysicalSchool(school) ? 0.5 : 0.12;
     let dmg = Math.max(1, raw - Math.floor(getEff(target).def * armorFactor));
+    if (isPhysicalSchool(school) && target.buffs && target.buffs.length) {
+      let armorPct = 0;
+      for (const b of target.buffs) {
+        if (b && b.armorMod) armorPct += Number(b.armorMod) || 0;
+      }
+      if (armorPct > 0) dmg = Math.max(1, Math.round(dmg * (1 - Math.min(0.85, armorPct))));
+    }
+    if (target.buffs && target.buffs.length) {
+      let dr = 0;
+      for (const b of target.buffs) {
+        if (b && b.dmgReduce) dr += Number(b.dmgReduce) || 0;
+      }
+      if (dr > 0) dmg = Math.max(1, Math.round(dmg * (1 - Math.min(0.9, dr))));
+    }
+    if (
+      attacker && attacker.side === 'enemy' && target.side === 'ally'
+      && !target.isPet && target.classId === 'warrior' && target.specId === 'protection'
+      && isPhysicalSchool(school) && !(ctx && ctx.skipBlock)
+    ) {
+      let blockChance = 0.20;
+      let blockValue = 0.20;
+      let parryChance = 0.05;
+      for (const b of (target.buffs || [])) {
+        if (!b) continue;
+        if (b.blockChanceAdd) blockChance += Number(b.blockChanceAdd) || 0;
+        if (b.blockValueAdd) blockValue += Number(b.blockValueAdd) || 0;
+      }
+      try { blockValue += masteryPct(target) * 0.35; } catch (_) {}
+      blockChance = Math.min(0.75, blockChance);
+      blockValue = Math.min(0.65, blockValue);
+      const roll = Math.random();
+      if (roll < parryChance) {
+        log((target.name || 'Танк') + ': Парирование!', 'player');
+        return 0;
+      }
+      if (roll < parryChance + blockChance) {
+        dmg = Math.max(1, Math.round(dmg * (1 - blockValue)));
+        log((target.name || 'Танк') + ': Блок (−' + Math.round(blockValue * 100) + '%)', 'player');
+        try { triggerProtRevenge(target); } catch (e) { console.error(e); }
+      }
+    }
     // Уязвимость (Удар колосса): +% входящего; physOnly → только физ. школы
     if (target.buffs && target.buffs.length) {
       let vuln = 0;
@@ -7696,7 +7934,11 @@
     }
     let crit = false;
     // Pets inherit owner sec → critChance/critMult work; enemies keep flat values
-    const cChance = attacker && attacker.side === 'ally' ? critChance(attacker) : 0.12;
+    let cChance = attacker && attacker.side === 'ally' ? critChance(attacker) : 0.12;
+    if (attacker && ctx && ctx.abilityId) {
+      const abC = (attacker.abilities || []).find(a => a.id === ctx.abilityId);
+      if (abC && abC.critBonus) cChance = Math.min(0.9, cChance + Number(abC.critBonus));
+    }
     const cMul = attacker && attacker.side === 'ally' ? critMult(attacker) : 1.5;
     if (Math.random() < cChance) { dmg = Math.round(dmg * cMul); crit = true; }
     if (target.shield > 0) {
