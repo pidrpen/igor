@@ -45,8 +45,7 @@ function A(o) {
       'flat','freeAction','maxCharges','applyDot','applyHot','dmgReduce','blockChanceAdd','blockValueAdd',
       'armorMod','armorStacksMax','critBonus','critMod','atkMod','lifesteal','vuln','hits','cleaveFlat',
       'school','maxHpPct','buffTurns','aoeBounce','shieldFromDmg','enemyDmgMod','grantBlock','holyShock',
-      'purifyPct','healAmp','nextHealCharges','abilityCharges','staggerBonus','chainDecay','summonOnCast',
-    ];
+      'purifyPct','healAmp','nextHealCharges','abilityCharges','staggerBonus','chainDecay','summonOnCast', 'petAtkMod', 'chainPrimary'];
     for (const k of keys) if (o[k] !== undefined) ab[k] = o[k];
     if (o.fl != null) ab.flat = o.fl;
     if (o.fa) ab.freeAction = true;
@@ -375,7 +374,7 @@ function A(o) {
           }),
           A({
             id: 'ch', n: 'Цепное исцеление', en: 'Chain Heal', i: '🔗',
-            c: 13, t: 'heal_aoe', fl: 40, chainDecay: 0.1, d: '', sid: 1064,
+            c: 13, t: 'heal_aoe', fl: 40, chainDecay: 0.05, chainPrimary: true, d: 'Сначала выбранная цель, дальше по %HP (−5%/скачок)', sid: 1064,
           }),
           A({
             id: 'hw', n: 'Волна исцеления', en: 'Healing Wave', i: '🌊',
@@ -395,7 +394,7 @@ function A(o) {
             c: 5, cd: 2, t: 'summon', p: 1, d: '', sid: 5394,
           }),
           A({
-            id: 'unleash', n: 'Высвободить жизнь', en: 'Unleash Life', i: '✨',
+            id: 'unleash', n: 'Высвободить жизнь (+20% след. хилы)', en: 'Unleash Life', i: '✨',
             c: 6, cd: 2, t: 'heal', fl: 15, fa: 1, healAmp: 0.2, nextHealCharges: 2, d: '', sid: 73685,
           }),
           A({
@@ -404,7 +403,7 @@ function A(o) {
             applyDot: { flat: 4, turns: 6, name: 'Огненный шок', school: 'fire' }, d: '', sid: 8050,
           }),
           A({
-            id: 'spirit_link', n: 'Тотем духовной связи', en: 'Spirit Link Totem', i: '🔗',
+            id: 'spirit_link', n: 'Тотем духовной связи (выравн. % HP)', en: 'Spirit Link Totem', i: '🔗',
             c: 0, cd: 5, t: 'heal_aoe', fl: 15, dr: 0.1, bt: 3, d: '', sid: 98008,
           }),
 ],

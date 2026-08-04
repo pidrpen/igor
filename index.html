@@ -1007,6 +1007,7 @@
     .ability:hover:not(:disabled) {
       border-color: var(--gold); box-shadow: 0 0 14px rgba(224,192,96,.35);
     }
+    .ability.elusive-charged .a-cost { color: #f0c14b !important; font-weight: 700; text-shadow: 0 0 8px rgba(240,193,75,.4); }
     .ability:disabled { opacity: .5; filter: grayscale(.35); }
     .ability .hk {
       position: absolute; top: 2px; right: 4px; font-size: .65rem; font-weight: 700;
@@ -3093,7 +3094,8 @@
     if (ab.holyShock) return 'ally_or_enemy';
     if (ab.type === 'dispel') return 'ally_any';
     if (ab.type === 'purge' || ab.type === 'cc') return 'enemy';
-    if (ab.type === 'heal' || ab.type === 'heal_aoe') return ab.type === 'heal_aoe' ? 'party' : 'ally_any';
+    if (ab.type === 'heal') return 'ally_any';
+    if (ab.type === 'heal_aoe') return ab.chainPrimary ? 'ally_any' : 'party';
     if (ab.type === 'shield' || ab.type === 'cleanse') return 'self_only'; // safe default
     if (ab.type === 'buff' || ab.type === 'taunt') return 'self_only';
     if (DOT_ABILITY_IDS.has(ab.id) || ab.type === 'dot') return 'enemy';
@@ -4665,6 +4667,13 @@
     if (ab.holyShock) bits.push('союзник/враг');
     if (ab.critMod) bits.push('+' + Math.round(Number(ab.critMod) * 100) + '% крит');
     if (ab.atkMod) bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% ATK');
+    if (ab.petAtkMod) bits.push('+' + Math.round(Number(ab.petAtkMod) * 100) + '% урон петов');
+    if (ab.staggerBonus) bits.push('+' + Math.round(Number(ab.staggerBonus) * 100) + '% stagger');
+    if (ab.healAmp) bits.push('+' + Math.round(Number(ab.healAmp) * 100) + '% след. хилы ×' + (ab.nextHealCharges || 1));
+    if (ab.chainDecay != null) bits.push('цепь −' + Math.round(Number(ab.chainDecay) * 100) + '%/скачок');
+    if (ab.chainPrimary) bits.push('сначала выбранная цель');
+    if (ab.applyDot && ab.applyDot.flat != null) bits.push('DoT ' + ab.applyDot.flat + 'т×' + (ab.applyDot.turns || 4));
+    if (ab.purifyPct != null && ab.purifyPct < 1) bits.push('−' + Math.round(Number(ab.purifyPct) * 100) + '% шат');
     if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% урон');
     if (ab.armorMod) bits.push('+' + Math.round(Number(ab.armorMod) * 100) + '% броня');
     if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% HP');
@@ -4745,19 +4754,35 @@
       return `~${fmt(hit)} + ${fmt(tick)}/р · ${PERIODIC_ROUNDS}р DoT`;
     }
     if (ab.type === 'buff') {
-      const pct = Math.round((ab.power || 0) * 100);
-      if (ab.id === 'last_stand' || ab.id === 'vampiric_blood') return `+${pct}% HP, 3 хода`;
-      if (ab.id === 'metamorphosis') return `+${pct}% ATK, 4 хода · форма`;
+      const bits = [];
+      if (ab.critMod) bits.push('+' + Math.round(Number(ab.critMod) * 100) + '% крит');
+      if (ab.atkMod) bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% ATK');
+      if (ab.petAtkMod) bits.push('+' + Math.round(Number(ab.petAtkMod) * 100) + '% урон петов');
+      if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% урон');
+      if (ab.staggerBonus) bits.push('+' + Math.round(Number(ab.staggerBonus) * 100) + '% stagger');
+      if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% HP');
+      if (ab.id === 'dark_soul') return 'питомцы +3 хода';
+      if (ab.id === 'metamorphosis') return (bits.length ? bits.join(', ') : '+30% урон себе и бесам') + ' · 2х';
+      if (ab.id === 'last_stand' || ab.id === 'vampiric_blood') return `+${Math.round((ab.maxHpPct || ab.power || 0) * 100)}% HP`;
       if (ab.id === 'evocation') return '+мана';
       if (ab.id === 'prem') return '+2 к серии';
-      if (ab.abilityCharges) return `+${pct}% ATK`;
-      return `+${pct}% ATK, 3 хода`;
+      if (bits.length) return bits.join(', ');
+      if (ab.power && ab.power !== 1) return `+${Math.round(ab.power * 100)}%`;
+      return ab.desc || 'бафф';
     }
     if (ab.type === 'debuff') {
       const pct = Math.round(Math.abs(ab.power || 0) * 100);
       return `−${pct}% ATK / −10% DEF, 3 хода`;
     }
-    if (ab.type === 'shield') return `щит ~${fmt(Math.round(actor.maxHp * ab.power))}`;
+    if (ab.type === 'shield') {
+      if (ab.id === 'elusive') {
+        const stacks = Math.min(2, actor.purifyStacks || 0);
+        const amt = 30 + stacks * 70;
+        return stacks > 0 ? `щит ${amt}т (${stacks} ст.)` : `щит 30т`;
+      }
+      if (ab.flat != null) return `щит ${fmt(Math.round(Number(ab.flat) * STAT_SCALE))}`;
+      return `щит ~${fmt(Math.round(actor.maxHp * (ab.power || 0.3)))}`;
+    }
     if (ab.type === 'interrupt' || INTERRUPT_IDS.has(ab.id)) return 'сбивает каст';
     if (ab.type === 'summon' || PET_SUMMONS[ab.id]) return 'призыв питомца';
     return ab.desc || typeLabel(ab.type);
@@ -5135,6 +5160,7 @@
       if (ab.charges == null) ab.charges = ab.maxCharges;
       if (ab.charges <= 0) return false;
     } else if (ab.curCd > 0.05) return false;
+    if (typeof PET_SUMMONS !== 'undefined' && PET_SUMMONS[ab.id] && u && typeof canSummonAbility === 'function' && !canSummonAbility(u, ab.id)) return false;
     const free = hasFreeCast(u);
     if (ab.costRunes) {
       if (!u.res.runes) return false;
@@ -6432,9 +6458,13 @@
     const sc = 1 + (k - 2) * 0.015;
     const ownAtk = owner?.atk || (16 * STAT_SCALE);
     const share = petAtkShare(defKey, owner);
-    // Template identity (~35%) + owner-scaled ATK (main share)
     const baseAtk = def.atk * sc * STAT_SCALE * 0.22;
-    const atk = Math.max(1, Math.round(ownAtk * share + baseAtk));
+    let atk = Math.max(1, Math.round(ownAtk * share + baseAtk));
+    if (owner?.buffs) {
+      let petBoost = 0;
+      for (const b of owner.buffs) if (b && b.petAtkMod) petBoost += Number(b.petAtkMod) || 0;
+      if (petBoost > 0) atk = Math.round(atk * (1 + petBoost));
+    }
     const maxHp = Math.round(def.hp * sc * STAT_SCALE * PET_HP_MULT);
     // Temporary summons hit harder (short window)
     const tempBoost = turnsLeft != null ? 1.18 : 1;
@@ -6522,16 +6552,22 @@
     return (combat?.pets || []).filter(p => p.side === 'ally' && p.alive && p.hp > 0);
   }
 
+  function ownerHasPetType(owner, defKey) {
+    if (!combat?.pets || !owner) return false;
+    return combat.pets.some(p => p.alive && p.hp > 0 && p.ownerUid === owner.uid && p.petKey === defKey);
+  }
+  function canSummonAbility(owner, abilityId) {
+    const list = PET_SUMMONS[abilityId];
+    if (!list || !owner) return true;
+    for (const s of list) if (ownerHasPetType(owner, s.def)) return false;
+    return true;
+  }
   function addPet(owner, defKey, turnsLeft) {
     if (!combat) return null;
     if (!combat.pets) combat.pets = [];
-    // Cap pets to avoid clutter
+    if (owner && ownerHasPetType(owner, defKey)) return null;
     const alive = combat.pets.filter(p => p.alive).length;
-    if (alive >= 6) {
-      const temp = combat.pets.find(p => p.alive && p.petTurnsLeft != null);
-      if (temp) { temp.alive = false; temp.hp = 0; }
-      else return null;
-    }
+    if (alive >= 12) return null;
     const pet = createPetUnit(owner, defKey, turnsLeft);
     combat.pets.push(pet);
     log(`${owner?.name || 'Призыв'}: ${pet.icon} ${pet.name}${turnsLeft ? ` (${turnsLeft} р.)` : ''}`, 'system');
@@ -6934,7 +6970,7 @@
     actor.abilities.forEach((ab, idx) => {
       const btn = document.createElement('button');
       const can = canPay(actor, ab);
-      btn.className = 'ability';
+      btn.className = 'ability' + ((ab.id === 'elusive' && (actor.purifyStacks || 0) > 0) ? ' elusive-charged' : '');
       btn.disabled = !can;
       const needTarget = abilityNeedsClickTarget(ab);
       const rule = abilityTargetRule(ab);
@@ -7596,8 +7632,13 @@
         playSkillAnim(actor, ability, fxTargets);
         const hm = ((actor.side === 'ally' && te.healMult) || 1) * (1 + lootHeal);
         let chainTargets = fxTargets.slice();
-        if (ability.chainDecay != null) {
-          chainTargets = chainTargets.filter(u => u.alive && u.hp < u.maxHp).sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+        if (ability.chainDecay != null || ability.chainPrimary) {
+          const primary = (ability.chainPrimary && target && target.alive && target.side === actor.side && !target.isPet)
+            ? target : null;
+          let rest = chainTargets.filter(u => u.alive && (!primary || u.uid !== primary.uid));
+          const injured = rest.filter(u => u.hp < u.maxHp).sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+          const full = rest.filter(u => !injured.includes(u));
+          chainTargets = (primary ? [primary] : []).concat(injured, full);
           if (!chainTargets.length) chainTargets = fxTargets.slice();
         }
         let chainMult = 1;
@@ -7648,23 +7689,13 @@
         }
         fxTargets = [target];
         playSkillAnim(actor, ability, fxTargets);
-        // Elusive Brew: only self DEF + small absorb
-        if (ability.id === 'elusive') {
-          target = actor;
-          applyStatus(actor, {
-            id: 'elusive', name: ability.name, icon: ability.icon || '💨',
-            turns: 3, defMod: Math.max(0.2, power), atkMod: 0,
-          });
-          let amount = Math.round(actor.maxHp * power * 0.5);
-          actor.shield += amount;
-          log(`${actor.name}: ${ability.name} +DEF и 🛡${fmt(amount)} (на себя)`, 'heal');
-          break;
-        }
         let useShieldFlat = ability.flat != null && Number.isFinite(Number(ability.flat));
         let amount;
+        let elusiveStacksUsed = 0;
         if (ability.id === 'elusive') {
-          const stacks = Math.min(2, actor.purifyStacks || 0);
-          amount = Math.round((30 + stacks * 70) * STAT_SCALE);
+          target = actor;
+          elusiveStacksUsed = Math.min(2, actor.purifyStacks || 0);
+          amount = Math.round((30 + elusiveStacksUsed * 70) * STAT_SCALE);
           actor.purifyStacks = 0;
           useShieldFlat = true;
         } else if (useShieldFlat) {
@@ -7676,7 +7707,12 @@
           amount = Math.round(amount * masteryShieldMult(actor) * versHealMult(actor));
         }
         target.shield += amount;
-        log(`${actor.name}: ${ability.name} 🛡${fmt(amount)} → ${target.name}`, 'heal');
+        if (ability.id === 'elusive') {
+          log(`${actor.name}: ${ability.name} 🛡${fmt(amount)}` +
+            (elusiveStacksUsed ? ` (+${elusiveStacksUsed}×70т)` : ' (база 30т)'), 'heal');
+        } else {
+          log(`${actor.name}: ${ability.name} 🛡${fmt(amount)} → ${target.name}`, 'heal');
+        }
         break;
       }
       case 'taunt': {
@@ -7737,8 +7773,15 @@
           applyStatus(actor, {
             id: 'atk_' + ability.id, name: ability.name, icon: ability.icon || '📜', turns: bTurns,
             atkMod: Number(ability.atkMod) || 0,
+            petAtkMod: Number(ability.petAtkMod) || 0,
           });
-          log(`${actor.name}: ${ability.name} +${Math.round((Number(ability.atkMod)||0)*100)}% ATK`, cls);
+          log(`${actor.name}: ${ability.name} +${Math.round((Number(ability.atkMod)||0)*100)}% ATK` +
+            (ability.petAtkMod ? ` / петам +${Math.round(Number(ability.petAtkMod)*100)}%` : ''), cls);
+          if (ability.petAtkMod && combat?.pets) {
+            for (const p of combat.pets.filter(x => x.alive && x.ownerUid === actor.uid)) {
+              p.atk = Math.round(p.atk * (1 + Number(ability.petAtkMod)));
+            }
+          }
         }
         if (ability.maxHpPct) {
           const bonus = Math.round(actor.maxHp * Number(ability.maxHpPct));
@@ -7779,10 +7822,6 @@
           log(`${actor.name}: ${ability.name} (+2 к серии)`, cls);
           toast('+2 к серии');
         } else if (ability.id === 'elusive') {
-          applyStatus(actor, {
-            id: 'elusive', name: ability.name, icon: ability.icon || '💨',
-            turns: 3, defMod: Math.max(0.15, power), atkMod: 0,
-          });
           log(`${actor.name}: ${ability.name} (+${Math.round(Math.max(0.15, power) * 100)}% DEF)`, cls);
           toast(ability.name + ': +DEF');
         } else if (ability.id === 'metamorphosis') {

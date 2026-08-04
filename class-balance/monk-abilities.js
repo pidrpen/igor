@@ -37,8 +37,7 @@ function A(o) {
       'flat','freeAction','maxCharges','applyDot','applyHot','dmgReduce','blockChanceAdd','blockValueAdd',
       'armorMod','armorStacksMax','critBonus','critMod','atkMod','lifesteal','vuln','hits','cleaveFlat',
       'school','maxHpPct','buffTurns','aoeBounce','shieldFromDmg','enemyDmgMod','grantBlock','holyShock',
-      'purifyPct','healAmp','nextHealCharges','abilityCharges','staggerBonus','chainDecay','summonOnCast',
-    ];
+      'purifyPct','healAmp','nextHealCharges','abilityCharges','staggerBonus','chainDecay','summonOnCast', 'petAtkMod', 'chainPrimary'];
     for (const k of keys) if (o[k] !== undefined) ab[k] = o[k];
     if (o.fl != null) ab.flat = o.fl;
     if (o.fa) ab.freeAction = true;
@@ -193,7 +192,7 @@ function A(o) {
             cs: 1, t: 'aoe', fl: 17, school: 'fire',
             enemyDmgMod: 0.1, bt: 5,
             applyDot: { flat: 3, turns: 5, name: 'Дыхание огня', school: 'fire' },
-            d: '', sid: 115181,
+            d: 'DoT 3т/ход · 5х, −10% урон врагов', sid: 115181,
           }),
           A({
             id: 'guard', n: 'Защита', en: 'Guard', i: '🛡️',
