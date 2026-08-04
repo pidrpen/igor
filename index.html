@@ -985,16 +985,23 @@
       width: 100%;
     }
     .ability {
-      width: 100%; min-width: 0; max-width: none; height: auto; min-height: 52px;
+      width: 100%; min-width: 0; max-width: none;
+      /* Фиксированная высота: «Тип» всегда в одном месте снизу у всех скиллов */
+      height: 76px;
+      min-height: 76px;
+      max-height: 76px;
       background: linear-gradient(135deg, #222820 0%, #141810 100%);
       border: 2px solid #5a5030; border-radius: 8px;
-      padding: .38rem .48rem;
+      padding: .32rem .45rem .28rem;
       color: var(--text); text-align: left; position: relative; overflow: hidden;
       display: grid;
       grid-template-columns: 38px minmax(0, 1fr);
+      grid-template-rows: 1fr auto; /* тело + прибитый низ с типом */
       column-gap: .45rem;
-      align-items: center; /* иконка по центру высоты карточки, не вверху */
+      row-gap: .12rem;
+      align-items: stretch;
       transition: border-color .15s, box-shadow .15s;
+      box-sizing: border-box;
     }
     .ability:hover:not(:disabled) {
       border-color: var(--gold); box-shadow: 0 0 14px rgba(224,192,96,.35);
@@ -1007,7 +1014,10 @@
     }
     .ability .a-ico {
       grid-column: 1;
+      grid-row: 1 / 3; /* на всю высоту карточки */
       width: 36px; height: 36px;
+      align-self: center;
+      justify-self: center;
       font-size: 1.2rem; line-height: 1;
       display: flex; align-items: center; justify-content: center;
       border-radius: 8px;
@@ -1015,37 +1025,54 @@
       border: 1px solid #6a6040;
       flex-shrink: 0;
     }
-    /* Текст справа: название → цифры → тип — без пустых рядов grid */
+    /* Верх: название + цифры (растёт, обрезается) */
     .ability .a-body {
       grid-column: 2;
+      grid-row: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: .08rem;
+      gap: .06rem;
       min-width: 0;
+      min-height: 0;
       padding-right: 1.05rem;
+      overflow: hidden;
     }
     .ability .a-name {
-      font-weight: 700; font-size: .78rem; line-height: 1.2;
+      font-weight: 700; font-size: .78rem; line-height: 1.15;
       margin: 0; color: var(--gold-bright);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex-shrink: 0;
     }
     .ability .a-cost {
-      font-size: .66rem; color: #c0b090; line-height: 1.25;
+      font-size: .64rem; color: #c0b090; line-height: 1.2;
       margin: 0;
-      white-space: normal;
-      word-break: break-word;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .ability .a-meta {
-      font-size: .64rem; color: var(--muted); line-height: 1.25;
+      font-size: .6rem; color: var(--muted); line-height: 1.2;
       margin: 0;
-      white-space: normal;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+    /* Низ: тип — всегда одна и та же линия у всех кнопок */
     .ability .a-school {
-      font-size: .6rem; font-weight: 600; line-height: 1.2;
+      grid-column: 2;
+      grid-row: 2;
+      font-size: .58rem; font-weight: 600; line-height: 1.15;
       color: #8eb4d4;
       letter-spacing: 0.01em;
       margin: 0;
+      padding-right: 1.05rem;
+      padding-top: .1rem;
+      border-top: 1px solid rgba(232, 234, 239, .08);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      align-self: end;
     }
     .ability .a-school.sch-phys { color: #c8d0da; }
     .ability .a-school.sch-fire { color: #ff9a6b; }
@@ -6879,7 +6906,7 @@
       if (!ab.school) stampAbilitySchool(ab, actor.classId, actor.specId);
       const schoolNote = abilitySchoolNote(ab, actor);
       const schoolCss = abilitySchoolCss(ab, actor);
-      // Иконка слева по центру; текст в .a-body — единый блок для всех скиллов
+      // Иконка слева; тело сверху; «Тип» — отдельная строка grid-row 2 (всегда снизу)
       btn.innerHTML =
         (keyHint !== '' ? `<span class="hk">${keyHint}</span>` : '') +
         `<span class="a-ico">${ab.icon || '✨'}</span>` +
@@ -6887,8 +6914,8 @@
           `<span class="a-name">${ab.name || ''}</span>` +
           (yellow ? `<span class="a-cost">${yellow}</span>` : '') +
           (prose ? `<span class="a-meta">${prose}</span>` : '') +
-          (schoolNote ? `<span class="a-school ${schoolCss}">${schoolNote}</span>` : '') +
         `</span>` +
+        `<span class="a-school ${schoolCss}">${schoolNote || 'Тип: —'}</span>` +
         cdHtml;
       btn.addEventListener('click', () => {
         sfx('click');
