@@ -4657,7 +4657,7 @@
   function abilityMetaLine(ab) {
     if (!ab) return '';
     const bits = [];
-    if (ab.flat != null && Number(ab.flat) > 0) bits.push(ab.flat + 'т');
+    // Цифры flat/HoT только в estimateAbility — здесь не дублируем
     if (ab.maxCharges) bits.push((ab.charges != null ? ab.charges : ab.maxCharges) + '/' + ab.maxCharges + ' зар.');
     if (ab.freeAction) bits.push('Не тратит ход');
     if (ab.holyShock) bits.push('союзник/враг');
@@ -4668,7 +4668,6 @@
     if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% HP');
     if (ab.blockChanceAdd) bits.push('+' + Math.round(Number(ab.blockChanceAdd) * 100) + '% блок');
     if (ab.enemyDmgMod) bits.push('−' + Math.round(Number(ab.enemyDmgMod) * 100) + '% урон врагов');
-    if (ab.applyHot) bits.push('HoT ' + (ab.applyHot.flat || 0) + 'т×' + (ab.applyHot.turns || 5));
     if (ab.critBonus) bits.push('+' + Math.round(Number(ab.critBonus) * 100) + '% шанс крита');
     if (ab.lifesteal != null && Number(ab.lifesteal) > 0) {
       bits.push('Вампиризм ' + Math.round(Number(ab.lifesteal) * 100) + '%');
@@ -4710,7 +4709,6 @@
           const turns = Number(ab.applyHot.turns) || 5;
           s += ` + ${fmt(tick)}/р · ${turns}р`;
         }
-        if (ab.holyShock) s += ' · или урон по врагу';
         return s;
       }
       const p = Number(ab.power) > 0 ? Number(ab.power) : 1;
@@ -7510,7 +7508,7 @@
           log(`${actor.name}: ${ability.name} → ${target.name} (+${fmt(h)}, HoT ${fmt(tick)}/р · ${turns}р)`, 'heal');
           toast(`${ability.name} на ${target.name} · ${turns}р`);
         } else {
-          const h = healUnit(target, amount, actor);
+          const h = healUnit(target, amount, actor, useFlat ? { exact: true } : null);
           log(`${actor.name}: ${ability.name} → ${target.name} (+${fmt(h)})`, 'heal');
           if (ability.applyHot) {
             const ad = ability.applyHot;
@@ -7531,11 +7529,11 @@
         playSkillAnim(actor, ability, fxTargets);
         const hm = ((actor.side === 'ally' && te.healMult) || 1) * (1 + lootHeal);
         for (const t of fxTargets) {
-          // flat «т» = вместо maxHp×power, без умножения на healMult/loot
-          let amt = (ability.flat != null && Number.isFinite(Number(ability.flat)))
+          const useF = ability.flat != null && Number.isFinite(Number(ability.flat));
+          let amt = useF
             ? Math.round(Number(ability.flat) * STAT_SCALE)
             : Math.round(t.maxHp * power * hm);
-          const h = healUnit(t, amt, actor);
+          const h = healUnit(t, amt, actor, useF ? { exact: true } : null);
           log(`${actor.name}: ${ability.name} → ${t.name} (+${fmt(h)})`, 'heal');
         }
         break;
@@ -7561,10 +7559,11 @@
           log(`${actor.name}: ${ability.name} +DEF и 🛡${fmt(amount)} (на себя)`, 'heal');
           break;
         }
-        let amount = (ability.flat != null && Number.isFinite(Number(ability.flat)))
+        const useShieldFlat = ability.flat != null && Number.isFinite(Number(ability.flat));
+        let amount = useShieldFlat
           ? Math.round(Number(ability.flat) * STAT_SCALE)
           : Math.round(target.maxHp * power);
-        if (actor.side === 'ally') {
+        if (actor.side === 'ally' && !useShieldFlat) {
           amount = Math.round(amount * masteryShieldMult(actor) * versHealMult(actor));
         }
         target.shield += amount;
@@ -7638,7 +7637,11 @@
           });
         }
         // Special buffs that aren't just "+ATK"
-        if ((ability.id === 'last_stand' || ability.id === 'vampiric_blood') && !ability.maxHpPct) {
+        const rebalanceBuff = !!(ability.critMod || ability.atkMod || ability.dmgReduce || ability.maxHpPct
+          || ability.blockChanceAdd || ability.blockValueAdd || ability.armorMod || ability.grantBlock);
+        if (rebalanceBuff) {
+          // флаги уже применены — без legacy +ATK / abilityCharges
+        } else if ((ability.id === 'last_stand' || ability.id === 'vampiric_blood') && !ability.maxHpPct) {
           const bonus = Math.round(actor.maxHp * power);
           actor.maxHp += bonus;
           actor.hp = clamp(actor.hp + bonus, 1, actor.maxHp);
@@ -8049,14 +8052,16 @@
     meterOnDamage(source || null, t, d);
     return d;
   }
-  function healUnit(t, amount, healer) {
+  function healUnit(t, amount, healer, opts) {
     if (!t?.alive) return 0;
-    if (healer && healer.side === 'ally') {
+    // opts.exact — flat «т» из таблицы без mastery/vers/loot поверх
+    if (healer && healer.side === 'ally' && !(opts && opts.exact)) {
       amount = Math.round(amount * versHealMult(healer) * masteryHealMult(healer, t) * (run?.healLootMult || 1));
-      // Threat from healing: small (healers rarely pull)
       if (combat) {
         for (const e of living('enemy')) addThreat(e, healer, amount * 0.12);
       }
+    } else if (healer && healer.side === 'ally' && opts && opts.exact && combat) {
+      for (const e of living('enemy')) addThreat(e, healer, amount * 0.12);
     }
     const b = t.hp;
     t.hp = clamp(t.hp + amount, 0, t.maxHp);
