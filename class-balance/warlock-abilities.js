@@ -123,6 +123,7 @@ function A(o) {
         role: 'dps',
         icon: '👹',
         stats: { hp: 100, atk: 16, def: 4, speed: 10 },
+        resourceOverride: { type: 'mana', name: 'Мана', icon: '💧', max: 100, start: 100, regen: 10 },
         cycle: {
           // MoP Demonic Fury simplified onto soul_shards
           gen: [
@@ -143,6 +144,7 @@ function A(o) {
           A({ id: 'metamorphosis', n: 'Метаморфоза', en: 'Metamorphosis', i: '👹', c: 0, cs: 0, cd: 5, t: 'buff', fa: 1, atkMod: 0.3, petAtkMod: 0.3, bt: 2, d: '+30% урон себе и бесам · 2х', sid: 103958 }),
           A({ id: 'dark_soul', n: 'Тёмная душа: Знание', en: 'Dark Soul: Knowledge', i: '😈', c: 0, cd: 10, t: 'buff', fa: 1, d: 'Только бесы/демоны: +3 хода жизни', sid: 113861 }),
           A({ id: 'felstorm', n: 'Буря Скверны (страж)', en: 'Felstorm', i: '🌪️', cd: 3, t: 'aoe', fl: 30, school: 'shadow', d: '', sid: 89751 }),
+          A({ id: 'imp_leader', n: 'Главарь бесов', en: 'Imp Gang Boss', i: '👑', c: 0, cd: 8, t: 'summon', fa: 1, d: 'Бес-главарь 4х · АоЕ 15т/ход', sid: 90101 }),
 ],
       },
       {

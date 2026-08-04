@@ -173,7 +173,7 @@ function A(o) {
         role: 'tank',
         icon: '🍺',
         stats: { hp: 168, atk: 12, def: 11, speed: 10 },
-        resourceOverride: { type: 'energy', name: 'Энергия', icon: '⚡', max: 100, start: 100, regen: 16 },
+        resourceOverride: { type: 'energy', name: 'Энергия', icon: '⚡', max: 100, start: 100, regen: 35 },
         abilities: [
           A({
             id: 'jab', n: 'Джаб', en: 'Jab', i: '👊',

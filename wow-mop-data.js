@@ -697,7 +697,7 @@
     // ═══════════════════════════════════════
     {
       id: 'engineer', name: 'Гном-инженер', nameEn: 'Gnome Engineer', icon: '⚙️', color: '#E67E22',
-      resource: { type: 'energy', name: 'Пар', icon: '💨', max: 100, start: 100, regen: 14 },
+      resource: { type: 'energy', name: 'Пар', icon: '💨', max: 100, start: 100, regen: 5 },
       secondary: { type: 'parts', name: 'Детали', icon: '🔩', max: 5, start: 1 },
       specs: [
         {
@@ -733,6 +733,7 @@
         {
           id: 'tinkerer', name: 'Изобретатель', nameEn: 'Tinkerer', role: 'dps', icon: '🧪',
           stats: { hp: 95, atk: 16, def: 4, speed: 12 },
+          resourceOverride: { type: 'energy', name: 'Пар', icon: '💨', max: 100, start: 100, regen: 5 },
           abilities: [
             A({ id: 'zap_gun', n: 'Электропушка', en: 'Zap Gun', i: '⚡', g: 20, gs: 1, t: 'damage', fl: 13, school: 'arcane', d: '', sid: 90021 }),
             A({ id: 'flux_bolt', n: 'Поток флюкса', en: 'Flux Bolt', i: '🌀', c: 0, g: 15, gs: 1, t: 'damage', fl: 30, school: 'arcane', d: '', sid: 90022 }),

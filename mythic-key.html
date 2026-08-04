@@ -4323,6 +4323,7 @@
     felguard:   { name: 'Страж Скверны', icon: '👹', hp: 125, atk: 17, def: 7, speed: 11, role: 'dps' },
     imp:        { name: 'Бес', icon: '👿', hp: 55, atk: 14, def: 2, speed: 14, role: 'dps' },
     water_totem:{ name: 'Водяной тотем', icon: '⛲', hp: 40, atk: 8, def: 2, speed: 10, role: 'healer' },
+    imp_boss:   { name: 'Главарь бесов', icon: '👑', hp: 70, atk: 18, def: 3, speed: 12, role: 'dps' },
     voidwalker: { name: 'Демон Бездны', icon: '👤', hp: 150, atk: 12, def: 9, speed: 8, role: 'tank' },
     ghoul:      { name: 'Вурдалак', icon: '🧟', hp: 105, atk: 16, def: 5, speed: 12, role: 'dps' },
     shadowfiend:{ name: 'Исчадие Тьмы', icon: '👾', hp: 75, atk: 18, def: 2, speed: 15, role: 'dps' },
@@ -4382,6 +4383,7 @@
     world_destroyer:    [{ def: 'world_destroyer', n: 1, turns: 2 }],
     scrap_swarm:        [{ def: 'scrap_bot', n: 2, turns: 5 }],
     hst:                [{ def: 'water_totem', n: 1, turns: 3 }],
+    imp_leader:         [{ def: 'imp_boss', n: 1, turns: 4 }],
   };
   const toast = (msg, ms = 2400) => {
     const el = document.getElementById('toast');
@@ -6407,6 +6409,7 @@
     ghoul:      0.36,   // Unholy (also Blood/Frost permanent ghoul)
     imp:        0.28,   // Affli / Destro baseline
     water_totem:0.20,
+    imp_boss:   0.45,
     voidwalker: 0.22,
     shadowfiend:0.48,   // short CD burst pet
     dire:       0.38,
@@ -6462,7 +6465,10 @@
     // Match hero key scaling so pets stay relevant on high keys
     const sc = 1 + (k - 2) * 0.015;
     const ownAtk = owner?.atk || (16 * STAT_SCALE);
-    const share = petAtkShare(defKey, owner);
+    let share = petAtkShare(defKey, owner);
+    if (owner && owner.specId === 'demonology' && (defKey === 'imp' || defKey === 'imp_boss' || defKey === 'felguard')) {
+      share *= 1.15;
+    }
     const baseAtk = def.atk * sc * STAT_SCALE * 0.22;
     let atk = Math.max(1, Math.round(ownAtk * share + baseAtk));
     if (owner?.buffs) {
@@ -6520,14 +6526,16 @@
             { id: 'pet_rend', name: 'Взрывной кудах', icon: '💥', power: 1.4, cd: 2 },
           ],
           world_destroyer: [
-            { id: 'pet_aoe', name: 'Осадный залп', icon: '☢️', power: 1.2, type: 'aoe' },
+            { id: 'pet_aoe', name: 'Осадный залп', icon: '☢️', power: 1, flat: 30, type: 'aoe' },
           ],
           water_totem: [
             { id: 'totem_heal', name: 'Поток', icon: '💧', power: 1, flat: 20, type: 'heal' },
           ],
           scrap_bot: [
-            { id: 'pet_claw', name: 'Цап', icon: '⚙️', power: 0.95 },
-            { id: 'pet_rend', name: 'Искровой скрежет', icon: '✨', power: 1.2, cd: 2 },
+            { id: 'pet_claw', name: 'Цап', icon: '⚙️', power: 1, flat: 14, type: 'damage' },
+          ],
+          imp_boss: [
+            { id: 'pet_aoe', name: 'Огонь бесов', icon: '🔥', power: 1, flat: 15, type: 'aoe' },
           ],
         };
         const kit = kits[defKey] || [
@@ -6799,6 +6807,32 @@
     combat._roundTicking = true;
     combat.round++;
     combat.turnIndex = 0;
+    // Демонология: пассивный бес каждые 5 раундов
+    if (run?.party && combat.round > 0 && combat.round % 5 === 0) {
+      for (const p of run.party.filter(h => h.alive && h.classId === 'warlock' && h.specId === 'demonology')) {
+        const n = (combat.pets || []).filter(x => x.alive && x.ownerUid === p.uid && x.petKey === 'imp').length;
+        if (n < 4) {
+          addPet(p, 'imp', 5);
+          log(`${p.name}: пассивный бес`, 'player');
+        }
+      }
+    }
+    // Изобретатель: Гаечный воскрешатель (<40% → +30% maxHP, КД 3)
+    if (run?.party) {
+      for (const eng of run.party.filter(h => h.alive && h.classId === 'engineer' && h.specId === 'tinkerer')) {
+        if ((eng.wrenchCd || 0) > 0) { eng.wrenchCd -= 1; continue; }
+        const needy = run.party
+          .filter(a => a.alive && a.hp < a.maxHp * 0.4)
+          .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
+        if (needy) {
+          const healAmt = Math.round(needy.maxHp * 0.3);
+          const h = healUnit(needy, healAmt, eng, { exact: true });
+          eng.wrenchCd = 3;
+          log(`${eng.name}: Гаечный воскрешатель → ${needy.name} (+${fmt(h)})`, 'heal');
+          toast('🔧 Воскрешатель');
+        }
+      }
+    }
     // Passive tank agro pulse — keeps mobs glued to tank without constant taunt
     const tankPulse = run?.party?.find(p => p.role === 'tank' && p.alive);
     if (tankPulse && combat) {
@@ -8091,6 +8125,16 @@
       }
       if (cut > 0) raw = Math.max(1, Math.round(raw * (1 - Math.min(0.9, cut))));
     }
+    if (target.side === 'ally' && target.classId === 'monk' && target.specId === 'brewmaster' && raw > 0) {
+      const dodgeChance = Math.min(0.9, target.brewDodge || 0);
+      if (dodgeChance > 0 && Math.random() < dodgeChance) {
+        target.brewDodge = 0;
+        floatText(target.uid, 'уклон!', 'buff');
+        log(`${target.name}: уклонение!`, 'heal');
+        return 0;
+      }
+      target.brewDodge = Math.min(0.9, (target.brewDodge || 0) + 0.15);
+    }
     // Школа удара: physical vs magic (fire/frost/shadow/…)
     let school = (ctx && ctx.school) || null;
     if (!school && attacker && ctx && ctx.abilityId) {
@@ -8193,7 +8237,7 @@
         if (b && b.staggerBonus) frac += Number(b.staggerBonus) || 0;
       }
       frac = Math.min(0.75, frac);
-      const cap = Math.round(target.maxHp * 0.6);
+      const cap = Math.round(target.maxHp * 2);
       const toStagger = Math.min(Math.round(dmg * frac), Math.max(0, cap - (target.stagger || 0)));
       if (toStagger > 0) {
         target.stagger = (target.stagger || 0) + toStagger;
@@ -8274,11 +8318,34 @@
       pulseUnit(t.uid, 'healed');
       sfx('heal');
       meterOnHeal(healer, t, healed);
+      if (healed > 0 && t.classId === 'monk' && t.specId === 'brewmaster') {
+        const chance = (typeof critChance === 'function') ? critChance(healer || t) : 0.15;
+        if (Math.random() < chance) {
+          const tick = Math.max(1, Math.round(healed * 0.75 / 5));
+          applyStatus(t, {
+            id: 'brew_gift', name: 'Дар хмелевара', icon: '🍵',
+            turns: 5, hot: tick, fromUid: (healer || t).uid, periodic: true,
+          });
+          log(`${t.name}: крит-хил → HoT ${fmt(tick)}/р · 5р`, 'heal');
+        }
+      }
     }
     updateVignette();
     return healed;
   }
   function killUnit(unit) {
+    if (unit.side === 'ally' && !unit.isPet && unit.classId === 'shaman' && unit.specId === 'restoration'
+        && run && !run.restoRebirthUsed) {
+      run.restoRebirthUsed = true;
+      unit.alive = true;
+      unit.hp = Math.max(1, Math.round(unit.maxHp * 0.6));
+      if (unit.res?.primary?.type === 'mana') unit.res.primary.current = Math.round(unit.res.primary.max * 0.6);
+      unit.shield = 0; unit.casting = null;
+      floatText(unit.uid, 'возрождение!', 'heal');
+      log(`${unit.name}: Возрождение 60% HP/маны (1× за ключ)`, 'heal');
+      toast('Возрождение шамана!');
+      return;
+    }
     unit.alive = false; unit.hp = 0; unit.shield = 0; unit.casting = null;
     pulseUnit(unit.uid, 'dying');
     log((unit.isPet ? 'Питомец ' : '') + unit.name + ' погибает', 'system');
