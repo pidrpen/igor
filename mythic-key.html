@@ -4674,6 +4674,7 @@
     if (ab.chainPrimary) bits.push('сначала выбранная цель');
     if (ab.applyDot && ab.applyDot.flat != null) bits.push('DoT ' + ab.applyDot.flat + 'т×' + (ab.applyDot.turns || 4));
     if (ab.purifyPct != null && ab.purifyPct < 1) bits.push('−' + Math.round(Number(ab.purifyPct) * 100) + '% шат');
+    if (ab.type === 'cc' && (ab.buffTurns || ab.ccTurns)) bits.push('стан ' + (ab.buffTurns || ab.ccTurns) + 'х');
     if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% урон');
     if (ab.armorMod) bits.push('+' + Math.round(Number(ab.armorMod) * 100) + '% броня');
     if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% HP');
@@ -4782,6 +4783,10 @@
       }
       if (ab.flat != null) return `щит ${fmt(Math.round(Number(ab.flat) * STAT_SCALE))}`;
       return `щит ~${fmt(Math.round(actor.maxHp * (ab.power || 0.3)))}`;
+    }
+    if (ab.type === 'cc') {
+      const n = Number(ab.buffTurns) || Number(ab.ccTurns) || 1;
+      return 'стан ' + n + 'х';
     }
     if (ab.type === 'interrupt' || INTERRUPT_IDS.has(ab.id)) return 'сбивает каст';
     if (ab.type === 'summon' || PET_SUMMONS[ab.id]) return 'призыв питомца';
@@ -7509,8 +7514,8 @@
         if (mode === 'stun') {
           const stTurns = Number(ability.buffTurns) || Number(ability.ccTurns) || 1;
           applyStatus(target, { id: 'stun', name: 'Оглушение', icon: '💫', turns: stTurns, ccMode: 'stun' });
-          log(`${actor.name}: ${ability.name} → ${target.name} (стан 1 ход)`, 'player');
-          toast('💫 Стан');
+          log(`${actor.name}: ${ability.name} → ${target.name} (стан ${stTurns}х)`, 'player');
+          toast('💫 Стан ' + stTurns + 'х');
         } else {
           applyStatus(target, { id: 'lock', name: 'Немота', icon: '🔇', turns: 2, ccMode: 'silence' });
           log(`${actor.name}: ${ability.name} → ${target.name} (немота)`, 'player');
