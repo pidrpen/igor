@@ -3089,6 +3089,8 @@
     if (!ab) return 'none';
     if (TARGET_SELF_ONLY.has(ab.id)) return 'self_only';
     if (TARGET_ALLY_ANY.has(ab.id)) return 'ally_any';
+    // Holy Shock etc.: click ally OR enemy
+    if (ab.holyShock) return 'ally_or_enemy';
     if (ab.type === 'dispel') return 'ally_any';
     if (ab.type === 'purge' || ab.type === 'cc') return 'enemy';
     if (ab.type === 'heal' || ab.type === 'heal_aoe') return ab.type === 'heal_aoe' ? 'party' : 'ally_any';
@@ -3100,7 +3102,7 @@
   }
   function abilityNeedsClickTarget(ab) {
     const r = abilityTargetRule(ab);
-    return r === 'ally_any' || r === 'enemy';
+    return r === 'ally_any' || r === 'enemy' || r === 'ally_or_enemy';
   }
   function resolveAbilityTarget(actor, ability, target) {
     const rule = abilityTargetRule(ability);
@@ -4658,6 +4660,16 @@
     if (ab.flat != null && Number(ab.flat) > 0) bits.push(ab.flat + 'т');
     if (ab.maxCharges) bits.push((ab.charges != null ? ab.charges : ab.maxCharges) + '/' + ab.maxCharges + ' зар.');
     if (ab.freeAction) bits.push('Не тратит ход');
+    if (ab.holyShock) bits.push('союзник/враг');
+    if (ab.critMod) bits.push('+' + Math.round(Number(ab.critMod) * 100) + '% крит');
+    if (ab.atkMod) bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% ATK');
+    if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% урон');
+    if (ab.armorMod) bits.push('+' + Math.round(Number(ab.armorMod) * 100) + '% броня');
+    if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% HP');
+    if (ab.blockChanceAdd) bits.push('+' + Math.round(Number(ab.blockChanceAdd) * 100) + '% блок');
+    if (ab.enemyDmgMod) bits.push('−' + Math.round(Number(ab.enemyDmgMod) * 100) + '% урон врагов');
+    if (ab.applyHot) bits.push('HoT ' + (ab.applyHot.flat || 0) + 'т×' + (ab.applyHot.turns || 5));
+    if (ab.critBonus) bits.push('+' + Math.round(Number(ab.critBonus) * 100) + '% шанс крита');
     if (ab.lifesteal != null && Number(ab.lifesteal) > 0) {
       bits.push('Вампиризм ' + Math.round(Number(ab.lifesteal) * 100) + '%');
     } else if (ab.id === 'bt' && ab.lifesteal == null) {
@@ -4690,6 +4702,16 @@
     // Только цифры урона/хила — метки механики идут в abilityMetaLine (строка ниже)
     if (ab.type === 'heal' || ab.type === 'heal_aoe') {
       const mult = (te.healMult || 1);
+      if (ab.flat != null && Number.isFinite(Number(ab.flat))) {
+        let s = `~${fmt(Math.round(Number(ab.flat) * STAT_SCALE * mult))} лечения`;
+        if (ab.applyHot) {
+          const tick = Math.round(Number(ab.applyHot.flat || 0) * STAT_SCALE);
+          const turns = Number(ab.applyHot.turns) || 5;
+          s += ` + ${fmt(tick)}/р · ${turns}р`;
+        }
+        if (ab.holyShock) s += ' · или урон по врагу';
+        return s;
+      }
       const p = Number(ab.power) > 0 ? Number(ab.power) : 1;
       const base = Math.round(actor.maxHp * p * mult * (ab.type === 'heal_aoe' ? 0.9 : 1));
       const h = hotConfig(ab.id);
@@ -6936,7 +6958,9 @@
           // Always pick target manually (heals, DoTs, damage, purge, kick…)
           pendingTarget = { actor, ability: ab };
           const r = abilityTargetRule(ab);
-          toast(r === 'ally_any' ? 'Цель: союзник (клик по фрейму)' : 'Цель: враг (клик по фрейму)');
+          toast(r === 'ally_any' ? 'Цель: союзник (клик по фрейму)'
+            : r === 'ally_or_enemy' ? 'Цель: союзник или враг'
+            : 'Цель: враг (клик по фрейму)');
           updateUnitSelectionOnly();
         } else {
           // self_only / aoe / buff / cleanse / heal_aoe — без клика
@@ -7083,6 +7107,9 @@
       if (unit.side !== 'ally' || unit.isPet) return toast('Нужен союзник');
     } else if (rule === 'enemy') {
       if (unit.side !== 'enemy') return toast('Нужен враг');
+    } else if (rule === 'ally_or_enemy') {
+      if (unit.isPet) return toast('Не питомец');
+      if (unit.side !== 'ally' && unit.side !== 'enemy') return toast('Нужна цель');
     } else {
       return toast('Эта способность без цели');
     }
@@ -7114,7 +7141,12 @@
     // Enforce targeting rules (tank defs self-only, etc.)
     const rule = abilityTargetRule(ability);
     if (rule === 'self_only') target = actor;
-    else if (rule === 'ally_any') {
+    else if (rule === 'ally_or_enemy') {
+      // keep player-chosen target (ally or enemy); no auto-rewrite
+      if (!target || !target.alive || target.isPet) {
+        target = lowest(living(actor.side === 'ally' ? 'ally' : 'enemy').filter(u => !u.isPet)) || actor;
+      }
+    } else if (rule === 'ally_any') {
       target = resolveAbilityTarget(actor, ability, target);
       if (!target || target.side !== actor.side || target.isPet) target = actor;
     } else if (rule === 'enemy') {
@@ -7643,7 +7675,11 @@
           });
           log(`${actor.name}: ${ability.name} (+${Math.round(power * 100)}% ATK · след. ${charges} спос.)`, cls);
           toast(`${ability.name}: +${Math.round(power * 100)}% · ${charges} спос.`);
-        } else {
+        } else if (!(
+          ability.critMod || ability.atkMod || ability.dmgReduce || ability.maxHpPct
+          || ability.blockChanceAdd || ability.blockValueAdd || ability.armorMod || ability.grantBlock
+        )) {
+          // Legacy default: +ATK from power — only if no explicit rebalance flags
           const turns = ability.cd >= 5 ? 3 : 3;
           applyStatus(actor, {
             id: ability.id, name: ability.name, icon: ability.icon || '⬆️',
@@ -8501,6 +8537,7 @@
         const r = abilityTargetRule(pendingTarget.ability);
         if (r === 'ally_any') return u.side === 'ally' && !u.isPet;
         if (r === 'enemy') return u.side === 'enemy';
+        if (r === 'ally_or_enemy') return !u.isPet && (u.side === 'ally' || u.side === 'enemy');
         return false;
       })();
       el.classList.toggle('selected-target', !!targeting);
@@ -8578,6 +8615,7 @@
       const r = abilityTargetRule(pendingTarget.ability);
       if (r === 'ally_any') return u.side === 'ally' && !u.isPet;
       if (r === 'enemy') return u.side === 'enemy';
+      if (r === 'ally_or_enemy') return !u.isPet && (u.side === 'ally' || u.side === 'enemy');
       return false;
     })();
     const castKind = u.casting?.kind || '';
