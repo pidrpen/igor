@@ -23,16 +23,39 @@
       spellId: o.sid || 0,
     };
     // Расширения механики (движок index.html)
-    if (o.flat != null) ab.flat = o.flat;                 // урон в «т» (× STAT_SCALE)
-    if (o.freeAction) ab.freeAction = true;               // не тратит ход
-    if (o.hits != null) ab.hits = o.hits;                 // число ударов
-    if (o.cleaveFlat != null) ab.cleaveFlat = o.cleaveFlat; // боковой урон в «т»
-    if (o.vuln) ab.vuln = o.vuln;                         // { amount, turns } +% входящего
-    if (o.applyDot) ab.applyDot = o.applyDot;             // { flat, turns, name, icon }
-    if (o.abilityCharges != null) ab.abilityCharges = o.abilityCharges; // бафф на N способностей
+    if (o.flat != null) ab.flat = o.flat;
+    if (o.fl != null) ab.flat = o.fl;
+    if (o.freeAction || o.fa) ab.freeAction = true;
+    if (o.hits != null) ab.hits = o.hits;
+    if (o.cleaveFlat != null) ab.cleaveFlat = o.cleaveFlat;
+    if (o.vuln) ab.vuln = o.vuln;
+    if (o.applyDot) ab.applyDot = o.applyDot;
+    if (o.applyHot) ab.applyHot = o.applyHot;
+    if (o.abilityCharges != null) ab.abilityCharges = o.abilityCharges;
     if (o.lifesteal != null) ab.lifesteal = o.lifesteal;
-    // Явная школа урона (physical/fire/…); иначе движок проставит по эвристике
     if (o.school) ab.school = o.school;
+    if (o.maxCharges != null) ab.maxCharges = o.maxCharges;
+    if (o.ch != null) ab.maxCharges = o.ch;
+    if (o.dmgReduce != null) ab.dmgReduce = o.dmgReduce;
+    if (o.dr != null) ab.dmgReduce = o.dr;
+    if (o.blockChanceAdd != null) ab.blockChanceAdd = o.blockChanceAdd;
+    if (o.blockValueAdd != null) ab.blockValueAdd = o.blockValueAdd;
+    if (o.armorMod != null) ab.armorMod = o.armorMod;
+    if (o.am != null) ab.armorMod = o.am;
+    if (o.armorStacksMax != null) ab.armorStacksMax = o.armorStacksMax;
+    if (o.critBonus != null) ab.critBonus = o.critBonus;
+    if (o.critMod != null) ab.critMod = o.critMod;
+    if (o.cm != null) ab.critMod = o.cm;
+    if (o.atkMod != null) ab.atkMod = o.atkMod;
+    if (o.maxHpPct != null) ab.maxHpPct = o.maxHpPct;
+    if (o.hpPct != null) ab.maxHpPct = o.hpPct;
+    if (o.buffTurns != null) ab.buffTurns = o.buffTurns;
+    if (o.bt != null) ab.buffTurns = o.bt;
+    if (o.aoeBounce != null) ab.aoeBounce = o.aoeBounce;
+    if (o.shieldFromDmg != null) ab.shieldFromDmg = o.shieldFromDmg;
+    if (o.enemyDmgMod != null) ab.enemyDmgMod = o.enemyDmgMod;
+    if (o.grantBlock) ab.grantBlock = true;
+    if (o.holyShock) ab.holyShock = o.holyShock;
     return ab;
   }
 
@@ -97,31 +120,32 @@
       ],
     },
 
-    // ─── Protection (без правок) ────────────────────────────
+    // ─── Protection (ребаланс: блок/парир + free Revenge) ──
     {
       id: 'protection', name: 'Защита', nameEn: 'Protection', role: 'tank', icon: '🛡️',
       stats: { hp: 170, atk: 12, def: 12, speed: 8 },
       abilities: [
-        A({ id: 'shield_slam', n: 'Удар щитом', en: 'Shield Slam', i: '🛡️', g: 15, cd: 1, t: 'damage', p: 1.1,
-          d: 'Главный генератор: +15 ярости. Базовый ST-урон.', sid: 23922 }),
-        A({ id: 'revenge', n: 'Реванш', en: 'Revenge', i: '↩️', g: 10, cd: 1, t: 'damage', p: 1.0,
-          d: 'Генератор: +10 ярости (в MoP — после блока/парирования; здесь всегда).', sid: 6572 }),
-        A({ id: 'devastate', n: 'Разрушение', en: 'Devastate', i: '💥', g: 5, t: 'damage', p: 0.85,
-          d: 'Заполнитель: +5 ярости, слабый ST-урон.', sid: 20243 }),
-        A({ id: 'thunder', n: 'Удар грома', en: 'Thunder Clap', i: '⛈️', c: 15, cd: 1, t: 'aoe', p: 0.95,
-          d: 'Расход 15 ярости — урон по всем врагам.', sid: 6343 }),
-        A({ id: 'shield_block', n: 'Блок щитом', en: 'Shield Block', i: '🧱', c: 40, cd: 2, t: 'shield', p: 0.5,
-          d: 'Расход 40 ярости — щит (~50% max HP). Частая защита.', sid: 2565 }),
-        A({ id: 'shield_wall', n: 'Глухая оборона', en: 'Shield Wall', i: '🏰', cd: 5, t: 'shield', p: 0.6,
-          d: 'Большой щит (~60% max HP). Без ярости, CD 5.', sid: 871 }),
-        A({ id: 'last_stand', n: 'Ни шагу назад', en: 'Last Stand', i: '❤️', cd: 5, t: 'buff', p: 0.3,
-          d: '+макс. здоровье на 3 хода (особый кейс движка).', sid: 12975 }),
-        A({ id: 'taunt', n: 'Провокация', en: 'Taunt', i: '📢', cd: 2, t: 'taunt', p: 0,
-          d: 'Перетягивает агро на себя.', sid: 355 }),
-        A({ id: 'heroic_leap', n: 'Героический прыжок', en: 'Heroic Leap', i: '🦘', c: 15, cd: 3, t: 'aoe', p: 0.7,
-          d: 'Расход 15 ярости — AoE-удар (CD 3).', sid: 6544 }),
-        A({ id: 'demo_shout', n: 'Деморализующий крик', en: 'Demoralizing Shout', i: '😨', cd: 3, t: 'debuff', p: 0.2,
-          d: '−атака одной цели (type debuff). CD 3.', sid: 1160 }),
+        A({ id: 'shield_slam', n: 'Удар щитом', en: 'Shield Slam', i: '🛡️',
+          g: 30, t: 'damage', fl: 18, school: 'physical', d: '18т · +30 ярости', sid: 23922 }),
+        A({ id: 'revenge', n: 'Реванш', en: 'Revenge', i: '↩️',
+          c: 15, cd: 2, t: 'aoe', fl: 17, school: 'physical', d: '17т AoE · 15 ярости · авто при блоке', sid: 6572 }),
+        A({ id: 'thunder', n: 'Удар грома', en: 'Thunder Clap', i: '⛈️',
+          g: 10, cd: 2, t: 'aoe', fl: 20, fa: 1, school: 'physical', d: '20т AoE · +10 ярости · без хода', sid: 6343 }),
+        A({ id: 'shield_block', n: 'Блок щитом', en: 'Shield Block', i: '🧱',
+          c: 10, cd: 5, t: 'buff', fa: 1, ch: 2, blockChanceAdd: 0.5, blockValueAdd: 0.2, bt: 2,
+          d: '2 заряда · +50% блок / +20% сила · 2 хода · без хода', sid: 2565 }),
+        A({ id: 'shield_wall', n: 'Глухая оборона', en: 'Shield Wall', i: '🏰',
+          cd: 8, t: 'buff', fa: 1, dr: 0.6, bt: 2, d: '−60% весь урон · 2 хода · без хода', sid: 871 }),
+        A({ id: 'last_stand', n: 'Ни шагу назад', en: 'Last Stand', i: '❤️',
+          cd: 10, t: 'buff', fa: 1, hpPct: 0.5, bt: 3, grantBlock: 1,
+          d: '+50% макс. HP · Блок щитом · 3 хода · без хода', sid: 12975 }),
+        A({ id: 'taunt', n: 'Провокация', en: 'Taunt', i: '📢',
+          cd: 2, t: 'taunt', p: 0, fa: 1, d: 'Агро · без хода', sid: 355 }),
+        A({ id: 'heroic_leap', n: 'Героический прыжок', en: 'Heroic Leap', i: '🦘',
+          cd: 5, t: 'aoe', fl: 2, fa: 1, dr: 0.05, bt: 2, school: 'physical',
+          d: '2т AoE · −5% урон 2 хода · без хода', sid: 6544 }),
+        A({ id: 'demo_shout', n: 'Деморализующий крик', en: 'Demoralizing Shout', i: '😨',
+          c: 40, cd: 3, t: 'debuff', enemyDmgMod: 0.15, bt: 3, d: '−15% урон врагов · 40 ярости', sid: 1160 }),
       ],
     },
   ];
