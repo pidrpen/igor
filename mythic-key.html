@@ -974,6 +974,8 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: .35rem;
+      /* stretch: в одном ряду карточки одной высоты → «Тип» на общей нижней линии */
+      align-items: stretch;
       flex: 1 1 auto;
       min-height: 0;
       max-height: min(28vh, 220px);
@@ -986,19 +988,18 @@
     }
     .ability {
       width: 100%; min-width: 0; max-width: none;
-      /* Фиксированная высота: «Тип» всегда в одном месте снизу у всех скиллов */
-      height: 76px;
-      min-height: 76px;
-      max-height: 76px;
+      height: auto;
+      min-height: 52px;
       background: linear-gradient(135deg, #222820 0%, #141810 100%);
       border: 2px solid #5a5030; border-radius: 8px;
-      padding: .32rem .45rem .28rem;
+      padding: .38rem .48rem;
       color: var(--text); text-align: left; position: relative; overflow: hidden;
       display: grid;
       grid-template-columns: 38px minmax(0, 1fr);
-      grid-template-rows: 1fr auto; /* тело + прибитый низ с типом */
+      /* 1fr тело (растёт) + auto «Тип» снизу — в ряду grid все карточки одной высоты → Тип на одной линии */
+      grid-template-rows: 1fr auto;
       column-gap: .45rem;
-      row-gap: .12rem;
+      row-gap: .1rem;
       align-items: stretch;
       transition: border-color .15s, box-shadow .15s;
       box-sizing: border-box;
@@ -1014,7 +1015,7 @@
     }
     .ability .a-ico {
       grid-column: 1;
-      grid-row: 1 / 3; /* на всю высоту карточки */
+      grid-row: 1 / 3;
       width: 36px; height: 36px;
       align-self: center;
       justify-self: center;
@@ -1025,50 +1026,42 @@
       border: 1px solid #6a6040;
       flex-shrink: 0;
     }
-    /* Верх: название + цифры (растёт, обрезается) */
     .ability .a-body {
       grid-column: 2;
       grid-row: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: .06rem;
+      gap: .08rem;
       min-width: 0;
-      min-height: 0;
       padding-right: 1.05rem;
-      overflow: hidden;
     }
     .ability .a-name {
-      font-weight: 700; font-size: .78rem; line-height: 1.15;
+      font-weight: 700; font-size: .78rem; line-height: 1.2;
       margin: 0; color: var(--gold-bright);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      flex-shrink: 0;
     }
     .ability .a-cost {
-      font-size: .64rem; color: #c0b090; line-height: 1.2;
+      font-size: .66rem; color: #c0b090; line-height: 1.25;
       margin: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: normal;
+      word-break: break-word;
     }
     .ability .a-meta {
-      font-size: .6rem; color: var(--muted); line-height: 1.2;
+      font-size: .64rem; color: var(--muted); line-height: 1.25;
       margin: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: normal;
     }
-    /* Низ: тип — всегда одна и та же линия у всех кнопок */
+    /* «Тип» закреплён снизу карточки (не ездит за длиной текста) */
     .ability .a-school {
       grid-column: 2;
       grid-row: 2;
-      font-size: .58rem; font-weight: 600; line-height: 1.15;
+      font-size: .6rem; font-weight: 600; line-height: 1.2;
       color: #8eb4d4;
       letter-spacing: 0.01em;
       margin: 0;
       padding-right: 1.05rem;
-      padding-top: .1rem;
-      border-top: 1px solid rgba(232, 234, 239, .08);
+      padding-top: .06rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
