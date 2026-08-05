@@ -2012,6 +2012,34 @@
   const BALANCE_BASE = '5.4.8';
   const BALANCE_HISTORY = [
     {
+      version: '5.4.8.03',
+      date: '2026-08-05',
+      title: 'Изобретатель: луч · флюкс · захват',
+      changes: [
+        {
+          classId: 'engineer',
+          className: 'Гном-инженер',
+          specId: 'tinkerer',
+          specName: 'Изобретатель',
+          text: 'Гномский луч смерти: без деталей, КД 4, только DoT радиации (убран дебафф −урона). Поток флюкса: +2 детали, +5 пара (было +15). Магнитный захват удалён.',
+        },
+      ],
+    },
+    {
+      version: '5.4.8.02',
+      date: '2026-08-05',
+      title: 'Убрана Удача',
+      changes: [
+        {
+          classId: 'system',
+          className: 'Система',
+          specId: null,
+          specName: null,
+          text: 'Удалён случайный прок «Удача» (10% freeCast). Способности всегда тратят primary-ресурс.',
+        },
+      ],
+    },
+    {
       version: '5.4.8.01',
       date: '2026-08-05',
       title: 'Ярость танка · пар питомцев инженера',
@@ -5481,24 +5509,12 @@
     return true;
   }
 
-  function hasFreeCast(u) {
-    return !!(u?.buffs?.some(b => b.freeCast && b.turns > 0));
-  }
-  function consumeFreeCast(u) {
-    if (!u?.buffs) return false;
-    const i = u.buffs.findIndex(b => b.freeCast && b.turns > 0);
-    if (i < 0) return false;
-    u.buffs.splice(i, 1);
-    return true;
-  }
-
   function canPay(u, ab, target) {
     if (ab.maxCharges) {
       if (ab.charges == null) ab.charges = ab.maxCharges;
       if (ab.charges <= 0) return false;
     } else if (ab.curCd > 0.05) return false;
     if (typeof PET_SUMMONS !== 'undefined' && PET_SUMMONS[ab.id] && u && typeof canSummonAbility === 'function' && !canSummonAbility(u, ab.id)) return false;
-    const free = hasFreeCast(u);
     if (ab.costRunes) {
       if (!u.res.runes) return false;
       if (ab.costRunes.any) { if (readyRunes(u) < ab.costRunes.any) return false; }
@@ -5509,7 +5525,7 @@
         if (ab.costRunes.u && r.unholy.filter(Boolean).length < ab.costRunes.u) return false;
       }
     }
-    if (!free && ab.cost > 0 && u.res.primary.type !== 'runes' && u.res.primary.current < ab.cost) return false;
+    if (ab.cost > 0 && u.res.primary.type !== 'runes' && u.res.primary.current < ab.cost) return false;
     if (ab.costSec > 0) {
       if (!u.res.secondary) return false;
       const need = ab.costSec;
@@ -5539,9 +5555,8 @@
         : Math.min(u.res.secondary.current, ab.costSec);
     } else u._spentSec = 0;
 
-    const free = consumeFreeCast(u);
     if (ab.costRunes) spendRunes(u, ab.costRunes);
-    else if (!free && ab.cost > 0 && u.res.primary.type !== 'runes') {
+    else if (ab.cost > 0 && u.res.primary.type !== 'runes') {
       u.res.primary.current = Math.max(0, u.res.primary.current - ab.cost);
     }
     if (ab.gen && u.res.primary.type !== 'runes') {
@@ -7698,11 +7713,6 @@
       power *= (0.65 + actor._spentSec * 0.18);
     }
 
-    // free cast proc — consumed next cast (see payAbility)
-    if (actor.side === 'ally' && Math.random() < 0.1) {
-      actor.buffs.push({ id: 'proc', name: 'Удача', icon: '✨', turns: 2, freeCast: true });
-    }
-
     let fxTargets = [];
     // Normalize type; force known DoT ids even if type was lost
     const abType = DOT_ABILITY_IDS.has(ability.id)
@@ -7807,15 +7817,11 @@
           for (const e of foes) {
             if (!e.alive) continue;
             applyStatus(e, {
-              id: 'dot_radiation', name: 'Радиация', icon: '☢️',
+              id: 'dot_radiation', name: 'Радиационный ожог', icon: '☢️',
               turns: 2, dot: Math.round(5 * STAT_SCALE), fromUid: actor.uid, periodic: true, school: 'fire',
             });
-            applyStatus(e, {
-              id: 'edm_radiation', name: 'Радиация', icon: '☢️',
-              turns: 2, enemyDmgMod: 0.05,
-            });
           }
-          log(`${actor.name}: Радиация на всех (5т×2, −5% урон)`, cls);
+          log(`${actor.name}: Радиационный ожог (DoT 5т×2) на всех`, cls);
         }
         if (target && target.alive && actor.side === 'ally' && !actor.isPet) {
           actor.lastAttackUid = target.uid;

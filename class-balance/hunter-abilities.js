@@ -173,7 +173,7 @@
       {
         id: 'focus_regen_pay',
         where: 'regenResources + payAbility(cost then gen)',
-        note: 'regen 14/ход; freeCast «Удача» снимает cost.',
+        note: 'regen 14/ход; ',
       },
       {
         id: 'ai_focus_gen',
