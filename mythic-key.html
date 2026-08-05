@@ -304,6 +304,35 @@
     .pick-card .nm { font-weight: 600; font-size: .82rem; margin: .2rem 0; }
     .pick-card .sub { font-size: .68rem; color: var(--muted); }
     .pick-card.spec-card { border-left: 3px solid var(--role-c, var(--dps)); }
+    .pick-card.locked {
+      opacity: .42;
+      filter: grayscale(1);
+      cursor: not-allowed;
+      pointer-events: auto;
+    }
+    .pick-card.locked:hover {
+      transform: none;
+      border-color: var(--border);
+      box-shadow: none;
+    }
+    .pick-card.locked .nm { color: var(--fg-subtle); }
+    .pick-card .roles {
+      display: flex; flex-wrap: wrap; gap: .2rem; justify-content: center;
+      margin-top: .25rem;
+    }
+    .pick-card .role-chip {
+      font-size: .62rem; font-weight: 600; letter-spacing: .02em;
+      padding: .08rem .32rem; border-radius: 999px;
+      border: 1px solid color-mix(in oklab, currentColor 35%, transparent);
+      background: color-mix(in oklab, currentColor 12%, transparent);
+      line-height: 1.2;
+    }
+    .pick-card .lock-note {
+      font-size: .6rem; color: var(--fg-subtle); margin-top: .15rem;
+    }
+    .pick-card .spec-role-line {
+      font-size: .68rem; margin-top: .1rem;
+    }
 
     .key-row { display: flex; flex-wrap: wrap; gap: .7rem; align-items: end; margin: .7rem 0; }
     .field label { display: block; font-size: .72rem; color: var(--muted); margin-bottom: .25rem; }
@@ -1641,12 +1670,6 @@
           <div class="field"><label>Подземелье</label><select id="dungeon-select"></select></div>
           <div class="field"><label>Уровень ключа</label><select id="key-level"></select></div>
         </div>
-        <div class="section-title">Готовые составы</div>
-        <div class="presets">
-          <button class="btn btn-sm" type="button" data-preset="classic">Классика 1/1/3</button>
-          <button class="btn btn-sm" type="button" data-preset="aoe">По области</button>
-          <button class="btn btn-sm" type="button" data-preset="burst">Всплеск урона</button>
-        </div>
         <div class="keystone-frame" id="keystone-frame">
           <div class="ks-level" id="ks-level">+5</div>
           <div class="ks-name" id="ks-name">Выберите подземелье</div>
@@ -1836,6 +1859,35 @@
     monk: 'var(--monk)', druid: 'var(--druid)', engineer: 'var(--engineer)',
   };
   const ROLE_CSS = { tank: 'var(--tank)', healer: 'var(--heal)', dps: 'var(--dps)' };
+
+  /** Specs with applied balance patches (Правки_спеков). Others locked in lobby. */
+  const PATCHED_SPECS = new Set([
+    'warrior:arms', 'warrior:fury', 'warrior:protection',
+    'paladin:holy', 'paladin:protection', 'paladin:retribution',
+    'shaman:restoration',
+    'warlock:demonology',
+    'monk:brewmaster',
+    'engineer:tinkerer',
+  ]);
+  function isSpecPatched(classId, specId) {
+    return PATCHED_SPECS.has(classId + ':' + specId);
+  }
+  function isClassPatched(classId) {
+    for (const key of PATCHED_SPECS) {
+      if (key.startsWith(classId + ':')) return true;
+    }
+    return false;
+  }
+  function classRoleList(cls) {
+    const order = ['tank', 'healer', 'dps'];
+    const roles = [...new Set((cls.specs || []).map(s => s.role))];
+    return order.filter(r => roles.includes(r));
+  }
+  function roleChipsHtml(roles) {
+    return '<div class="roles">' + roles.map(r =>
+      `<span class="role-chip ${ROLE_CLASS[r]}">${ROLE_LABEL[r]}</span>`
+    ).join('') + '</div>';
+  }
 
   function juiceOk() {
     return !window.matchMedia('(prefers-reduced-motion: reduce)').matches && gameSpeed <= 2;
@@ -2496,6 +2548,8 @@
    * Files live in assets/backgrounds/{crypt|forge|tide|jade|rift|ember}/{key}.png
    */
   const NODE_LOC = {
+    // Progressive dungeon walk: each major stop gets a distinct room art.
+    // Only rest1/rest2 share the same safe-camp look on purpose.
     start: 'entrance',
     fork1a: 'corridor',
     fork1b: 'elite',
@@ -2506,8 +2560,8 @@
     rest2: 'rest',
     final: 'throne',
     mop1: 'mopup',
-    mop2: 'elite',
-    mop3: 'corridor',
+    mop2: 'depths',
+    mop3: 'gallery',
     risk: 'elite',
     side1: 'corridor',
   };
@@ -5262,14 +5316,30 @@
     // Проставить school всем скиллам классов (данные + class-balance)
     try { stampAllAbilitySchools(); } catch (e) { console.warn('[school]', e); }
     const grid = document.getElementById('class-grid');
-    grid.innerHTML = WOW_MOP.classes.map(c => `
-      <div class="pick-card" data-id="${c.id}" style="--cc:${CLASS_CSS[c.id] || c.color};border-color:${c.color}66">
+    grid.innerHTML = WOW_MOP.classes.map(c => {
+      const unlocked = isClassPatched(c.id);
+      const roles = classRoleList(c);
+      const lockCls = unlocked ? '' : ' locked';
+      const note = unlocked ? '' : '<div class="lock-note">без правок</div>';
+      return `
+      <div class="pick-card${lockCls}" data-id="${c.id}" data-locked="${unlocked ? '0' : '1'}"
+           style="--cc:${CLASS_CSS[c.id] || c.color};border-color:${c.color}66"
+           title="${unlocked ? c.name : c.name + ' — пока без правок'}">
         ${artHtml(ASSETS.classP(c.id), c.icon, 'medallion', `--cc:${CLASS_CSS[c.id] || c.color}`)}
         <div class="nm">${c.name}</div>
         <div class="sub">${c.resource.icon} ${c.resource.name}</div>
-      </div>`).join('');
+        ${roleChipsHtml(roles)}
+        ${note}
+      </div>`;
+    }).join('');
     grid.querySelectorAll('.pick-card').forEach(el => {
-      el.addEventListener('click', () => selectClass(el.dataset.id));
+      el.addEventListener('click', () => {
+        if (el.dataset.locked === '1') {
+          toast('Класс пока без правок — недоступен');
+          return;
+        }
+        selectClass(el.dataset.id);
+      });
     });
 
     document.getElementById('tab-class').addEventListener('click', () => showClassTab());
@@ -5347,26 +5417,15 @@
       if (f) importSaveFile(f);
       ev.target.value = '';
     });
-    document.querySelectorAll('[data-preset]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const p = PRESETS[btn.dataset.preset];
-        if (!p) return;
-        party = p.map(x => ({ classId: x.classId, specId: x.specId, sec: defaultSec(), gear: emptyGear() }));
-        renderParty();
-        savePartyProfile();
-        const names = { classic: 'Классика', aoe: 'По области', burst: 'Всплеск урона' };
-        toast('Состав: ' + (names[btn.dataset.preset] || btn.dataset.preset));
-      });
-    });
     document.addEventListener('keydown', onHotkey);
     bindRecountUI();
 
-    // Lobby party: restore profile or default MoP classic
+    // Lobby party: restore saved profile only; no default presets
     const prof = loadPartyProfile();
     if (prof && prof.party && prof.party.length) {
       applyPartyProfile(prof);
     } else {
-      party = PRESETS.classic.map(x => ({ classId: x.classId, specId: x.specId, sec: defaultSec(), gear: emptyGear() }));
+      party = [];
     }
     renderParty();
     refreshAffixes();
@@ -5436,6 +5495,10 @@
     }
   }
   function selectClass(id) {
+    if (!isClassPatched(id)) {
+      toast('Класс пока без правок — недоступен');
+      return;
+    }
     pickClass = id; pickSpec = null;
     document.querySelectorAll('#class-grid .pick-card').forEach(el => {
       el.classList.toggle('selected', el.dataset.id === id);
@@ -5458,14 +5521,26 @@
     document.getElementById('class-grid').classList.add('hidden');
     const sg = document.getElementById('spec-grid');
     sg.classList.remove('hidden');
-    sg.innerHTML = cls.specs.map(s => `
-      <div class="pick-card spec-card" data-id="${s.id}" style="--role-c:${ROLE_CSS[s.role]};--cc:${CLASS_CSS[cls.id] || cls.color}">
+    sg.innerHTML = cls.specs.map(s => {
+      const unlocked = isSpecPatched(cls.id, s.id);
+      const lockCls = unlocked ? '' : ' locked';
+      const note = unlocked ? '' : '<div class="lock-note">без правок</div>';
+      return `
+      <div class="pick-card spec-card${lockCls}" data-id="${s.id}" data-locked="${unlocked ? '0' : '1'}"
+           style="--role-c:${ROLE_CSS[s.role]};--cc:${CLASS_CSS[cls.id] || cls.color}"
+           title="${unlocked ? s.name : s.name + ' — пока без правок'}">
         ${artHtml(ASSETS.specP(cls.id, s.id), s.icon || cls.icon, 'medallion', `--cc:${ROLE_CSS[s.role] || CLASS_CSS[cls.id] || cls.color}`)}
         <div class="nm">${s.name}</div>
-        <div class="sub ${ROLE_CLASS[s.role]}">${ROLE_LABEL[s.role]}</div>
-      </div>`).join('');
+        <div class="spec-role-line ${ROLE_CLASS[s.role]}">Роль в группе: ${ROLE_LABEL[s.role]}</div>
+        ${note}
+      </div>`;
+    }).join('');
     sg.querySelectorAll('.pick-card').forEach(el => {
       el.addEventListener('click', () => {
+        if (el.dataset.locked === '1') {
+          toast('Спек пока без правок — недоступен');
+          return;
+        }
         pickSpec = el.dataset.id;
         sg.querySelectorAll('.pick-card').forEach(x => x.classList.toggle('selected', x.dataset.id === pickSpec));
         updatePreview();
@@ -5488,9 +5563,17 @@
     const cls = WOW_MOP.getClass(pickClass);
     if (!pickSpec) {
       const { primary, secondary } = WOW_MOP.resolveResources(cls, cls.specs[0]);
+      const roles = classRoleList(cls);
+      const roleStr = roles.map(r => `<span class="${ROLE_CLASS[r]}">${ROLE_LABEL[r]}</span>`).join(' · ');
+      const specsLine = cls.specs.map(s => {
+        const ok = isSpecPatched(cls.id, s.id);
+        const mark = ok ? '' : ' (без правок)';
+        return `<span class="${ROLE_CLASS[s.role]}">${s.name}</span>${mark}`;
+      }).join(', ');
       box.innerHTML = `<b>${cls.icon} ${cls.name}</b> — ресурс: ${primary.icon} ${primary.name}` +
         (cls.secondary ? ` + ${cls.secondary.icon} ${cls.secondary.name}` : '') +
-        `<br>Специализацияи: ${cls.specs.map(s => s.name).join(', ')}`;
+        `<br>Роли класса: ${roleStr}` +
+        `<br>Специализации: ${specsLine}`;
       addBtn.disabled = true;
       return;
     }
@@ -5498,7 +5581,7 @@
     const { primary, secondary } = WOW_MOP.resolveResources(cls, spec);
     let html = `<div style="margin-bottom:.45rem;color:var(--text)">
       <b>${cls.icon} ${cls.name} — ${spec.icon} ${spec.name}</b>
-      <span class="${ROLE_CLASS[spec.role]}"> · ${ROLE_LABEL[spec.role]}</span><br>
+      <span class="${ROLE_CLASS[spec.role]}"> · Роль в группе: ${ROLE_LABEL[spec.role]}</span><br>
       <span style="color:var(--muted)">Ресурс: ${primary.icon} <b style="color:var(--gold)">${primary.name}</b>` +
       (secondary ? ` · ${secondary.icon} <b style="color:var(--gold)">${secondary.name}</b>` : '') +
       `</span><br><b style="color:var(--gold-bright)">Скиллы (${spec.abilities.length}) — всё видно сразу:</b></div>`;
@@ -5533,6 +5616,10 @@
 
   function addToParty() {
     if (!pickClass || !pickSpec) return;
+    if (!isSpecPatched(pickClass, pickSpec)) {
+      toast('Спек пока без правок — недоступен');
+      return;
+    }
     const prevSec = (editSlot != null && party[editSlot]?.sec) ? { ...ensureSec(party[editSlot]) } : defaultSec();
     const prevGear = (editSlot != null && party[editSlot]?.gear) ? normalizeGear(party[editSlot].gear) : emptyGear();
     const entry = { classId: pickClass, specId: pickSpec, sec: prevSec, gear: prevGear };
