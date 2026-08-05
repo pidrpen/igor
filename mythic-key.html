@@ -6641,6 +6641,16 @@
     log(`${pet.name}: осколок → ${owner.name} (${owner.res.secondary.current})`, 'player');
     floatText(owner.uid, '+осколок', 'buff');
   }
+  /** Инженер (все спеки): каждый удар любого питомца → +3–7 пара владельцу. */
+  function maybeEngineerPetPair(pet) {
+    if (!pet || !pet.isPet || !pet.ownerUid || !run?.party) return;
+    const owner = run.party.find(p => p.uid === pet.ownerUid);
+    if (!owner || !owner.alive || owner.classId !== 'engineer') return;
+    if (!owner.res?.primary) return;
+    const gain = 3 + Math.floor(Math.random() * 5); // 3..7
+    owner.res.primary.current = clamp(owner.res.primary.current + gain, 0, owner.res.primary.max);
+    floatText(owner.uid, '+' + gain + ' пар', 'buff');
+  }
   function canSummonAbility(owner, abilityId) {
     // Лимит «пока жив — не ресам» только у гнома-инженера
     if (!owner || owner.classId !== 'engineer') return true;
@@ -8357,6 +8367,19 @@
     pulseUnit(target.uid, 'hit');
     if (crit) flashScreen(true);
     sfx(crit ? 'crit' : 'hit');
+    // Prot warrior: +3 rage per direct hit taken (not DoTs / dealTrue)
+    if (
+      target.side === 'ally' && !target.isPet
+      && target.classId === 'warrior' && target.specId === 'protection'
+      && target.res?.primary?.type === 'rage'
+    ) {
+      target.res.primary.current = clamp(target.res.primary.current + 3, 0, target.res.primary.max);
+      floatText(target.uid, '+3 ярость', 'buff');
+    }
+    // Engineer: any pet hit that deals damage → 3–7 pair to owner (all specs)
+    if (attacker && attacker.isPet && target.side === 'enemy') {
+      try { maybeEngineerPetPair(attacker); } catch (_) {}
+    }
     if (target.hp <= 0) { target.hp = 0; killUnit(target, attacker); }
     else if (target.isBoss) checkBossPhase(target);
     // Threat: tanks generate heavy agro so mobs stay on them
