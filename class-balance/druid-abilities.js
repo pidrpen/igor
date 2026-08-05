@@ -344,4 +344,11 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   }
+  function applyDruidBalance(classes) {
+    return applyTo(classes);
+  }
+  api.apply = applyDruidBalance;
+  global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+  global.CLASS_BALANCE_PACKS.push({ id: 'druid', apply: applyDruidBalance });
+
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -136,7 +136,7 @@ function A(o) {
           ],
         },
         abilities: [
-          A({ id: '', n: 'Стрела Тьмы', en: 'Shadow Bolt', i: '🌑', c: 7, gs: 1, t: 'damage', p: 1.15, school: 'shadow', d: '', sid: 686 }),
+          A({ id: 'shadow_bolt', n: 'Стрела Тьмы', en: 'Shadow Bolt', i: '🌑', c: 7, gs: 1, t: 'damage', p: 1.15, school: 'shadow', d: '', sid: 686 }),
           A({ id: 'soul_fire', n: 'Ожог души', en: 'Soul Fire', i: '🔥', c: 7, cs: 1, t: 'damage', p: 1.7, school: 'fire', d: '', sid: 6353 }),
           A({ id: 'corruption', n: 'Порча', en: 'Corruption', i: '🟢', c: 5, t: 'dot', fl: 13, school: 'shadow',
             applyDot: { flat: 5, turns: 5, name: 'Порча', school: 'shadow' }, d: '', sid: 172 }),
@@ -234,4 +234,15 @@ function A(o) {
   }
   global.WARLOCK_BALANCE = WARLOCK_BALANCE;
   global.WARLOCK_CLASS = WARLOCK_CLASS;
+  function applyWarlockBalance(classes) {
+    if (!Array.isArray(classes) || !WARLOCK_CLASS) return false;
+    const i = classes.findIndex((c) => c.id === 'warlock');
+    const clone = JSON.parse(JSON.stringify(WARLOCK_CLASS));
+    if (i >= 0) classes[i] = clone; else classes.push(clone);
+    return true;
+  }
+  WARLOCK_BALANCE.apply = applyWarlockBalance;
+  global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+  global.CLASS_BALANCE_PACKS.push({ id: 'warlock', apply: applyWarlockBalance });
+
 })(typeof window !== 'undefined' ? window : globalThis);

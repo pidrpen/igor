@@ -280,4 +280,8 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = HUNTER_BALANCE;
   }
+  HUNTER_BALANCE.apply = applyHunterBalance;
+  global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+  global.CLASS_BALANCE_PACKS.push({ id: 'hunter', apply: applyHunterBalance });
+
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : this);

@@ -232,4 +232,20 @@
   }
   global.PRIEST_BALANCE = PRIEST_BALANCE;
   global.PRIEST_CLASS = PRIEST_CLASS;
+  function applyPriestBalance(classes) {
+    if (typeof apply === 'function' && global.WOW_MOP) {
+      return apply(global.WOW_MOP);
+    }
+    if (!Array.isArray(classes)) return false;
+    const i = classes.findIndex((c) => c.id === 'priest');
+    const clone = JSON.parse(JSON.stringify(PRIEST_CLASS));
+    delete clone.engineNeeds;
+    if (i >= 0) classes[i] = clone; else classes.push(clone);
+    return true;
+  }
+  PRIEST_BALANCE.applyClasses = applyPriestBalance;
+  // Keep apply(WOW_MOP) and also expose unified apply on pack via wrapper in apply-all
+  global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+  global.CLASS_BALANCE_PACKS.push({ id: 'priest', apply: applyPriestBalance });
+
 })(typeof window !== 'undefined' ? window : globalThis);

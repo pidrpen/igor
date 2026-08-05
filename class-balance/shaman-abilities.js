@@ -355,7 +355,8 @@ function A(o) {
         nameEn: 'Restoration',
         role: 'healer',
         icon: '💚',
-        stats: { hp: 95, atk: 8, def: 4, speed: 10 },
+        // atk 15 = FLAT_REF: вес Nт ≈ Nт хила (как у паладина Свет)
+        stats: { hp: 95, atk: 15, def: 4, speed: 10 },
         resourceOverride: {
           type: 'mana',
           name: 'Мана',
@@ -370,19 +371,20 @@ function A(o) {
             c: 4, cd: 1, t: 'heal', fl: 22,
             applyHot: { flat: 3, turns: 5, name: 'Быстрина' },
             nextHealCharges: 0, // tidal waves stacks handled as abilityCharges on cast
-            d: '', sid: 61295,
+            d: 'СТ · 22т + HoT', sid: 61295,
           }),
           A({
             id: 'ch', n: 'Цепное исцеление', en: 'Chain Heal', i: '🔗',
-            c: 13, t: 'heal_aoe', fl: 40, chainDecay: 0.05, chainPrimary: true, d: 'Сначала выбранная цель, дальше по %HP (−5%/скачок)', sid: 1064,
+            c: 13, t: 'heal_aoe', fl: 40, chainDecay: 0.05, chainPrimary: true,
+            d: '40т · сначала выбранная, дальше по %HP (−5%/скачок)', sid: 1064,
           }),
           A({
             id: 'hw', n: 'Волна исцеления', en: 'Healing Wave', i: '🌊',
-            c: 8, t: 'heal', p: 0.5, d: '', sid: 331,
+            c: 8, t: 'heal', fl: 30, d: 'СТ · 30т', sid: 331,
           }),
           A({
             id: 'chw', n: 'Исцеляющий всплеск', en: 'Healing Surge', i: '💧',
-            c: 13, t: 'heal', p: 0.42, d: '', sid: 8004,
+            c: 13, t: 'heal', fl: 24, d: 'СТ · 24т · авария', sid: 8004,
           }),
           A({
             id: 'hs', n: 'Исцеляющий ливень', en: 'Healing Rain', i: '🌧️',
@@ -403,10 +405,11 @@ function A(o) {
             applyDot: { flat: 4, turns: 6, name: 'Огненный шок', school: 'fire' }, d: '', sid: 8050,
           }),
           A({
-            id: 'spirit_link', n: 'Тотем духовной связи (выравн. % HP)', en: 'Spirit Link Totem', i: '🔗',
-            c: 0, cd: 5, t: 'heal_aoe', fl: 15, dr: 0.1, bt: 3, d: '', sid: 98008,
+            id: 'spirit_link', n: 'Тотем духовной связи', en: 'Spirit Link Totem', i: '🔗',
+            c: 0, cd: 5, t: 'heal_aoe', fl: 15, dr: 0.1, bt: 3,
+            d: '15т AoE · −10% урон 3х · после каждого удара выравнивает % HP отряда', sid: 98008,
           }),
-],
+        ],
       },
     ],
   };
@@ -462,4 +465,7 @@ function A(o) {
     getSpec,
     efficiencyTable,
   };
+  global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+  global.CLASS_BALANCE_PACKS.push({ id: 'shaman', apply: apply });
+
 })(typeof window !== 'undefined' ? window : globalThis);

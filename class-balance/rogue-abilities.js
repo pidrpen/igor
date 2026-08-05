@@ -305,4 +305,18 @@
     module.exports = API;
   }
   global.ROGUE_BALANCE = API;
+  function applyRogueBalance(classes) {
+    if (!Array.isArray(classes)) return false;
+    const i = classes.findIndex((c) => c.id === 'rogue');
+    if (i < 0) {
+      classes.push(JSON.parse(JSON.stringify(ROGUE_CLASS)));
+      return true;
+    }
+    applyToWowClass(classes[i]);
+    return true;
+  }
+  API.apply = applyRogueBalance;
+  global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+  global.CLASS_BALANCE_PACKS.push({ id: 'rogue', apply: applyRogueBalance });
+
 })(typeof window !== 'undefined' ? window : globalThis);

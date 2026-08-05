@@ -56,6 +56,7 @@
     if (o.enemyDmgMod != null) ab.enemyDmgMod = o.enemyDmgMod;
     if (o.grantBlock) ab.grantBlock = true;
     if (o.holyShock) ab.holyShock = o.holyShock;
+    if (o.grantSelfBuff) ab.grantSelfBuff = o.grantSelfBuff;
     return ab;
   }
 
@@ -66,27 +67,41 @@
       id: 'arms', name: 'Оружие', nameEn: 'Arms', role: 'dps', icon: '🗡️',
       stats: { hp: 110, atk: 17, def: 5, speed: 10 },
       // d: '' — без текстового описания; UI сам пишет урон (a-cost) и метки (a-meta)
+      // Кровотечение: ms / colossus / heroic — 4 хода (пассивка «Кровотечение»)
+      // Вихрь перед Превосходством: КД 9 → 1 стак «Широкий размах» → Героический 40% по остальным
       abilities: [
         A({ id: 'ms', n: 'Смертельный удар', en: 'Mortal Strike', i: '⚔️',
-          g: 20, cd: 2, t: 'damage', p: 1, flat: 15, school: 'physical', d: '', sid: 12294 }),
+          g: 20, cd: 2, t: 'damage', p: 1, flat: 15, school: 'physical',
+          applyDot: { flat: 5, turns: 4, name: 'Кровотечение', icon: '🩸', id: 'bleed', school: 'physical' },
+          d: '', sid: 12294 }),
+        A({ id: 'whirlwind', n: 'Вихрь', en: 'Whirlwind', i: '🌪️',
+          c: 20, cd: 9, t: 'aoe', p: 1, flat: 9, hits: 2, school: 'physical',
+          grantSelfBuff: {
+            id: 'wide_sweep', name: 'Широкий размах', icon: '🌀',
+            turns: 99, stacks: 1,
+            tip: 'Героический удар дублируется на остальных (40%)',
+          },
+          d: '', sid: 1680 }),
         A({ id: 'overpower', n: 'Превосходство', en: 'Overpower', i: '💥',
           g: 15, t: 'damage', p: 1, flat: 12, cleaveFlat: 4, school: 'physical', d: '', sid: 7384 }),
         A({ id: 'colossus', n: 'Удар колосса', en: 'Colossus Smash', i: '🔨',
           cd: 3, t: 'damage', p: 1, flat: 21, school: 'physical',
-          vuln: { amount: 0.2, turns: 3, physical: true }, d: '', sid: 86346 }),
+          vuln: { amount: 0.2, turns: 3, physical: true },
+          applyDot: { flat: 5, turns: 4, name: 'Кровотечение', icon: '🩸', id: 'bleed', school: 'physical' },
+          d: '', sid: 86346 }),
         A({ id: 'slam', n: 'Мощный удар', en: 'Slam', i: '👊',
           c: 20, t: 'damage', p: 1, flat: 30, school: 'physical', d: '', sid: 1464 }),
-        A({ id: 'whirlwind', n: 'Вихрь', en: 'Whirlwind', i: '🌪️',
-          c: 20, cd: 1, t: 'aoe', p: 1, flat: 9, hits: 2, school: 'physical', d: '', sid: 1680 }),
         A({ id: 'execute', n: 'Казнь', en: 'Execute', i: '☠️',
           c: 40, t: 'damage', p: 1, flat: 40, school: 'physical', d: '', sid: 5308 }),
         A({ id: 'heroic', n: 'Героический удар', en: 'Heroic Strike', i: '🗡️',
           c: 35, t: 'damage', p: 1, flat: 20, school: 'physical',
-          applyDot: { flat: 5, turns: 4, name: 'Кровопускание', icon: '🩸', id: 'rend', school: 'physical' }, d: '', sid: 78 }),
+          applyDot: { flat: 5, turns: 4, name: 'Кровотечение', icon: '🩸', id: 'bleed', school: 'physical' },
+          d: '', sid: 78 }),
         A({ id: 'charge', n: 'Рывок', en: 'Charge', i: '🏃',
           g: 10, cd: 4, t: 'damage', p: 1, flat: 3, freeAction: true, school: 'physical', d: '', sid: 100 }),
         A({ id: 'reck', n: 'Безрассудство', en: 'Recklessness', i: '🔥',
-          cd: 7, t: 'buff', p: 0.35, abilityCharges: 2, school: 'none', d: '', sid: 1719 }),
+          cd: 7, t: 'buff', p: 0.35, abilityCharges: 2, freeAction: true, school: 'none',
+          d: '+35% атаки на следующие 2 удара · не тратит ход', sid: 1719 }),
       ],
     },
 
@@ -108,7 +123,8 @@
         A({ id: 'charge', n: 'Рывок', en: 'Charge', i: '🏃',
           g: 10, cd: 4, t: 'damage', p: 1, flat: 3, freeAction: true, school: 'physical', d: '', sid: 100 }),
         A({ id: 'reck', n: 'Безрассудство', en: 'Recklessness', i: '🔥',
-          cd: 7, t: 'buff', p: 0.35, abilityCharges: 2, school: 'none', d: '', sid: 1719 }),
+          cd: 7, t: 'buff', p: 0.35, abilityCharges: 2, freeAction: true, school: 'none',
+          d: '+35% атаки на следующие 2 удара · не тратит ход', sid: 1719 }),
       ],
     },
 
@@ -145,4 +161,20 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { WARRIOR_SPECS, A };
   }
+  // Unified contract: apply(classes)
+  function applyWarriorBalance(classes) {
+    if (!Array.isArray(classes)) return false;
+    const c = classes.find((x) => x.id === 'warrior');
+    if (!c) return false;
+    c.specs = JSON.parse(JSON.stringify(WARRIOR_SPECS));
+    return true;
+  }
+  if (global.CLASS_BALANCE_API && global.CLASS_BALANCE_API.register) {
+    global.CLASS_BALANCE_API.register('warrior', applyWarriorBalance);
+  } else {
+    global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+    global.CLASS_BALANCE_PACKS.push({ id: 'warrior', apply: applyWarriorBalance });
+  }
+  if (global.WOW_WARRIOR_BALANCE) global.WOW_WARRIOR_BALANCE.apply = applyWarriorBalance;
+
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : this);

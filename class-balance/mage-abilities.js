@@ -201,4 +201,27 @@
     module.exports = MAGE_BALANCE;
   }
   global.MAGE_BALANCE = MAGE_BALANCE;
+  function applyMageBalance(classes) {
+    if (!Array.isArray(classes) || !MAGE_BALANCE || !MAGE_BALANCE.specs) return false;
+    const mb = MAGE_BALANCE;
+    const specsArr = ['arcane', 'fire', 'frost'].map((k) => mb.specs[k]).filter(Boolean);
+    if (!specsArr.length) return false;
+    const cls = {
+      id: 'mage',
+      name: mb.name || 'Маг',
+      nameEn: mb.nameEn || 'Mage',
+      icon: mb.icon || '🔮',
+      color: mb.color || '#69CCF0',
+      resource: mb.resource || { type: 'mana', name: 'Мана', icon: '💧', max: 100, start: 100, regen: 5 },
+      secondary: mb.secondary != null ? mb.secondary : null,
+      specs: JSON.parse(JSON.stringify(specsArr)),
+    };
+    const i = classes.findIndex((c) => c.id === 'mage');
+    if (i >= 0) classes[i] = cls; else classes.push(cls);
+    return true;
+  }
+  MAGE_BALANCE.apply = applyMageBalance;
+  global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+  global.CLASS_BALANCE_PACKS.push({ id: 'mage', apply: applyMageBalance });
+
 })(typeof window !== 'undefined' ? window : globalThis);

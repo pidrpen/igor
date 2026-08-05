@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>BOOT_PENDING</title>
+</head>
+<body>
+  <p>Redirecting boot check… open via same folder as index.</p>
+  <iframe id="game" src="../index.html" style="width:100%;height:80vh;border:1px solid #333"></iframe>
+  <pre id="out"></pre>
+  <script>
+    const out = document.getElementById('out');
+    const frame = document.getElementById('game');
+    const fails = [];
+    function done(ok, msg) {
+      document.title = ok ? 'BOOT_OK' : ('BOOT_FAIL ' + msg);
+      out.textContent = document.title + '\n' + fails.join('\n');
+      const m = document.createElement('div');
+      m.id = 'boot-result';
+      m.setAttribute('data-status', ok ? 'OK' : 'FAIL');
+      m.textContent = document.title;
+      document.body.appendChild(m);
+    }
+    frame.addEventListener('load', () => {
+      setTimeout(() => {
+        try {
+          const w = frame.contentWindow;
+          const d = frame.contentDocument;
+          if (!w || !d) { fails.push('no frame'); return done(false, 'no frame'); }
+          if (!w.WOW_MOP) fails.push('WOW_MOP missing');
+          if (!w.CLASS_BALANCE_APPLIED || !w.CLASS_BALANCE_APPLIED.length) fails.push('balance not applied');
+          if (typeof w.initLobby !== 'function' && !d.getElementById('class-grid')?.children?.length) {
+            // initLobby may be script-local (const/function in classic multi-script = shared lexical)
+            // Check DOM instead
+          }
+          const grid = d.getElementById('class-grid');
+          if (!grid) fails.push('class-grid missing');
+          else if (!grid.children.length) fails.push('class-grid empty (initLobby failed?)');
+          const lobby = d.getElementById('lobby');
+          if (!lobby) fails.push('lobby missing');
+          if (fails.length) done(false, fails[0]);
+          else done(true, 'ok');
+        } catch (e) {
+          fails.push(e.message);
+          done(false, e.message);
+        }
+      }, 500);
+    });
+    setTimeout(() => {
+      if (document.title === 'BOOT_PENDING') done(false, 'timeout');
+    }, 10000);
+  </script>
+</body>
+</html>

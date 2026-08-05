@@ -200,11 +200,11 @@ function A(o) {
           }),
           A({
             id: 'purifying', n: 'Очищающий отвар', en: 'Purifying Brew', i: '🍵',
-            c: 20, cs: 0, t: 'cleanse', p: 1.0, fa: 1, purifyPct: 0.5, d: '', sid: 119582,
+            c: 20, cs: 0, t: 'cleanse', p: 1.0, fa: 1, purifyPct: 0.25, d: 'Снимает 25% пошатывания → пул для Отвара неуловимости', sid: 119582,
           }),
           A({
             id: 'elusive', n: 'Отвар неуловимости', en: 'Elusive Brew', i: '💨',
-            cd: 0, t: 'shield', fl: 30, d: '', sid: 115308,
+            cd: 0, t: 'shield', fl: 30, d: 'Щит: база 30т + объём stagger, очищенный Очищающим отваром', sid: 115308,
           }),
           A({
             id: 'provoke', n: 'Вызов', en: 'Provoke', i: '📢',
@@ -404,4 +404,11 @@ function A(o) {
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   }
+  function applyMonkBalance(classes) {
+    return applyTo(classes);
+  }
+  api.apply = applyMonkBalance;
+  global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+  global.CLASS_BALANCE_PACKS.push({ id: 'monk', apply: applyMonkBalance });
+
 })(typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : this);
