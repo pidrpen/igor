@@ -186,8 +186,114 @@
 
     .role-tank { color: var(--tank); } .role-healer { color: var(--heal); } .role-dps { color: var(--dps); }
 
-    .lobby-wrap { width: min(1200px, 100%); display: grid; grid-template-columns: 1.3fr .9fr; gap: 1rem; }
-    @media (max-width: 960px) { .lobby-wrap { grid-template-columns: 1fr; } }
+    .lobby-wrap {
+      width: min(1480px, 100%);
+      display: grid;
+      grid-template-columns: minmax(240px, .78fr) minmax(0, 1.25fr) minmax(0, .95fr);
+      gap: .85rem;
+      align-items: start;
+    }
+    @media (max-width: 1180px) {
+      .lobby-wrap { grid-template-columns: minmax(220px, .85fr) 1fr; }
+      .lobby-party-col { grid-column: 1 / -1; }
+    }
+    @media (max-width: 760px) {
+      .lobby-wrap { grid-template-columns: 1fr; }
+      .lobby-party-col { grid-column: auto; }
+    }
+    .balance-panel {
+      position: sticky;
+      top: .5rem;
+      max-height: min(78vh, 820px);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .balance-panel .section-title { flex-shrink: 0; }
+    .balance-ver {
+      display: flex; align-items: center; justify-content: space-between; gap: .4rem;
+      margin-bottom: .55rem; flex-wrap: wrap;
+    }
+    .balance-ver .ver-badge {
+      font-family: Cinzel, serif;
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--gold-bright);
+      letter-spacing: .04em;
+    }
+    .balance-ver .ver-sub {
+      font-size: .68rem;
+      color: var(--muted);
+    }
+    .balance-filter {
+      display: flex; flex-wrap: wrap; gap: .28rem;
+      margin-bottom: .55rem;
+    }
+    .balance-filter .bf-btn {
+      font-size: .65rem;
+      padding: .18rem .42rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--muted);
+      cursor: pointer;
+      line-height: 1.2;
+    }
+    .balance-filter .bf-btn.on {
+      border-color: var(--gold);
+      color: var(--gold-bright);
+      background: color-mix(in oklab, var(--gold) 14%, var(--panel2));
+    }
+    .balance-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: .25rem;
+      display: flex;
+      flex-direction: column;
+      gap: .55rem;
+    }
+    .patch-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md, 10px);
+      background: color-mix(in oklab, var(--panel2) 88%, #000);
+      padding: .55rem .65rem;
+    }
+    .patch-card.current {
+      border-color: color-mix(in oklab, var(--gold) 55%, var(--border));
+      box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 18%, transparent);
+    }
+    .patch-head {
+      display: flex; align-items: baseline; justify-content: space-between; gap: .4rem;
+      margin-bottom: .35rem; flex-wrap: wrap;
+    }
+    .patch-head .pv {
+      font-weight: 700; font-size: .82rem; color: var(--gold);
+      font-family: Cinzel, serif;
+    }
+    .patch-head .pd { font-size: .65rem; color: var(--fg-subtle); }
+    .patch-title {
+      font-size: .78rem; color: var(--text); margin-bottom: .35rem; font-weight: 600;
+    }
+    .patch-changes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .28rem; }
+    .patch-changes li {
+      font-size: .72rem; line-height: 1.35; color: var(--muted);
+      padding: .28rem .4rem;
+      border-radius: 6px;
+      background: color-mix(in oklab, #000 22%, transparent);
+      border-left: 3px solid var(--cc, var(--border-gold));
+    }
+    .patch-changes li .cls {
+      font-weight: 600; color: var(--text); margin-right: .25rem;
+    }
+    .patch-changes li .sp {
+      color: var(--gold); font-size: .68rem;
+    }
+    .patch-changes li.hidden-by-filter { display: none; }
+    .patch-card.hidden-by-filter { display: none; }
+    .balance-empty {
+      font-size: .75rem; color: var(--fg-subtle); text-align: center; padding: .8rem .4rem;
+    }
 
     .party-slots { display: flex; flex-direction: column; gap: .55rem; margin-bottom: .8rem; }
     .slot {
@@ -1643,10 +1749,19 @@
 </head>
 <body>
   <div id="lobby" class="screen screen-center">
-    <div class="lobby-hero"><h1>Мифик-ключ</h1><div class="badge-row"><span class="week-badge">Mists of Pandaria</span></div></div>
+    <div class="lobby-hero"><h1>Мифик-ключ</h1><div class="badge-row"><span class="week-badge">Mists of Pandaria</span><span class="week-badge" id="lobby-patch-badge">патч 5.4.8</span></div></div>
     <p class="subtitle">Классы и специализации <b style="color:var(--text)">Mists of Pandaria</b>. Выбери класс → специализацию. Ресурсы как в WoW: ярость, энергия, руны, фокус, мана, ци…</p>
 
     <div class="lobby-wrap">
+      <div class="card balance-panel" id="balance-panel">
+        <div class="section-title">Баланс классов</div>
+        <div class="balance-ver">
+          <span class="ver-badge" id="balance-ver-badge">5.4.8</span>
+          <span class="ver-sub" id="balance-ver-sub">текущий патч</span>
+        </div>
+        <div class="balance-filter" id="balance-filter"></div>
+        <div class="balance-scroll" id="balance-history"></div>
+      </div>
       <div class="card">
         <div class="section-title">Сборка персонажа</div>
         <div class="picker-tabs">
@@ -1662,7 +1777,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card lobby-party-col">
         <div class="section-title">Отряд (5 слотов) — клик по слоту, чтобы заменить</div>
         <div class="party-slots" id="party-slots"></div>
         <p class="party-req bad" id="party-req">Нужны: 1 танк · 1 целитель · 3 бойца</p>
@@ -1887,6 +2002,194 @@
     return '<div class="roles">' + roles.map(r =>
       `<span class="role-chip ${ROLE_CLASS[r]}">${ROLE_LABEL[r]}</span>`
     ).join('') + '</div>';
+  }
+
+  /**
+   * История баланса. Версии: 5.4.8 → 5.4.8.01 → 5.4.8.02 …
+   * Старт лога — с блокировки классов (5.4.8). Дальше каждый ребаланс = +0.01.
+   * Новые правки добавляй В НАЧАЛО массива BALANCE_HISTORY (свежие сверху).
+   */
+  const BALANCE_BASE = '5.4.8';
+  const BALANCE_HISTORY = [
+    {
+      version: '5.4.8.01',
+      date: '2026-08-05',
+      title: 'Ярость танка · пар питомцев инженера',
+      changes: [
+        {
+          classId: 'warrior',
+          className: 'Воин',
+          specId: 'protection',
+          specName: 'Защита',
+          text: 'При каждом прямом получении урона (не DoT) танк получает +3 ярости.',
+        },
+        {
+          classId: 'engineer',
+          className: 'Гном-инженер',
+          specId: null,
+          specName: 'все спеки',
+          text: 'Каждый удар любого питомца, нанёсший урон, даёт владельцу 3–7 ед. пара (случайно).',
+        },
+      ],
+    },
+    {
+      version: '5.4.8',
+      date: '2026-08-05',
+      title: 'Блокировка классов · открыты только правки',
+      changes: [
+        {
+          classId: 'system',
+          className: 'Система',
+          specId: null,
+          specName: null,
+          text: 'Классы и спеки без применённых правок заблокированы в лобби (серые). Отряд без готовых пресетов.',
+        },
+        {
+          classId: 'warrior',
+          className: 'Воин',
+          specId: null,
+          specName: 'Оружие / Неистовство / Защита',
+          text: 'Открыты все три спека. Защита: блок, парирование, free Revenge с блока.',
+        },
+        {
+          classId: 'paladin',
+          className: 'Паладин',
+          specId: null,
+          specName: 'Свет / Защита / Воздаяние',
+          text: 'Открыты все спеки. Пассивный реген маны; броня танка; Divine Storm и прочие правки Ret.',
+        },
+        {
+          classId: 'shaman',
+          className: 'Шаман',
+          specId: 'restoration',
+          specName: 'Исцеление',
+          text: 'Открыт Resto: реген маны, пассивное возрождение 1×/ключ, Spirit Link.',
+        },
+        {
+          classId: 'warlock',
+          className: 'Чернокнижник',
+          specId: 'demonology',
+          specName: 'Демонология',
+          text: 'Открыта Demo: реген маны, пассивные бесы, Главарь бесов, осколки с петов 65%.',
+        },
+        {
+          classId: 'monk',
+          className: 'Монах',
+          specId: 'brewmaster',
+          specName: 'Хмелевар',
+          text: 'Открыт Brew: реген энергии, уклонение, Stagger.',
+        },
+        {
+          classId: 'engineer',
+          className: 'Гном-инженер',
+          specId: 'tinkerer',
+          specName: 'Изобретатель',
+          text: 'Открыт Tinkerer: пар/детали, Shock Wrench, Death Ray, воскрешатель, лимит петов.',
+        },
+        {
+          classId: 'system',
+          className: 'Система',
+          specId: null,
+          specName: null,
+          text: 'Закрыты до правок: Охотник, Разбойник, Жрец, DK, Маг, Друид (+ незакрытые спеки открытых классов).',
+        },
+      ],
+    },
+  ];
+  const BALANCE_VERSION = BALANCE_HISTORY[0] ? BALANCE_HISTORY[0].version : BALANCE_BASE;
+  let balanceFilterClass = 'all';
+
+  function balanceClassLabel(classId) {
+    if (!classId || classId === 'system') return 'Система';
+    try {
+      const c = WOW_MOP && WOW_MOP.getClass ? WOW_MOP.getClass(classId) : null;
+      if (c && c.name) return c.name;
+    } catch (_) {}
+    const map = {
+      warrior: 'Воин', paladin: 'Паладин', hunter: 'Охотник', rogue: 'Разбойник',
+      priest: 'Жрец', deathknight: 'Рыцарь смерти', shaman: 'Шаман', mage: 'Маг',
+      warlock: 'Чернокнижник', monk: 'Монах', druid: 'Друид', engineer: 'Гном-инженер',
+    };
+    return map[classId] || classId;
+  }
+
+  function balanceClassColor(classId) {
+    if (!classId || classId === 'system') return 'var(--border-gold)';
+    return CLASS_CSS[classId] || 'var(--border-gold)';
+  }
+
+  function renderBalancePanel() {
+    const badge = document.getElementById('balance-ver-badge');
+    const sub = document.getElementById('balance-ver-sub');
+    const lobbyBadge = document.getElementById('lobby-patch-badge');
+    const filterEl = document.getElementById('balance-filter');
+    const hist = document.getElementById('balance-history');
+    if (!hist) return;
+
+    if (badge) badge.textContent = BALANCE_VERSION;
+    if (sub) sub.textContent = 'текущий · база ' + BALANCE_BASE;
+    if (lobbyBadge) lobbyBadge.textContent = 'патч ' + BALANCE_VERSION;
+
+    // filter chips: all + classes that appear in history
+    const classIds = new Set();
+    for (const p of BALANCE_HISTORY) {
+      for (const ch of (p.changes || [])) {
+        if (ch.classId && ch.classId !== 'system') classIds.add(ch.classId);
+      }
+    }
+    const chips = [{ id: 'all', label: 'Все' }];
+    for (const id of ['warrior', 'paladin', 'shaman', 'warlock', 'monk', 'engineer', 'hunter', 'rogue', 'priest', 'deathknight', 'mage', 'druid']) {
+      if (classIds.has(id)) chips.push({ id, label: balanceClassLabel(id) });
+    }
+    if (filterEl) {
+      filterEl.innerHTML = chips.map(c =>
+        `<button type="button" class="bf-btn${balanceFilterClass === c.id ? ' on' : ''}" data-bf="${c.id}">${c.label}</button>`
+      ).join('');
+      filterEl.querySelectorAll('.bf-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          balanceFilterClass = btn.dataset.bf || 'all';
+          renderBalancePanel();
+        });
+      });
+    }
+
+    const f = balanceFilterClass;
+    hist.innerHTML = BALANCE_HISTORY.map((p, idx) => {
+      const changes = (p.changes || []).filter(ch => {
+        if (f === 'all') return true;
+        return ch.classId === f;
+      });
+      if (!changes.length) {
+        return '';
+      }
+      const items = changes.map(ch => {
+        const cls = balanceClassLabel(ch.classId);
+        const sp = ch.specName ? ` <span class="sp">· ${ch.specName}</span>` : '';
+        const cc = balanceClassColor(ch.classId);
+        const name = ch.className || cls;
+        return `<li style="--cc:${cc}"><span class="cls">${name}</span>${sp}<br>${ch.text}</li>`;
+      }).join('');
+      return `<article class="patch-card${idx === 0 ? ' current' : ''}">
+        <div class="patch-head">
+          <span class="pv">${p.version}</span>
+          <span class="pd">${p.date || ''}</span>
+        </div>
+        <div class="patch-title">${p.title || ''}</div>
+        <ul class="patch-changes">${items}</ul>
+      </article>`;
+    }).filter(Boolean).join('') || '<div class="balance-empty">Нет записей для фильтра</div>';
+  }
+
+  /** Следующий номер патча после текущего (5.4.8 → 5.4.8.01, 5.4.8.01 → 5.4.8.02). */
+  function nextBalanceVersion(from) {
+    const v = String(from || BALANCE_VERSION || BALANCE_BASE);
+    if (v === BALANCE_BASE) return BALANCE_BASE + '.01';
+    const m = v.match(/^(5\.4\.8)\.(\d+)$/);
+    if (m) {
+      const n = parseInt(m[2], 10) + 1;
+      return m[1] + '.' + String(n).padStart(2, '0');
+    }
+    return v + '.01';
   }
 
   function juiceOk() {
@@ -5428,6 +5731,7 @@
       party = [];
     }
     renderParty();
+    renderBalancePanel();
     refreshAffixes();
     refreshKeystone();
     updatePreview();
@@ -5503,6 +5807,11 @@
     document.querySelectorAll('#class-grid .pick-card').forEach(el => {
       el.classList.toggle('selected', el.dataset.id === id);
     });
+    // подсветить историю баланса выбранного класса
+    if (typeof balanceFilterClass !== 'undefined') {
+      balanceFilterClass = id;
+      try { renderBalancePanel(); } catch (_) {}
+    }
     showSpecTab();
     updatePreview();
   }
