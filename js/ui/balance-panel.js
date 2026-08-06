@@ -2,6 +2,20 @@
   const BALANCE_BASE = '5.4.8';
   const BALANCE_HISTORY = [
     {
+      version: '5.4.8.28',
+      date: '2026-08-06',
+      title: 'ДК Кровь: парирование 20%',
+      changes: [
+        {
+          classId: 'deathknight',
+          className: 'Рыцарь смерти',
+          specId: 'blood',
+          specName: 'Кровь',
+          text: '«Кровяной клинок»: +15% → +20% шанса парирования (итого 20% у танка Крови).',
+        },
+      ],
+    },
+    {
       version: '5.4.8.27',
       date: '2026-08-06',
       title: 'Прото: Блок +1 заряд · Реванш с парира · «Одной левой!»',
