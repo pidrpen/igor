@@ -122,7 +122,7 @@
         try { blockChance += masteryPct(target); } catch (_) {}
       }
       let blockValue = 0.35;
-      // База парирования: воин Защита +5%; пассивки (ДК Кровь «Кровяной клинок» +15%)
+      // База парирования: воин Защита +5%; пассивки (ДК Кровь «Кровяной клинок» +20%)
       let parryChance = (target.classId === 'warrior' && target.specId === 'protection') ? 0.05 : 0;
       try { parryChance += passiveParryChance(target); } catch (_) {}
       for (const b of (target.buffs || [])) {
