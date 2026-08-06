@@ -1172,6 +1172,9 @@
     .unit.hit { animation: hitFlash .35s ease; }
     .unit.healed { animation: healFlash .45s ease; }
     .unit.shielded { animation: shieldPop .5s ease; }
+    .unit.parried { animation: parryFlash .55s ease; z-index: 5; }
+    .unit.blocked { animation: blockFlash .55s ease; z-index: 5; }
+    .unit.dodged { animation: dodgeFlash .5s ease; z-index: 5; }
     .unit.casting-skill { animation: castSkillPulse .45s ease; z-index: 4; }
     .unit.low-hp .bar.hp > i { animation: lowPulse .8s ease infinite; }
 
@@ -2418,6 +2421,128 @@
       0% { box-shadow: 0 0 0 0 rgba(160,180,200,.7); }
       100% { box-shadow: 0 0 18px 4px transparent; }
     }
+    @keyframes parryFlash {
+      0%   { filter: brightness(1.9) saturate(1.2); box-shadow: 0 0 0 0 rgba(255, 214, 100, .9); transform: scale(1); }
+      35%  { filter: brightness(1.35); box-shadow: 0 0 22px 6px rgba(255, 200, 80, .55); transform: scale(1.04) rotate(-1.5deg); }
+      100% { filter: none; box-shadow: 0 0 0 transparent; transform: scale(1); }
+    }
+    @keyframes blockFlash {
+      0%   { filter: brightness(1.55); box-shadow: 0 0 0 0 rgba(100, 170, 255, .85); transform: scale(1); }
+      40%  { filter: brightness(1.25); box-shadow: 0 0 20px 5px rgba(90, 160, 255, .5); transform: scale(1.03); }
+      100% { filter: none; box-shadow: 0 0 0 transparent; transform: scale(1); }
+    }
+    @keyframes dodgeFlash {
+      0%   { filter: brightness(1.4); transform: translateX(0); box-shadow: 0 0 0 0 rgba(100, 230, 160, .6); }
+      30%  { filter: brightness(1.2); transform: translateX(6px); box-shadow: 0 0 16px 4px rgba(100, 230, 160, .4); }
+      100% { filter: none; transform: translateX(0); box-shadow: 0 0 0 transparent; }
+    }
+    @keyframes floatDefense {
+      0%   { opacity: 0; transform: translate(-50%, -40%) scale(.5); }
+      15%  { opacity: 1; transform: translate(-50%, -75%) scale(1.25); }
+      55%  { opacity: 1; transform: translate(calc(-50% + var(--fx, 0px)), -125%) scale(1.05); }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--fx, 0px)), -175%) scale(.9); }
+    }
+
+    /* Defense FX (parry / block / dodge) — fixed layer children */
+    .def-fx {
+      position: fixed;
+      left: 0; top: 0;
+      width: 0; height: 0;
+      pointer-events: none;
+      z-index: 74;
+      transform: translate(-50%, -50%);
+    }
+    .def-fx-ring {
+      position: absolute;
+      left: 0; top: 0;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 220, 120, .95);
+      box-shadow: 0 0 12px rgba(255, 200, 80, .7), inset 0 0 8px rgba(255, 240, 180, .5);
+      transform: translate(-50%, -50%);
+      animation: defRing 0.55s ease-out forwards;
+    }
+    .def-fx-block .def-fx-ring {
+      border-color: rgba(120, 180, 255, .95);
+      box-shadow: 0 0 14px rgba(80, 150, 255, .75), inset 0 0 8px rgba(180, 220, 255, .45);
+    }
+    .def-fx-dodge .def-fx-ring {
+      border-color: rgba(120, 230, 170, .9);
+      box-shadow: 0 0 12px rgba(80, 210, 140, .65);
+    }
+    .def-fx-slash {
+      position: absolute;
+      left: 0; top: 0;
+      width: 72px; height: 5px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, transparent, #fff6c8 20%, #ffe08a 50%, #fff 70%, transparent);
+      box-shadow: 0 0 10px #ffd76a, 0 0 18px rgba(255, 200, 80, .7);
+      transform: translate(-50%, -50%) rotate(var(--rot, -40deg)) scaleX(.15);
+      animation: defSlash 0.42s cubic-bezier(.2,.8,.2,1) forwards;
+    }
+    .def-fx-shield {
+      position: absolute;
+      left: 0; top: 0;
+      width: 54px; height: 62px;
+      transform: translate(-50%, -50%) scale(.4);
+      border-radius: 50% 50% 46% 46% / 42% 42% 58% 58%;
+      border: 3px solid rgba(160, 210, 255, .95);
+      background:
+        radial-gradient(ellipse at 50% 35%, rgba(200, 230, 255, .45), rgba(60, 120, 200, .12) 55%, transparent 70%);
+      box-shadow:
+        0 0 16px rgba(90, 160, 255, .7),
+        inset 0 0 12px rgba(180, 220, 255, .35);
+      animation: defShield 0.55s ease-out forwards;
+    }
+    .def-fx-spark {
+      position: absolute;
+      left: 0; top: 0;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #ffe9a0;
+      box-shadow: 0 0 8px #ffd76a;
+      transform: translate(-50%, -50%);
+      animation: defSpark 0.48s ease-out forwards;
+    }
+    .def-fx-spark-block {
+      background: #a8d4ff;
+      box-shadow: 0 0 8px #6ab0ff;
+    }
+    .def-fx-swoosh {
+      position: absolute;
+      left: 0; top: 0;
+      width: 64px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top-color: rgba(150, 240, 190, .95);
+      border-right-color: rgba(150, 240, 190, .45);
+      transform: translate(-50%, -50%) rotate(-25deg) scale(.3);
+      box-shadow: 0 0 10px rgba(100, 220, 150, .5);
+      animation: defSwoosh 0.45s ease-out forwards;
+    }
+    @keyframes defRing {
+      0%   { width: 12px; height: 12px; opacity: 1; }
+      100% { width: 88px; height: 88px; opacity: 0; border-width: 1px; }
+    }
+    @keyframes defSlash {
+      0%   { opacity: 0; transform: translate(-50%, -50%) rotate(var(--rot, -40deg)) scaleX(.12); filter: brightness(2); }
+      25%  { opacity: 1; transform: translate(-50%, -50%) rotate(var(--rot, -40deg)) scaleX(.9); }
+      100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--rot, -40deg)) scaleX(1.35); filter: brightness(1); }
+    }
+    @keyframes defShield {
+      0%   { opacity: 0; transform: translate(-50%, -50%) scale(.25); }
+      30%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
+    }
+    @keyframes defSpark {
+      0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 20px)), calc(-50% + var(--dy, -20px))) scale(.3); }
+    }
+    @keyframes defSwoosh {
+      0%   { opacity: 0; transform: translate(-50%, -50%) rotate(-25deg) scale(.2); }
+      35%  { opacity: 1; transform: translate(-20%, -60%) rotate(10deg) scale(1); }
+      100% { opacity: 0; transform: translate(20%, -80%) rotate(35deg) scale(1.15); }
+    }
     @keyframes castSkillPulse {
       0% { filter: brightness(1.35); }
       100% { filter: none; }
@@ -2591,6 +2716,41 @@
     .float-text.dot { color: #c77dff; font-size: 1rem; }
     .float-text.shield { color: #7ec8ff; font-size: .95rem; }
     .float-text.miss { color: #a0a8b8; font-size: .95rem; font-weight: 700; }
+    .float-text.parry {
+      color: #ffe9a8;
+      font-size: 1.22rem;
+      letter-spacing: 0.06em;
+      text-shadow:
+        0 0 12px rgba(255, 210, 90, .95),
+        0 0 4px #000,
+        0 2px 6px #000;
+      animation: floatDefense 1.15s cubic-bezier(.2,.7,.2,1) forwards;
+    }
+    .float-text.block {
+      color: #9ad0ff;
+      font-size: 1.12rem;
+      letter-spacing: 0.04em;
+      text-shadow:
+        0 0 12px rgba(90, 170, 255, .9),
+        0 0 4px #000,
+        0 2px 6px #000;
+      animation: floatDefense 1.1s cubic-bezier(.2,.7,.2,1) forwards;
+    }
+    .float-text.block-dmg {
+      color: #7eb6e8;
+      font-size: 1.02rem;
+      opacity: .95;
+    }
+    .float-text.dodge {
+      color: #b8f0c8;
+      font-size: 1.12rem;
+      letter-spacing: 0.05em;
+      text-shadow:
+        0 0 10px rgba(80, 220, 140, .85),
+        0 0 4px #000;
+      animation: floatDefense 1.05s cubic-bezier(.2,.7,.2,1) forwards;
+    }
+    .float-text.buff { color: #d4c4a0; font-size: .95rem; }
     .forces-bar { height: 5px; background: #0e1218; border-bottom: 1px solid #2a3040; }
     .forces-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #3a70b0, #9b5fd4); width: 0%; transition: width .3s; }
     .unit.casting { border-color: #f0c14b !important; box-shadow: 0 0 16px rgba(240,193,75,.55); }

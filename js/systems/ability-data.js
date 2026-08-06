@@ -95,6 +95,20 @@
       else if (kind === 'win') { o.frequency.value = 660; g.gain.setValueAtTime(0.05, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.25); o.start(now); o.stop(now + 0.26); }
       else if (kind === 'lose') { o.frequency.value = 110; g.gain.setValueAtTime(0.06, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.3); o.start(now); o.stop(now + 0.31); }
       else if (kind === 'click') { o.frequency.value = 300; g.gain.setValueAtTime(0.02, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.04); o.start(now); o.stop(now + 0.05); }
+      else if (kind === 'parry') {
+        // metallic clang — short high + low tick
+        o.type = 'triangle'; o.frequency.setValueAtTime(880, now); o.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+        g.gain.setValueAtTime(0.07, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        o.start(now); o.stop(now + 0.15);
+      } else if (kind === 'block') {
+        o.type = 'square'; o.frequency.setValueAtTime(140, now); o.frequency.exponentialRampToValueAtTime(70, now + 0.1);
+        g.gain.setValueAtTime(0.05, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        o.start(now); o.stop(now + 0.13);
+      } else if (kind === 'dodge') {
+        o.type = 'sine'; o.frequency.setValueAtTime(480, now); o.frequency.exponentialRampToValueAtTime(720, now + 0.08);
+        g.gain.setValueAtTime(0.035, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        o.start(now); o.stop(now + 0.1);
+      }
     } catch (_) { /* ignore */ }
   }
   /** Per-uid stack so simultaneous numbers fan out over the portrait. */

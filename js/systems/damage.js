@@ -73,7 +73,8 @@
         const dodgeChance = brewTotalDodgeChance(target);
         if (dodgeChance > 0 && Math.random() < dodgeChance) {
           clearBrewLucky(target);
-          floatText(target.uid, 'уклон!', 'buff');
+          floatText(target.uid, 'УКЛОН!', 'dodge');
+          try { playDefenseFx(target.uid, 'dodge'); } catch (_) {}
           log(`${target.name}: уклонение! (Ещё повезёт сброшен)`, 'heal');
           return 0;
         }
@@ -138,7 +139,8 @@
         const roll = Math.random();
         if (parryChance > 0 && roll < parryChance) {
           log((target.name || 'Танк') + ': Парирование!', 'player');
-          floatText(target.uid, 'парир!', 'buff');
+          floatText(target.uid, 'ПАРИР!', 'parry');
+          try { playDefenseFx(target.uid, 'parry'); } catch (_) {}
           // Prot: авто-Реванш только с парирования (не с блока)
           if (target.classId === 'warrior' && target.specId === 'protection') {
             try { triggerProtRevenge(target); } catch (e) { console.error(e); }
@@ -148,6 +150,9 @@
         if (roll < parryChance + blockChance) {
           dmg = Math.max(1, Math.round(dmg * (1 - blockValue)));
           log((target.name || 'Танк') + ': Блок (−' + Math.round(blockValue * 100) + '%)', 'player');
+          floatText(target.uid, 'БЛОК −' + Math.round(blockValue * 100) + '%', 'block');
+          try { playDefenseFx(target.uid, 'block'); } catch (_) {}
+          target._justBlocked = true;
         }
       }
     }
@@ -221,10 +226,13 @@
       try { addBrewLuckyStack(target); } catch (e) { console.error(e); }
     }
     target.hp -= dmg;
-    floatText(target.uid, (crit ? 'КРИТ ' : '') + '−' + fmt(dmg), crit ? 'crit' : 'dmg');
-    pulseUnit(target.uid, 'hit');
+    const blockedHit = !!target._justBlocked;
+    if (target._justBlocked) delete target._justBlocked;
+    // blocked hits already showed «БЛОК» float; still show reduced damage number
+    floatText(target.uid, (crit ? 'КРИТ ' : '') + '−' + fmt(dmg), crit ? 'crit' : (blockedHit ? 'block-dmg' : 'dmg'));
+    pulseUnit(target.uid, blockedHit ? 'blocked' : 'hit');
     if (crit) flashScreen(true);
-    sfx(crit ? 'crit' : 'hit');
+    if (!blockedHit) sfx(crit ? 'crit' : 'hit');
     // Prot warrior: +3 rage per direct hit taken (not DoTs / dealTrue)
     if (
       target.side === 'ally' && !target.isPet

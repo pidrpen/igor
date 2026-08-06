@@ -22,7 +22,76 @@
     el.classList.remove(useCls);
     void el.offsetWidth;
     el.classList.add(useCls);
-    setTimeout(() => el.classList.remove(useCls), 400);
+    const ms = (useCls === 'parried' || useCls === 'blocked' || useCls === 'dodged') ? 560 : 400;
+    setTimeout(() => el.classList.remove(useCls), ms);
+  }
+
+  /**
+   * Visual feedback for tank defense: parry / block / dodge.
+   * Ring + slash (parry) or shield dome (block) over the unit portrait.
+   */
+  function playDefenseFx(uid, kind) {
+    if (!uid) return;
+    const k = kind === 'block' ? 'block' : (kind === 'dodge' ? 'dodge' : 'parry');
+    try { pulseUnit(uid, k === 'block' ? 'blocked' : (k === 'dodge' ? 'dodged' : 'parried')); } catch (_) {}
+    try {
+      if (k === 'parry') sfx('parry');
+      else if (k === 'block') sfx('block');
+      else sfx('dodge');
+    } catch (_) {}
+    if (!juiceOk()) return;
+    const layer = document.getElementById('skill-fx-layer');
+    const c = unitCenter(uid);
+    if (!layer || !c) return;
+    const root = document.createElement('div');
+    root.className = 'def-fx def-fx-' + k;
+    root.style.left = c.x + 'px';
+    root.style.top = c.y + 'px';
+    // ring
+    const ring = document.createElement('div');
+    ring.className = 'def-fx-ring';
+    root.appendChild(ring);
+    if (k === 'parry') {
+      // dual steel slash
+      for (const rot of [-42, 38]) {
+        const s = document.createElement('div');
+        s.className = 'def-fx-slash';
+        s.style.setProperty('--rot', rot + 'deg');
+        root.appendChild(s);
+      }
+      // sparks
+      for (let i = 0; i < 6; i++) {
+        const sp = document.createElement('div');
+        sp.className = 'def-fx-spark';
+        const a = (i / 6) * Math.PI * 2 + Math.random() * 0.4;
+        const dist = 28 + Math.random() * 22;
+        sp.style.setProperty('--dx', Math.cos(a) * dist + 'px');
+        sp.style.setProperty('--dy', Math.sin(a) * dist + 'px');
+        sp.style.animationDelay = (i * 18) + 'ms';
+        root.appendChild(sp);
+      }
+    } else if (k === 'block') {
+      const sh = document.createElement('div');
+      sh.className = 'def-fx-shield';
+      root.appendChild(sh);
+      for (let i = 0; i < 5; i++) {
+        const sp = document.createElement('div');
+        sp.className = 'def-fx-spark def-fx-spark-block';
+        const a = (-Math.PI / 2) + (i - 2) * 0.45;
+        const dist = 24 + Math.random() * 16;
+        sp.style.setProperty('--dx', Math.cos(a) * dist + 'px');
+        sp.style.setProperty('--dy', Math.sin(a) * dist + 'px');
+        sp.style.animationDelay = (i * 20) + 'ms';
+        root.appendChild(sp);
+      }
+    } else {
+      // dodge: swoosh arc
+      const sw = document.createElement('div');
+      sw.className = 'def-fx-swoosh';
+      root.appendChild(sw);
+    }
+    layer.appendChild(root);
+    setTimeout(() => root.remove(), 700);
   }
 
   function unitCenter(uid) {
