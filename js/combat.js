@@ -786,7 +786,7 @@
         detail: 'В конце хода есть шанс «прокачать» основного питомца — он наносит удар с +200% урона (в текущем режиме: одна цель или область). Искусность повышает только шанс срабатывания.',
       });
     }
-    // Prot warrior mastery
+    // Prot warrior mastery + parry passive
     if (classId === 'warrior' && specId === 'protection') {
       list.push({
         id: 'crit_block_mastery',
@@ -794,6 +794,14 @@
         icon: '🧱',
         short: 'шанс блока',
         detail: 'Искусность повышает шанс блокировать удар. Заблокированный удар ослабляется на 35%.',
+      });
+      list.push({
+        id: 'one_left',
+        name: 'Одной левой!',
+        icon: '✋',
+        short: '+7% парир',
+        detail: 'Повышает шанс парировать прямой удар на 7%. При парировании срабатывает авто-Реванш.',
+        parryChanceAdd: 0.07,
       });
     }
     // Death Knight Blood
@@ -2623,7 +2631,23 @@
       if (p.hp <= 0) { p.alive = false; p.hp = 0; } else p.alive = true;
       p.shield = 0;
       p.buffs = [];
-      p.abilities.forEach(a => { a.curCd = 0; });
+      p.abilities.forEach(a => {
+        if (a.maxCharges) {
+          // Заряды (Блок щитом): между пачками сохраняем charges и таймер восстановления.
+          // Старое «curCd = 0» обнуляло откат и оставляло 0/2 без тика → скилл «ломался» до конца ключа.
+          if (a.charges == null) a.charges = a.maxCharges;
+          a.charges = Math.max(0, Math.min(a.maxCharges, Number(a.charges) || 0));
+          if (a.charges >= a.maxCharges) {
+            a.curCd = 0;
+          } else if (!(a.curCd > 0) && a.cd) {
+            // нет активного тика — запустить восстановление +1
+            a.curCd = a.cd;
+          }
+          // иначе оставляем текущий curCd (продолжается между пачками)
+        } else {
+          a.curCd = 0;
+        }
+      });
       // Between pulls (M+ feel): no full restore. Energy/focus partially regen; mana barely; rage carries over.
       if (p.res.primary.type === 'energy' || p.res.primary.type === 'focus') {
         p.res.primary.current = clamp(
@@ -2756,7 +2780,14 @@
     actor.abilities.forEach(a => {
       if (a.curCd > 0) {
         a.curCd--;
-        if (a.curCd <= 0 && a.maxCharges) a.charges = a.maxCharges;
+        if (a.curCd <= 0) {
+          if (a.maxCharges) {
+            // Каждый тик КД восстанавливает +1 заряд (не полный 2/2 сразу)
+            if (a.charges == null) a.charges = 0;
+            a.charges = Math.min(a.maxCharges, a.charges + 1);
+            if (a.charges < a.maxCharges && a.cd) a.curCd = a.cd;
+          }
+        }
       }
     });
     regenResources(actor);
@@ -3411,7 +3442,10 @@
     if (ability.maxCharges) {
       if (ability.charges == null) ability.charges = ability.maxCharges;
       ability.charges = Math.max(0, ability.charges - 1);
-      if (ability.charges <= 0 && ability.cd) ability.curCd = ability.cd;
+      // Откат по 1 заряду: таймер стартует при любом spend, если ещё не тикает
+      if (ability.charges < ability.maxCharges && ability.cd && !(ability.curCd > 0)) {
+        ability.curCd = ability.cd;
+      }
     } else if (ability.cd) {
       ability.curCd = ability.cd;
     }
@@ -4506,7 +4540,7 @@
       for (const e of foes.slice()) {
         if (!e.alive) continue;
         const dealt = dealDmg(e, raw, tank, ctx);
-        if (dealt) log(tank.name + ': Реванш (блок) → ' + e.name + ' (−' + fmt(dealt) + ')', 'player');
+        if (dealt) log(tank.name + ': Реванш (парир) → ' + e.name + ' (−' + fmt(dealt) + ')', 'player');
       }
     } finally {
       combat._revengeLock = false;
@@ -4631,14 +4665,15 @@
         if (parryChance > 0 && roll < parryChance) {
           log((target.name || 'Танк') + ': Парирование!', 'player');
           floatText(target.uid, 'парир!', 'buff');
+          // Prot: авто-Реванш только с парирования (не с блока)
+          if (target.classId === 'warrior' && target.specId === 'protection') {
+            try { triggerProtRevenge(target); } catch (e) { console.error(e); }
+          }
           return 0;
         }
         if (roll < parryChance + blockChance) {
           dmg = Math.max(1, Math.round(dmg * (1 - blockValue)));
           log((target.name || 'Танк') + ': Блок (−' + Math.round(blockValue * 100) + '%)', 'player');
-          if (target.classId === 'warrior' && target.specId === 'protection') {
-            try { triggerProtRevenge(target); } catch (e) { console.error(e); }
-          }
         }
       }
     }
