@@ -905,8 +905,12 @@
     return map[classId] || classId;
   }
 
-  function balanceClassColor(classId) {
+  function balanceClassColor(classId, specId) {
     if (!classId || classId === 'system') return 'var(--border-gold)';
+    // Unholy DK (и другие spec-accent) — тот же цвет, что рамка портрета
+    if (specId && typeof classAccentColor === 'function') {
+      return classAccentColor(classId, specId);
+    }
     return CLASS_CSS[classId] || 'var(--border-gold)';
   }
 
@@ -1035,7 +1039,7 @@
       const items = changes.map(ch => {
         const cls = balanceClassLabel(ch.classId);
         const sp = ch.specName ? ` <span class="sp">· ${ch.specName}</span>` : '';
-        const cc = balanceClassColor(ch.classId);
+        const cc = balanceClassColor(ch.classId, ch.specId);
         const name = ch.className || cls;
         const lines = Array.isArray(ch.lines) && ch.lines.length
           ? `<ul class="ch-lines">${ch.lines.map(t => `<li>${t}</li>`).join('')}</ul>`
