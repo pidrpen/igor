@@ -14,27 +14,38 @@ python -m http.server 8080
 ## Структура
 
 ```
-index.html              # shell: разметка + подключение CSS/JS
-css/main.css            # стили
+index.html                 # shell: разметка + порядок <script>
+css/main.css
 js/
-  core.js               # баланс-панель, FX, портреты, хелперы
-  enemies.js            # аффиксы + шаблоны врагов/боссов
-  route.js              # данжи, таланты, граф маршрута
-  gear.js               # экипировка
-  combat.js             # бой (системы + loop)
-  save.js               # localStorage / export-import
-  ui.js                 # лобби, комнаты, boot
-wow-mop-data.js         # базовые классы/спеки
-class-balance/          # патчи 5.4.8 lite (единый apply(classes))
-  *-abilities.js
-  apply-all.js
-assets/                 # портреты, фоны
+  state.js                 # run/combat/party + STAT/мастерство константы
+  core.js                  # цвета классов, портреты, темы данжей
+  ui/
+    balance-panel.js       # история баланса + панель в лобби
+    fx.js                  # VFX скиллов
+    combat-ui.js           # ability bar, unit cards, render боя
+  systems/
+    telegraph-loot.js      # телеграфы, лут, key powers
+    stats.js               # крит / иск / унив
+    passives.js            # пассивки спеков
+    meter.js               # Recount
+    ability-data.js        # PET/HoT/школы/описания
+    resources.js           # ресурсы + charges
+    combat-loop.js         # startCombat / processTurn / endRound
+    abilities.js           # castAbility
+    damage.js              # dealDmg / heal / block-parry-revenge
+    ai.js                  # ИИ
+    combat-flow.js         # afterAction, victory, rest
+  enemies.js route.js gear.js save.js ui.js
+  combat.js                # shim (не подключается)
+wow-mop-data.js
+class-balance/
+assets/
 tests/
-  run-smoke.py          # smoke: структура + баланс (Chrome/Edge headless)
-  balance-smoke.js      # то же для Node (если есть)
-  load-check.js
-  browser-smoke.html
 ```
+
+Зоны правок: **цифры скилла** → `class-balance/`; **блок/парир/реванш** → `systems/damage.js`; **заряды** → `systems/resources.js`; **пассивки** → `systems/passives.js`; **changelog UI** → `ui/balance-panel.js`.
+
+
 
 Бэкап монолита (до разбиения): `index.html.monolith.bak`.
 
