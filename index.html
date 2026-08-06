@@ -7,27 +7,26 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
-  <script src="wow-mop-data.js?v=5.4.8.33"></script>
-  <!-- Баланс 5.4.8 lite по классам (агенты → class-balance/) -->
-  <script src="class-balance/warrior-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/paladin-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/hunter-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/rogue-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/priest-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/deathknight-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/shaman-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/mage-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/warlock-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/monk-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/druid-abilities.js?v=5.4.8.33"></script>
-  <script src="class-balance/apply-all.js?v=5.4.8.33"></script>
-  <link rel="stylesheet" href="css/main.css" />
+  <script src="wow-mop-data.js?v=5.4.8.34"></script>
+  <script src="class-balance/warrior-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/paladin-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/hunter-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/rogue-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/priest-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/deathknight-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/shaman-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/mage-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/warlock-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/monk-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/druid-abilities.js?v=5.4.8.34"></script>
+  <script src="class-balance/apply-all.js?v=5.4.8.34"></script>
+  <link rel="stylesheet" href="css/main.css?v=5.4.8.34" />
+  <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34" />
 </head>
 <body>
   <div id="lobby" class="screen screen-center">
     <div class="lobby-hero"><h1>Мифик-ключ</h1><div class="badge-row"><span class="week-badge">Туманы Пандарии</span><span class="week-badge" id="lobby-patch-badge">патч 5.4.8</span></div></div>
     <p class="subtitle">Классы и специализации <b style="color:var(--text)">эпохи Туманов Пандарии</b>. Выбери класс → специализацию. Ресурсы: ярость, энергия, руны, фокус, мана, ци…</p>
-
     <div class="lobby-wrap">
       <div class="card balance-panel" id="balance-panel">
         <div class="section-title">Баланс классов</div>
@@ -53,7 +52,6 @@
           <button class="btn btn-sm" id="btn-clear-pick" type="button">Сброс выбора</button>
         </div>
       </div>
-
       <div class="card lobby-party-col">
         <div class="section-title">Отряд (5 слотов) — клик по слоту, чтобы заменить</div>
         <div class="party-slots" id="party-slots"></div>
@@ -83,7 +81,6 @@
     </div>
     <p class="src-note">Способности специализаций эпохи Туманов Пандарии. Охотников на демонов и пробудителей в той эпохе ещё не было.</p>
   </div>
-
   <div id="run-screen" class="screen hidden">
     <div class="run-top">
       <span class="stat-pill key" id="hud-key">+2</span>
@@ -135,7 +132,6 @@
         <div id="log"></div>
       </aside>
     </div>
-    <!-- Пассивки: карман слева снизу (по умолчанию свёрнут) -->
     <div id="passive-pocket" class="passive-pocket collapsed hidden" aria-label="Пассивные способности">
       <button type="button" class="passive-pocket-toggle" id="passive-pocket-toggle" title="Пассивные способности">
         <span class="passive-pocket-title">✨ Пассивные способности</span>
@@ -146,7 +142,6 @@
         <div class="passive-pocket-tip hidden" id="passive-pocket-tip" role="tooltip" aria-live="polite"></div>
       </div>
     </div>
-    <!-- Recount: сворачиваемая панель метра урона/хила за ключ -->
     <div id="recount-panel" class="recount-panel collapsed hidden" data-tab="damage">
       <button type="button" class="recount-toggle" id="recount-toggle" title="Свернуть/развернуть Recount">
         <span class="recount-title">📊 Recount</span>
@@ -173,7 +168,6 @@
       </div>
     </div>
   </div>
-
   <div id="talent-modal" class="modal-back hidden">
     <div class="modal">
       <h2>Выбор силы</h2>
@@ -185,7 +179,7 @@
     </div>
   </div>
   <div id="loot-modal" class="modal-back hidden loot-modal">
-    <div class="modal">
+    <div class="modal" style="max-width:480px">
       <h2>💎 Добыча</h2>
       <p class="hint">Выбери <b>1 из 3</b> предметов (или пропусти).</p>
       <div class="talent-grid" id="loot-grid"></div>
@@ -194,7 +188,6 @@
       </div>
     </div>
   </div>
-
   <div id="gear-modal" class="modal-back hidden">
     <div class="modal" style="max-width:480px">
       <h2 id="gear-modal-title">Экипировка</h2>
@@ -208,7 +201,6 @@
       </div>
     </div>
   </div>
-
   <div id="gear-assign-modal" class="modal-back hidden">
     <div class="modal" style="max-width:420px">
       <h2>Надеть добычу</h2>
@@ -220,7 +212,6 @@
       </div>
     </div>
   </div>
-
   <div id="route-modal" class="modal-back hidden">
     <div class="modal" style="max-width:440px;text-align:center">
       <h2 id="route-modal-title">🗺 Развилка</h2>
@@ -251,31 +242,26 @@
   <div id="float-layer" aria-hidden="true"></div>
   <div id="vignette"></div>
   <div class="skill-fx-layer" id="skill-fx-layer"></div>
-
-  <!-- state + chrome -->
-  <script src="js/state.js?v=5.4.8.33"></script>
-  <script src="js/core.js?v=5.4.8.33"></script>
-  <script src="js/ui/balance-panel.js?v=5.4.8.33"></script>
-  <script src="js/ui/fx.js?v=5.4.8.33"></script>
-  <!-- content data -->
-  <script src="js/enemies.js?v=5.4.8.33"></script>
-  <script src="js/route.js?v=5.4.8.33"></script>
-  <script src="js/gear.js?v=5.4.8.33"></script>
-  <!-- combat systems -->
-  <script src="js/systems/telegraph-loot.js?v=5.4.8.33"></script>
-  <script src="js/systems/stats.js?v=5.4.8.33"></script>
-  <script src="js/systems/passives.js?v=5.4.8.33"></script>
-  <script src="js/systems/meter.js?v=5.4.8.33"></script>
-  <script src="js/systems/ability-data.js?v=5.4.8.33"></script>
-  <script src="js/systems/resources.js?v=5.4.8.33"></script>
-  <script src="js/systems/combat-loop.js?v=5.4.8.33"></script>
-  <script src="js/ui/combat-ui.js?v=5.4.8.33"></script>
-  <script src="js/systems/abilities.js?v=5.4.8.33"></script>
-  <script src="js/systems/damage.js?v=5.4.8.33"></script>
-  <script src="js/systems/ai.js?v=5.4.8.33"></script>
-  <script src="js/systems/combat-flow.js?v=5.4.8.33"></script>
-  <!-- save + lobby boot last -->
-  <script src="js/save.js?v=5.4.8.33"></script>
-  <script src="js/ui.js?v=5.4.8.33"></script>
+  <script src="js/state.js?v=5.4.8.34"></script>
+  <script src="js/core.js?v=5.4.8.34"></script>
+  <script src="js/ui/balance-panel.js?v=5.4.8.34"></script>
+  <script src="js/ui/fx.js?v=5.4.8.34"></script>
+  <script src="js/enemies.js?v=5.4.8.34"></script>
+  <script src="js/route.js?v=5.4.8.34"></script>
+  <script src="js/gear.js?v=5.4.8.34"></script>
+  <script src="js/systems/telegraph-loot.js?v=5.4.8.34"></script>
+  <script src="js/systems/stats.js?v=5.4.8.34"></script>
+  <script src="js/systems/passives.js?v=5.4.8.34"></script>
+  <script src="js/systems/meter.js?v=5.4.8.34"></script>
+  <script src="js/systems/ability-data.js?v=5.4.8.34"></script>
+  <script src="js/systems/resources.js?v=5.4.8.34"></script>
+  <script src="js/systems/combat-loop.js?v=5.4.8.34"></script>
+  <script src="js/ui/combat-ui.js?v=5.4.8.34"></script>
+  <script src="js/systems/abilities.js?v=5.4.8.34"></script>
+  <script src="js/systems/damage.js?v=5.4.8.34"></script>
+  <script src="js/systems/ai.js?v=5.4.8.34"></script>
+  <script src="js/systems/combat-flow.js?v=5.4.8.34"></script>
+  <script src="js/save.js?v=5.4.8.34"></script>
+  <script src="js/ui.js?v=5.4.8.34"></script>
 </body>
 </html>

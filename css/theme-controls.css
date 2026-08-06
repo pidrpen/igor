@@ -1,0 +1,104 @@
+/* theme-controls.css — тематические скроллбары и range, без дефолтов OS */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #8a7040 #12151c;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #8a7040 #12151c;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, rgba(40,32,18,.55), rgba(16,18,24,.9));
+  border-radius: 999px;
+  border: 1px solid rgba(138,112,64,.35);
+  box-shadow: inset 0 0 6px rgba(0,0,0,.45);
+}
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #d4b86a 0%, #8a7040 45%, #5a4828 100%);
+  border-radius: 999px;
+  border: 2px solid #1a1410;
+  box-shadow: 0 0 8px rgba(212,184,106,.25);
+  min-height: 28px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f0d78a 0%, #b8944e 50%, #6e5630 100%);
+}
+*::-webkit-scrollbar-corner { background: transparent; }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  margin: .2rem 0;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2a2418 0%, #1a1810 50%, #2a2418 100%);
+  border: 1px solid rgba(138,112,64,.45);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.55);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f0e0a0, #c9a227 55%, #6a5420);
+  border: 2px solid #1a1410;
+  box-shadow: 0 0 8px rgba(212,184,106,.45), inset 0 1px 2px rgba(255,255,255,.35);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 12px rgba(240,215,138,.65), inset 0 1px 2px rgba(255,255,255,.4);
+}
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2a2418 0%, #1a1810 50%, #2a2418 100%);
+  border: 1px solid rgba(138,112,64,.45);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.55);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f0e0a0, #c9a227 55%, #6a5420);
+  border: 2px solid #1a1410;
+  box-shadow: 0 0 8px rgba(212,184,106,.45);
+  cursor: pointer;
+}
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid rgba(240,193,75,.7);
+  outline-offset: 2px;
+}
+input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid rgba(240,193,75,.7);
+  outline-offset: 2px;
+}
+
+/* select без дефолтной стрелки OS */
+.field select {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  padding-right: 1.8rem !important;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--gold, #c8d0da) 50%),
+    linear-gradient(135deg, var(--gold, #c8d0da) 50%, transparent 50%) !important;
+  background-position:
+    calc(100% - 14px) calc(50% - 2px),
+    calc(100% - 9px) calc(50% - 2px) !important;
+  background-size: 5px 5px, 5px 5px !important;
+  background-repeat: no-repeat !important;
+  cursor: pointer;
+}
