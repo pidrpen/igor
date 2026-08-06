@@ -245,11 +245,23 @@
           });
           log(`${actor.name}: ${ad.name || 'период. урон'} → ${target.name} (${fmt(tick)}/р · ${turns}р)`, cls);
         }
-        // Arms: «Широкий размах» — Героический удар дублируется на остальных (40% силы)
+        // Arms: «Широкий размах» — Героический удар дублируется на остальных (40% силы + 40% кровотечения)
         if (ability.id === 'heroic' && actor.alive && target) {
           const ws = (actor.buffs || []).find(b => b && b.id === 'wide_sweep' && (Number(b.stacks) || 0) > 0);
           if (ws) {
-            const splashRaw = Math.max(1, Math.round(abilityDamageRaw(actor, ability) * 0.4));
+            const splashPct = 0.4;
+            const splashRaw = Math.max(1, Math.round(abilityDamageRaw(actor, ability) * splashPct));
+            // Тик кровотечения как у основной цели, но × тот же % что и splash-удар
+            let splashBleedTick = 0;
+            if (ability.applyDot) {
+              const ad = ability.applyDot;
+              let tick = periodicTickFromFlat(actor, ad.flat || 0);
+              tick = Math.max(1, Math.round(tick * masteryDmgMult(actor, {
+                isDot: true, type: 'dot', abilityId: ad.id || ability.id,
+                school: ad.school || 'physical',
+              })));
+              splashBleedTick = Math.max(1, Math.round(tick * splashPct));
+            }
             for (const e of foes) {
               if (!e.alive || e.uid === target.uid) continue;
               const sd = dealDmg(e, splashRaw, actor, {
@@ -257,6 +269,21 @@
                 school, skipBlock: false,
               });
               if (sd) log(`${actor.name}: ${ability.name} (размах) → ${e.name} (−${fmt(sd)})`, cls);
+              if (splashBleedTick > 0 && e.alive && ability.applyDot) {
+                const ad = ability.applyDot;
+                const turns = Math.max(1, Number(ad.turns) || 4);
+                applyStatus(e, {
+                  id: 'dot_' + (ad.id || ability.id),
+                  name: ad.name || 'Кровотечение',
+                  icon: ad.icon || '🩸',
+                  turns,
+                  dot: splashBleedTick,
+                  fromUid: actor.uid,
+                  periodic: true,
+                  school: ad.school || 'physical',
+                });
+                log(`${actor.name}: ${ad.name || 'Кровотечение'} (размах ${Math.round(splashPct * 100)}%) → ${e.name} (${fmt(splashBleedTick)}/р · ${turns}р)`, cls);
+              }
             }
             actor.buffs = (actor.buffs || []).filter(b => b && b.id !== 'wide_sweep');
             log(`${actor.name}: «Широкий размах» израсходован`, 'system');

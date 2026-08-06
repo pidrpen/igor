@@ -2003,7 +2003,7 @@
       transition: border-color .15s, box-shadow .15s;
       box-sizing: border-box;
     }
-    .ability:hover:not(:disabled) {
+    .ability:hover:not(:disabled):not(.is-disabled) {
       border-color: var(--gold); box-shadow: 0 0 14px rgba(224,192,96,.35);
     }
     .ability.elusive-charged .a-cost { color: #f0c14b !important; font-weight: 700; text-shadow: 0 0 8px rgba(240,193,75,.4); }
@@ -2019,7 +2019,12 @@
       border-color: #e0c060;
       box-shadow: 0 0 10px rgba(224,192,96,.5);
     }
-    .ability:disabled { opacity: .5; filter: grayscale(.35); }
+    .ability:disabled,
+    .ability.is-disabled {
+      opacity: .5; filter: grayscale(.35);
+      cursor: help; /* hover description still available */
+    }
+    .ability.is-disabled .a-ico { pointer-events: auto; }
     .ability .hk {
       position: absolute; top: 2px; right: 4px; font-size: .65rem; font-weight: 700;
       color: var(--gold-bright); text-shadow: 0 1px 2px #000; z-index: 2;

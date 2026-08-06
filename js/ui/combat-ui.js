@@ -15,8 +15,13 @@
       const hasWideSweep = !!(actor.buffs || []).some(b => b && b.id === 'wide_sweep' && (Number(b.stacks) || 0) > 0);
       btn.className = 'ability' + ((ab.id === 'elusive' && (actor.purifyCleared || 0) > 0) ? ' elusive-charged' : '')
         + ((ab.id === 'heroic' && hasWideSweep) ? ' wide-sweep-charged' : '')
-        + ((ab.id === 'debug_mode') ? ' debug-mode-ab' : '');
-      btn.disabled = !can;
+        + ((ab.id === 'debug_mode') ? ' debug-mode-ab' : '')
+        + (!can ? ' is-disabled' : '');
+      // Не используем native disabled: на disabled-кнопках не приходят mouseenter → нет тултипа.
+      // Блок каста: aria + canPay в click/hotkey.
+      if (!can) btn.setAttribute('aria-disabled', 'true');
+      else btn.removeAttribute('aria-disabled');
+      btn.tabIndex = 0;
       const needTarget = abilityNeedsClickTarget(ab);
       const rule = abilityTargetRule(ab);
       const keyHint = idx < 9 ? (idx + 1) : (idx === 9 ? 0 : '');
@@ -70,17 +75,23 @@
         `<span class="a-school ${schoolCss}">${schoolNote || 'Тип: —'}</span>` +
         cdHtml;
       const icoEl = btn.querySelector('.a-ico');
+      const showTip = (e) => {
+        if (e) e.stopPropagation();
+        const anchor = icoEl || btn;
+        showAbilityTipFloat(anchor, ab.name || '', detail);
+      };
+      const hideTip = () => hideAbilityTipFloat();
       if (icoEl) {
-        const show = (e) => {
-          e.stopPropagation();
-          showAbilityTipFloat(icoEl, ab.name || '', detail);
-        };
-        const hide = () => hideAbilityTipFloat();
-        icoEl.addEventListener('mouseenter', show);
-        icoEl.addEventListener('mouseleave', hide);
-        icoEl.addEventListener('focus', show);
-        icoEl.addEventListener('blur', hide);
+        icoEl.addEventListener('mouseenter', showTip);
+        icoEl.addEventListener('mouseleave', hideTip);
+        icoEl.addEventListener('focus', showTip);
+        icoEl.addEventListener('blur', hideTip);
       }
+      // Тултип и на всей карточке (в т.ч. на КД / без ресурса)
+      btn.addEventListener('mouseenter', showTip);
+      btn.addEventListener('mouseleave', hideTip);
+      btn.addEventListener('focus', showTip);
+      btn.addEventListener('blur', hideTip);
       // ДК: подсветка нужных рун при наведении / фокусе на скилле
       if (ab.costRunes && actor.res?.runes) {
         const hlOn = () => highlightAbilityRunes(actor, ab.costRunes);
@@ -100,7 +111,7 @@
       btn.addEventListener('click', () => {
         hideAbilityTipFloat();
         sfx('click');
-        if (!canPay(actor, ab)) return;
+        if (btn.classList.contains('is-disabled') || !canPay(actor, ab)) return;
         if (needTarget) {
           // Always pick target manually (heals, DoTs, damage, purge, kick…)
           pendingTarget = { actor, ability: ab };
