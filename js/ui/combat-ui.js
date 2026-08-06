@@ -422,13 +422,27 @@
     let runesHtml = '';
     if (u.res.runes) {
       const r = u.res.runes;
-      // ready = руна доступна (тускло); hl навешивается при hover/выборе скилла
-      const mk = (cls, on) =>
-        `<i class="rune ${cls}${on ? ' ready' : ''}" data-ready="${on ? '1' : '0'}"></i>`;
+      // turns left for a specific spent rune slot (from r.cd entries)
+      const cdLeft = (type, idx) => {
+        let best = 0;
+        for (const c of (r.cd || [])) {
+          if (c && c.type === type && Number(c.idx) === idx && Number(c.turns) > 0) {
+            best = Math.max(best, Number(c.turns) || 0);
+          }
+        }
+        return best;
+      };
+      // ready = ярко; spent = свой цвет, приглушённый + цифра ходов до восстановления
+      const mk = (cls, type, idx) => {
+        const on = !!(r[type] && r[type][idx]);
+        const cd = on ? 0 : cdLeft(type, idx);
+        const cdHtml = (!on && cd > 0) ? `<span class="rune-cd">${cd}</span>` : '';
+        return `<i class="rune ${cls}${on ? ' ready' : ' spent'}${cd > 0 ? ' on-cd' : ''}" data-ready="${on ? '1' : '0'}" data-cd="${cd}" title="${on ? 'Готова' : (cd > 0 ? 'Восстановление: ' + cd + ' х.' : 'На КД')}">${cdHtml}</i>`;
+      };
       runesHtml = '<div class="slot-runes runes-row">' +
-        r.blood.map(on => mk('b', on)).join('') +
-        r.frost.map(on => mk('f', on)).join('') +
-        r.unholy.map(on => mk('u', on)).join('') +
+        (r.blood || []).map((_, i) => mk('b', 'blood', i)).join('') +
+        (r.frost || []).map((_, i) => mk('f', 'frost', i)).join('') +
+        (r.unholy || []).map((_, i) => mk('u', 'unholy', i)).join('') +
         '</div>';
     }
     // Вторичный ресурс текстом — кроме ДК (сила рун уже в полоске под HP)

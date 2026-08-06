@@ -202,7 +202,7 @@
     blood_boil: { motion: 'nova', school: 'blood', impact: 'splash' },
     scourge: { motion: 'slash', school: 'shadow', impact: 'hit' },
     festering: { motion: 'slash', school: 'shadow', impact: 'hit' },
-    outbreak: { motion: 'bolt', school: 'shadow', impact: 'hit' },
+    outbreak: { motion: 'nova', school: 'shadow', impact: 'splash' },
     plague_strike: { motion: 'slash', school: 'shadow', impact: 'hit' },
     mind_freeze: { motion: 'slam', school: 'frost', impact: 'hit' },
     // Shaman

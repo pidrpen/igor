@@ -2,6 +2,25 @@
   const BALANCE_BASE = '5.4.8';
   const BALANCE_HISTORY = [
     {
+      version: '5.4.8.29',
+      date: '2026-08-06',
+      title: 'ДК: руны с таймером · Вспышка болезни AoE',
+      changes: [
+        {
+          classId: 'deathknight',
+          className: 'Рыцарь смерти',
+          text: 'Руны: потраченные не «чёрные», а приглушённый цвет типа; в каждом кружке — ходы до восстановления.',
+        },
+        {
+          classId: 'deathknight',
+          className: 'Рыцарь смерти',
+          specId: 'unholy',
+          specName: 'Нечестивость',
+          text: '«Вспышка болезни»: на всех врагов (AoE + DoT), КД 2 → 8.',
+        },
+      ],
+    },
+    {
       version: '5.4.8.28',
       date: '2026-08-06',
       title: 'ДК Кровь: парирование 20%',

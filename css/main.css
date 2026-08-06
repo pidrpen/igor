@@ -1492,44 +1492,70 @@
     }
     .hp-text { font-size: .7rem; color: var(--muted); margin-top: 2px; display: none; }
     .res-text { font-size: .7rem; color: var(--gold); margin-top: 0; line-height: 14px; }
-    .runes-row { display: flex; gap: 3px; justify-content: center; margin-top: 0; flex-wrap: nowrap; }
+    .runes-row { display: flex; gap: 3px; justify-content: center; margin-top: 1px; flex-wrap: nowrap; align-items: center; }
     /*
      * Руны ДК:
-     *  — spent: свой цвет, но затемнённый
+     *  — spent: тот же цвет типа, только приглушённый (не чёрные)
      *  — ready: яркая заливка
+     *  — on-cd: цифра ходов до восстановления в кружке
      *  — hl: мягкая обводка (hover / выбор / каст)
      */
     .rune {
-      width: 12px; height: 12px; border-radius: 50%; flex: 0 0 12px;
+      position: relative;
+      width: 15px; height: 15px; border-radius: 50%; flex: 0 0 15px;
+      display: inline-flex; align-items: center; justify-content: center;
       opacity: 1;
       filter: none;
-      border: 1px solid rgba(0,0,0,.5);
+      border: 1px solid rgba(0,0,0,.45);
+      box-sizing: border-box;
       transition: opacity .12s ease, box-shadow .12s ease, filter .12s ease, transform .12s ease, background .12s ease;
+      font-style: normal;
     }
-    /* Потраченные — цвет типа, затемнённый */
-    .rune.b {
-      background: radial-gradient(circle at 30% 28%, #5a2020, #2a0c0c 70%);
-      box-shadow: inset 0 1px 2px rgba(0,0,0,.55);
-      border-color: rgba(120,40,40,.5);
-      filter: brightness(.55) saturate(.75);
+    .rune .rune-cd {
+      position: absolute;
+      inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: "DM Sans", system-ui, sans-serif;
+      font-size: 8.5px;
+      font-weight: 800;
+      line-height: 1;
+      color: #fff;
+      text-shadow: 0 0 3px #000, 0 1px 2px #000, 0 0 1px #000;
+      pointer-events: none;
+      z-index: 1;
     }
-    .rune.f {
-      background: radial-gradient(circle at 30% 28%, #183060, #0a1528 70%);
-      box-shadow: inset 0 1px 2px rgba(0,0,0,.55);
-      border-color: rgba(40,70,120,.5);
-      filter: brightness(.55) saturate(.75);
+    /* Потраченные — цвет типа, просто погашенный (читаемый, не «уголь») */
+    .rune.b,
+    .rune.spent.b {
+      background: radial-gradient(circle at 30% 28%, #e07070, #a02828 55%, #6a1414);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.35);
+      border-color: rgba(180,70,70,.55);
+      filter: brightness(.78) saturate(.9);
+      opacity: .88;
     }
-    .rune.u {
-      background: radial-gradient(circle at 30% 28%, #184028, #0a1810 70%);
-      box-shadow: inset 0 1px 2px rgba(0,0,0,.55);
-      border-color: rgba(40,100,60,.5);
-      filter: brightness(.55) saturate(.75);
+    .rune.f,
+    .rune.spent.f {
+      background: radial-gradient(circle at 30% 28%, #80b8f0, #2868c0 55%, #143878);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.35);
+      border-color: rgba(70,120,200,.55);
+      filter: brightness(.78) saturate(.9);
+      opacity: .88;
     }
-    .rune.d {
-      background: radial-gradient(circle at 30% 28%, #301848, #140820 70%);
-      box-shadow: inset 0 1px 2px rgba(0,0,0,.55);
-      border-color: rgba(80,40,120,.5);
-      filter: brightness(.55) saturate(.75);
+    .rune.u,
+    .rune.spent.u {
+      background: radial-gradient(circle at 30% 28%, #70e0a0, #1e9a50 55%, #0e6030);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.35);
+      border-color: rgba(50,160,90,.55);
+      filter: brightness(.78) saturate(.9);
+      opacity: .88;
+    }
+    .rune.d,
+    .rune.spent.d {
+      background: radial-gradient(circle at 30% 28%, #c080e8, #7030b0 55%, #401868);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.35);
+      border-color: rgba(140,80,200,.55);
+      filter: brightness(.78) saturate(.9);
+      opacity: .88;
     }
     /* Готовые — ярко */
     .rune.ready.b,
@@ -1538,6 +1564,7 @@
       box-shadow: 0 0 4px rgba(255,80,80,.35), inset 0 1px 2px rgba(255,255,255,.35);
       border-color: rgba(255,120,120,.55);
       filter: none;
+      opacity: 1;
     }
     .rune.ready.f,
     .rune.on.f {
@@ -1545,6 +1572,7 @@
       box-shadow: 0 0 4px rgba(80,140,255,.4), inset 0 1px 2px rgba(255,255,255,.35);
       border-color: rgba(120,180,255,.55);
       filter: none;
+      opacity: 1;
     }
     .rune.ready.u,
     .rune.on.u {
@@ -1552,6 +1580,7 @@
       box-shadow: 0 0 4px rgba(60,220,120,.4), inset 0 1px 2px rgba(255,255,255,.35);
       border-color: rgba(100,230,150,.55);
       filter: none;
+      opacity: 1;
     }
     .rune.ready.d,
     .rune.on.d {
@@ -1559,6 +1588,7 @@
       box-shadow: 0 0 4px rgba(180,80,255,.4), inset 0 1px 2px rgba(255,255,255,.35);
       border-color: rgba(200,120,255,.55);
       filter: none;
+      opacity: 1;
     }
     /* Подсветка «скилл тратит эти руны» — спокойная */
     .rune.hl {
