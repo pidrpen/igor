@@ -10,9 +10,8 @@
       p.shield = 0;
       p.buffs = [];
       p.abilities.forEach(a => {
+        // Между пачками откаты НЕ сбрасываются (M+ feel): curCd и charges живут через весь ключ.
         if (a.maxCharges) {
-          // Заряды (Блок щитом): между пачками сохраняем charges и таймер восстановления.
-          // Старое «curCd = 0» обнуляло откат и оставляло 0/2 без тика → скилл «ломался» до конца ключа.
           if (a.charges == null) a.charges = a.maxCharges;
           a.charges = Math.max(0, Math.min(a.maxCharges, Number(a.charges) || 0));
           if (a.charges >= a.maxCharges) {
@@ -21,9 +20,10 @@
             // нет активного тика — запустить восстановление +1
             a.curCd = a.cd;
           }
-          // иначе оставляем текущий curCd (продолжается между пачками)
+          // иначе оставляем текущий curCd
         } else {
-          a.curCd = 0;
+          // обычные скиллы: не обнулять curCd при входе в новую пачку
+          if (a.curCd == null || a.curCd < 0) a.curCd = 0;
         }
       });
       // Between pulls (M+ feel): no full restore. Energy/focus partially regen; mana barely; rage carries over.
@@ -57,18 +57,8 @@
         }
       }
     }
-    const te = talentEffects();
-    if (te.bloodlust) {
-      for (const a of run.party.filter(x => x.alive)) {
-        a.buffs.push({ id: 'lust', name: 'Кровожадность', icon: '🐺', turns: 2, atkMod: te.bloodlust });
-      }
-    }
-    if (run.restBuffBattles > 0) {
-      for (const a of run.party.filter(x => x.alive)) {
-        a.buffs.push({ id: 'rb', name: 'Настрой', icon: '🔥', turns: 99, atkMod: 0.15 });
-      }
-      run.restBuffBattles--;
-    }
+    // Межпулловые «подарки» (привал +15% ATK / авто-lust) отключены — только боевые баффы от скиллов.
+    if (run.restBuffBattles) run.restBuffBattles = 0;
     combat = { type, enemies, pets: [], turnQueue: [], turnIndex: 0, round: 1, over: false, waitingPlayer: false, thunderTimer: 0 };
     spawnClassPets();
     buildTurnQueue();

@@ -454,7 +454,8 @@
   }
 
   function secPanelHtml(entry, slotIndex) {
-    const s = ensureSec(entry);
+    // база + шмот (не пишем в entry.sec — иначе двойной учёт в бою)
+    const s = (typeof secWithGear === 'function') ? secWithGear(entry) : ensureSec(entry);
     const mi = masteryInfo(entry.classId, entry.specId);
     const cRating = s.critRating != null ? s.critRating : SEC_CRIT_RATING;
     const vRating = s.versRating != null ? s.versRating : SEC_VERS_RATING;
@@ -462,6 +463,9 @@
     const cPct = Math.round((cRating / SEC_CRIT_RATING) * SEC_CRIT_DEFAULT * 1000) / 10;
     const vPct = Math.round(vRating * SEC_VERS_PCT_PER_RATING * 1000) / 10;
     const mPct = Math.round(masteryDisplayPct(entry.classId, entry.specId, mRating) * 10) / 10;
+    const gb = s._gearBonus || { crit: 0, vers: 0, mastery: 0 };
+    const gearNote = (n) => (n > 0 ? ` · шмот +${n}` : n < 0 ? ` · шмот ${n}` : '');
+    const rateLabel = (total, gear) => (gear ? `${total} <span class="sec-gear-delta">+${gear}</span>` : String(total));
     const mEffect = mi.effect || mi.desc || 'Увеличивает эффективность специализации';
     const mName = mi.name || 'Искусность';
     const tip = (title, body, meta) =>
@@ -475,21 +479,21 @@
       <div class="sec-rows">
         <div class="sec-row-card" tabindex="0">
           <span class="sec-k">Критический удар</span>
-          <span class="sec-rating">${cRating}</span>
+          <span class="sec-rating">${rateLabel(cRating, gb.crit)}</span>
           <span class="sec-pct">${cPct}%</span>
-          ${tip('Критический удар', 'Вероятность дополнительного урона и исцеления', `рейтинг ${cRating} → ${cPct}%`)}
+          ${tip('Критический удар', 'Вероятность дополнительного урона и исцеления', `рейтинг ${cRating} → ${cPct}%${gearNote(gb.crit)}`)}
         </div>
         <div class="sec-row-card" tabindex="0">
           <span class="sec-k">Искусность</span>
-          <span class="sec-rating">${mRating}</span>
+          <span class="sec-rating">${rateLabel(mRating, gb.mastery)}</span>
           <span class="sec-pct">${mPct}%</span>
-          ${tip(mName, mEffect, `рейтинг ${mRating} → ${mPct}% · при рейтинге 120: ${mi.pctAt120 ?? 36}%`)}
+          ${tip(mName, mEffect, `рейтинг ${mRating} → ${mPct}% · при рейтинге 120: ${mi.pctAt120 ?? 36}%${gearNote(gb.mastery)}`)}
         </div>
         <div class="sec-row-card" tabindex="0">
           <span class="sec-k">Универсальность</span>
-          <span class="sec-rating">${vRating}</span>
+          <span class="sec-rating">${rateLabel(vRating, gb.vers)}</span>
           <span class="sec-pct">${vPct}%</span>
-          ${tip('Универсальность', 'Снижает входящий урон и усиливает исходящее исцеление', `рейтинг ${vRating} → ${vPct}% (−${Math.round(vPct * 0.6 * 10) / 10}% вх. · +${Math.round(vPct * 0.8 * 10) / 10}% хил)`)}
+          ${tip('Универсальность', 'Снижает входящий урон и усиливает исходящее исцеление', `рейтинг ${vRating} → ${vPct}% (−${Math.round(vPct * 0.6 * 10) / 10}% вх. · +${Math.round(vPct * 0.8 * 10) / 10}% хил)${gearNote(gb.vers)}`)}
         </div>
       </div>
     </div>`;

@@ -61,6 +61,38 @@
     if (u.sec) return u.sec;
     return defaultSec();
   }
+
+  /**
+   * Вторички для UI в лобби: база (entry.sec) + бонусы с надетого шмота.
+   * Не мутирует entry — сейв хранит «голый» sec, gear считается отдельно
+   * (в бою applyGearToHero накидывает то же самое на _baseSec*).
+   */
+  function secWithGear(entry) {
+    const tmp = { sec: entry?.sec ? { ...entry.sec } : defaultSec() };
+    const base = ensureSec(tmp);
+    const gs = (entry && entry.gear && typeof sumGearStats === 'function')
+      ? sumGearStats(entry.gear)
+      : { crit: 0, mastery: 0, vers: 0 };
+    const gearCrit = Math.round((+gs.crit || 0) * (typeof GEAR_CRIT_PER_POINT !== 'undefined' ? GEAR_CRIT_PER_POINT : 5));
+    const gearVers = Math.round((+gs.vers || 0) * (typeof GEAR_VERS_PER_POINT !== 'undefined' ? GEAR_VERS_PER_POINT : 1));
+    const gearMast = Math.round((+gs.mastery || 0) * (typeof GEAR_MASTERY_PER_POINT !== 'undefined' ? GEAR_MASTERY_PER_POINT : 3));
+    const critRating = Math.max(0, Math.round(Number(base.critRating) || 0) + gearCrit);
+    const versRating = Math.max(0, Math.round(Number(base.versRating) || 0) + gearVers);
+    const masteryRating = Math.max(0, Math.round(Number(base.masteryRating) || 0) + gearMast);
+    return {
+      critRating,
+      versRating,
+      masteryRating,
+      critPct: clamp((critRating / SEC_CRIT_RATING) * SEC_CRIT_DEFAULT, 0, 0.75),
+      versPct: clamp(versRating * SEC_VERS_PCT_PER_RATING, 0, 0.6),
+      _gearBonus: { crit: gearCrit, vers: gearVers, mastery: gearMast },
+      _base: {
+        critRating: Math.round(Number(base.critRating) || 0),
+        versRating: Math.round(Number(base.versRating) || 0),
+        masteryRating: Math.round(Number(base.masteryRating) || 0),
+      },
+    };
+  }
   /** Crit chance 0–1 (100 rating → 18%). */
   function critChance(u) {
     const s = getUnitSec(u);

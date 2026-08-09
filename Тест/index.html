@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -23,7 +23,7 @@
   <script src="class-balance/apply-all.js?v=5.4.8.34-test"></script>
   <link rel="stylesheet" href="css/main.css?v=5.4.8.34" />
   <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34-beta" />
-  <link rel="stylesheet" href="css/test-room.css?v=5.4.8.34-shop" />
+  <link rel="stylesheet" href="css/test-room.css?v=5.4.8.34-gearui" />
 </head>
 <body>
   <div id="lobby" class="screen screen-center">
@@ -247,13 +247,15 @@
     </div>
   </div>
   <div id="gear-modal" class="modal-back hidden">
-    <div class="modal" style="max-width:480px">
-      <h2 id="gear-modal-title">Экипировка</h2>
-      <p class="hint" id="gear-modal-sub">Слоты героя · общая сумка (магазин) · клик — надеть</p>
-      <div class="gear-grid" id="gear-equipped"></div>
-      <div class="section-title" style="margin-top:.75rem">Общая сумка</div>
-      <div class="gear-bag" id="gear-bag"></div>
-      <div style="margin-top:.9rem;text-align:center;display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap">
+    <div class="modal gear-modal-panel">
+      <div class="gear-modal-scroll">
+        <h2 id="gear-modal-title">Экипировка</h2>
+        <p class="hint" id="gear-modal-sub">Слоты героя · общая сумка (магазин) · клик — надеть</p>
+        <div class="gear-grid" id="gear-equipped"></div>
+        <div class="section-title" style="margin-top:.75rem">Общая сумка</div>
+        <div class="gear-bag" id="gear-bag"></div>
+      </div>
+      <div class="gear-modal-footer">
         <button class="btn btn-sm btn-ok" type="button" id="gear-auto-equip" title="Лучшее из общей сумки под роль/спек">⚡ Авто-одеть</button>
         <button class="btn btn-sm" type="button" id="gear-unequip-all">Снять всё в сумку</button>
         <button class="btn" type="button" id="gear-close">Закрыть</button>
@@ -315,30 +317,30 @@
   <div id="float-layer" aria-hidden="true"></div>
   <div id="vignette"></div>
   <div class="skill-fx-layer" id="skill-fx-layer"></div>
-  <script src="js/state.js?v=5.4.8.34-gear3"></script>
+  <script src="js/state.js?v=5.4.8.34-gear6"></script>
   <script src="js/core.js?v=5.4.8.34-test"></script>
-  <script src="js/ui/balance-panel.js?v=5.4.8.34-beta"></script>
+  <script src="js/ui/balance-panel.js?v=5.4.8.34-beta5"></script>
   <script src="js/ui/fx.js?v=5.4.8.34"></script>
   <script src="js/enemies.js?v=5.4.8.34"></script>
-  <script src="js/route.js?v=5.4.8.34"></script>
-  <script src="js/gear.js?v=5.4.8.34-gear3"></script>
+  <script src="js/route.js?v=5.4.8.34-beta5"></script>
+  <script src="js/gear.js?v=5.4.8.34-gear6"></script>
   <script src="js/shop/shop-sets.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop-trinkets-data.js?v=5.4.8.34-gear2"></script>
-  <script src="js/shop/shop.js?v=5.4.8.34-gear2"></script>
+  <script src="js/shop/shop.js?v=5.4.8.34-gear6"></script>
   <script src="js/systems/telegraph-loot.js?v=5.4.8.34"></script>
-  <script src="js/systems/stats.js?v=5.4.8.34"></script>
+  <script src="js/systems/stats.js?v=5.4.8.34-gear5"></script>
   <script src="js/systems/passives.js?v=5.4.8.34"></script>
   <script src="js/systems/meter.js?v=5.4.8.34"></script>
   <script src="js/systems/ability-data.js?v=5.4.8.34"></script>
   <script src="js/systems/resources.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-loop.js?v=5.4.8.34"></script>
+  <script src="js/systems/combat-loop.js?v=5.4.8.34-beta5"></script>
   <script src="js/ui/combat-ui.js?v=5.4.8.34"></script>
   <script src="js/systems/abilities.js?v=5.4.8.34"></script>
   <script src="js/systems/damage.js?v=5.4.8.34"></script>
   <script src="js/systems/ai.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-flow.js?v=5.4.8.34"></script>
+  <script src="js/systems/combat-flow.js?v=5.4.8.34-beta5"></script>
   <script src="js/save.js?v=5.4.8.34"></script>
-  <script src="js/ui.js?v=5.4.8.34-gear3"></script>
+  <script src="js/ui.js?v=5.4.8.34-beta5"></script>
   <script src="js/test-room/sprites.js?v=5.4.8.34-v04"></script>
   <script src="js/test-room/test-room.js?v=5.4.8.34-v04"></script>
 </body>

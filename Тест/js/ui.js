@@ -496,7 +496,8 @@
   }
 
   function secPanelHtml(entry, slotIndex) {
-    const s = ensureSec(entry);
+    // база + шмот (не пишем в entry.sec — иначе двойной учёт в бою)
+    const s = (typeof secWithGear === 'function') ? secWithGear(entry) : ensureSec(entry);
     const mi = masteryInfo(entry.classId, entry.specId);
     const cRating = s.critRating != null ? s.critRating : SEC_CRIT_RATING;
     const vRating = s.versRating != null ? s.versRating : SEC_VERS_RATING;
@@ -504,6 +505,9 @@
     const cPct = Math.round((cRating / SEC_CRIT_RATING) * SEC_CRIT_DEFAULT * 1000) / 10;
     const vPct = Math.round(vRating * SEC_VERS_PCT_PER_RATING * 1000) / 10;
     const mPct = Math.round(masteryDisplayPct(entry.classId, entry.specId, mRating) * 10) / 10;
+    const gb = s._gearBonus || { crit: 0, vers: 0, mastery: 0 };
+    const gearNote = (n) => (n > 0 ? ` · шмот +${n}` : n < 0 ? ` · шмот ${n}` : '');
+    const rateLabel = (total, gear) => (gear ? `${total} <span class="sec-gear-delta">+${gear}</span>` : String(total));
     const mEffect = mi.effect || mi.desc || 'Увеличивает эффективность специализации';
     const mName = mi.name || 'Искусность';
     const tip = (title, body, meta) =>
@@ -517,21 +521,21 @@
       <div class="sec-rows">
         <div class="sec-row-card" tabindex="0">
           <span class="sec-k">Критический удар</span>
-          <span class="sec-rating">${cRating}</span>
+          <span class="sec-rating">${rateLabel(cRating, gb.crit)}</span>
           <span class="sec-pct">${cPct}%</span>
-          ${tip('Критический удар', 'Вероятность дополнительного урона и исцеления', `рейтинг ${cRating} → ${cPct}%`)}
+          ${tip('Критический удар', 'Вероятность дополнительного урона и исцеления', `рейтинг ${cRating} → ${cPct}%${gearNote(gb.crit)}`)}
         </div>
         <div class="sec-row-card" tabindex="0">
           <span class="sec-k">Искусность</span>
-          <span class="sec-rating">${mRating}</span>
+          <span class="sec-rating">${rateLabel(mRating, gb.mastery)}</span>
           <span class="sec-pct">${mPct}%</span>
-          ${tip(mName, mEffect, `рейтинг ${mRating} → ${mPct}% · при рейтинге 120: ${mi.pctAt120 ?? 36}%`)}
+          ${tip(mName, mEffect, `рейтинг ${mRating} → ${mPct}% · при рейтинге 120: ${mi.pctAt120 ?? 36}%${gearNote(gb.mastery)}`)}
         </div>
         <div class="sec-row-card" tabindex="0">
           <span class="sec-k">Универсальность</span>
-          <span class="sec-rating">${vRating}</span>
+          <span class="sec-rating">${rateLabel(vRating, gb.vers)}</span>
           <span class="sec-pct">${vPct}%</span>
-          ${tip('Универсальность', 'Снижает входящий урон и усиливает исходящее исцеление', `рейтинг ${vRating} → ${vPct}% (−${Math.round(vPct * 0.6 * 10) / 10}% вх. · +${Math.round(vPct * 0.8 * 10) / 10}% хил)`)}
+          ${tip('Универсальность', 'Снижает входящий урон и усиливает исходящее исцеление', `рейтинг ${vRating} → ${vPct}% (−${Math.round(vPct * 0.6 * 10) / 10}% вх. · +${Math.round(vPct * 0.8 * 10) / 10}% хил)${gearNote(gb.vers)}`)}
         </div>
       </div>
     </div>`;
@@ -928,7 +932,7 @@
   function renderPath() {
     const list = document.getElementById('path-list');
     if (!list || !run?.route) { if (list) list.innerHTML = ''; return; }
-    const order = ['start', 'fork1a', 'fork1b', 'rest1', 'mid', 'fork2a', 'fork2b', 'rest2', 'final', 'mop1', 'mop2', 'mop3'];
+    const order = ['start', 'fork1a', 'fork1b', 'side1', 'mid', 'risk', 'fork2a', 'fork2b', 'final', 'mop1', 'mop2', 'mop3'];
     const cur = run.route.currentId;
     const visited = new Set(run.route.visited || []);
     const html = order.map(id => {
@@ -995,38 +999,35 @@
           : meta.name + ` · силы ${f}/${FORCES_TARGET}%`);
     combat = null; pendingTarget = null;
     if (type === 'rest') {
-      showRestRoom();
+      // Привалы отключены: legacy-сейвы / старые маршруты — сразу дальше
+      skipRestRoomAndContinue();
       return;
     }
     startCombat(type);
   }
 
-  /** Rest room: no enemies by design — show clear continue UI (panel + modal). */
+  /** Пропуск комнаты привала без хила/баффа (темп: пачка → пачка). */
+  function skipRestRoomAndContinue() {
+    try { document.getElementById('rest-modal')?.classList.add('hidden'); } catch (_) {}
+    if (run?.route?.currentId) markNodeVisited(run.route.currentId);
+    log('Привал отключён — сразу следующая комната (CD скиллов сохраняются).', 'system');
+    const nextIds = (currentRouteNode()?.next || []);
+    const options = nextIds.map(id => routeNode(id)).filter(Boolean)
+      .filter(n => !run.route.visited.includes(n.id));
+    if (options.length === 1) {
+      goToNode(options[0].id);
+      return;
+    }
+    if (options.length > 1) {
+      showRouteChoice(options, '🗺 Дальше', 'Привал пропущен.');
+      return;
+    }
+    advanceRoom();
+  }
+
+  /** @deprecated Привал UI отключён — оставлено на случай вызова. */
   function showRestRoom() {
-    renderAllies();
-    document.getElementById('ability-bar').innerHTML = '';
-    try { hidePassivePocket(); } catch (_) {}
-    document.getElementById('combat-actions').innerHTML =
-      '<button class="btn btn-primary" type="button" id="rest-inline-go">🏕️ Привал — выбрать отдых</button>';
-    document.getElementById('rest-inline-go')?.addEventListener('click', () => {
-      document.getElementById('rest-modal').classList.remove('hidden');
-    });
-    document.getElementById('enemy-row').innerHTML = `
-      <div class="rest-panel">
-        <h3>🏕️ Привал</h3>
-        <p>Здесь нет врагов — это комната отдыха. Восстановись и переходи к следующей комнате.</p>
-        <div class="rest-btns">
-          <button class="btn btn-ok" type="button" data-rest="heal">Отдых (частичный)</button>
-          <button class="btn" type="button" data-rest="buff">+15% атаки · 2 боя</button>
-          <button class="btn btn-primary" type="button" data-rest="skip">Дальше без отдыха →</button>
-        </div>
-      </div>`;
-    document.querySelectorAll('#enemy-row [data-rest]').forEach(btn => {
-      btn.addEventListener('click', () => doRest(btn.getAttribute('data-rest')));
-    });
-    document.getElementById('rest-modal').classList.remove('hidden');
-    log('Привал: врагов нет. Выбери отдых, чтобы идти дальше.', 'system');
-    toast('Привал — выбери отдых, чтобы продолжить');
+    skipRestRoomAndContinue();
   }
 
   function markNodeVisited(id) {

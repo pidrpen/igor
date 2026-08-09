@@ -55,15 +55,14 @@
     const hasRisk = Math.random() < 0.62;
     const hasSide = Math.random() < 0.45;
 
+    // Без привалов: после пачки сразу бой / развилка (темп M+).
     const nodes = {
       start:   { id: 'start', type: 'trash', name: 'Вход', next: ['fork1a', 'fork1b'], forceW: trashW },
-      fork1a:  { id: 'fork1a', type: f1aType, name: L.a + (f1aType === 'elite' ? ' (элита)' : ''), next: ['rest1'], forceW: f1aType === 'elite' ? eliteW : trashW, branch: 'A' },
-      fork1b:  { id: 'fork1b', type: f1bType, name: L.b + (f1bType === 'elite' ? ' (элита)' : ''), next: ['rest1'], forceW: f1bType === 'elite' ? eliteW : trashW, branch: 'B' },
-      rest1:   { id: 'rest1', type: 'rest', name: 'Привал', next: ['mid'] },
+      fork1a:  { id: 'fork1a', type: f1aType, name: L.a + (f1aType === 'elite' ? ' (элита)' : ''), next: ['mid'], forceW: f1aType === 'elite' ? eliteW : trashW, branch: 'A' },
+      fork1b:  { id: 'fork1b', type: f1bType, name: L.b + (f1bType === 'elite' ? ' (элита)' : ''), next: ['mid'], forceW: f1bType === 'elite' ? eliteW : trashW, branch: 'B' },
       mid:     { id: 'mid', type: 'boss', name: 'Страж', next: hasRisk ? ['risk', 'fork2a', 'fork2b'] : ['fork2a', 'fork2b'] },
-      fork2a:  { id: 'fork2a', type: f2aType, name: L.c + (f2aType === 'elite' ? ' (элита)' : ''), next: ['rest2'], forceW: f2aType === 'elite' ? eliteW * 1.05 : trashW * 1.1, branch: 'C' },
-      fork2b:  { id: 'fork2b', type: f2bType, name: L.d + (f2bType === 'elite' ? ' (элита)' : ''), next: ['rest2'], forceW: f2bType === 'elite' ? eliteW * 1.05 : trashW * 1.1, branch: 'D' },
-      rest2:   { id: 'rest2', type: 'rest', name: 'Родник', next: ['final'] },
+      fork2a:  { id: 'fork2a', type: f2aType, name: L.c + (f2aType === 'elite' ? ' (элита)' : ''), next: ['final'], forceW: f2aType === 'elite' ? eliteW * 1.05 : trashW * 1.1, branch: 'C' },
+      fork2b:  { id: 'fork2b', type: f2bType, name: L.d + (f2bType === 'elite' ? ' (элита)' : ''), next: ['final'], forceW: f2bType === 'elite' ? eliteW * 1.05 : trashW * 1.1, branch: 'D' },
       final:   { id: 'final', type: 'final', name: 'Трон', next: [] },
       mop1:    { id: 'mop1', type: 'trash', name: 'Добор: двор', next: ['mop2'], forceW: 1.15, mopup: true },
       mop2:    { id: 'mop2', type: 'elite', name: 'Добор: элита', next: ['mop3'], forceW: 1.7, mopup: true },
@@ -71,18 +70,19 @@
     };
     if (hasRisk) {
       nodes.risk = {
-        id: 'risk', type: 'elite', name: 'Риск: тайный зал', next: ['rest2'],
+        id: 'risk', type: 'elite', name: 'Риск: тайный зал', next: ['final'],
         forceW: eliteW * 1.25, branch: 'R', optional: true,
       };
     }
     if (hasSide) {
-      // Side trash off rest1 — optional forces before mid
+      // Опциональный обход до мид-босса (без привала)
       nodes.side1 = {
         id: 'side1', type: Math.random() < 0.4 ? 'elite' : 'trash',
         name: 'Обходной ход' + (Math.random() < 0.4 ? ' (элита)' : ''),
         next: ['mid'], forceW: trashW * 1.2, branch: 'S', optional: true,
       };
-      nodes.rest1.next = ['side1', 'mid'];
+      nodes.fork1a.next = ['side1', 'mid'];
+      nodes.fork1b.next = ['side1', 'mid'];
     }
     // Normalize forceBudget so all combat nodes (main+mopup) sum to FORCES_MAP_BUDGET
     const combat = Object.values(nodes).filter(n => n.type === 'trash' || n.type === 'elite');

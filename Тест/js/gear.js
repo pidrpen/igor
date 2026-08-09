@@ -122,20 +122,21 @@
     const prefix = pickWeighted(GEAR_PREFIXES, rnd);
     const suffix = pickWeighted(GEAR_SUFFIXES, rnd);
     const rm = rarityMult(rarity);
-    // Бюджет: полный сет +2 ~+50% базы, +8 ~+1.5–2×, +15 ~+3× (см. applyGearToHero)
-    const budget = Math.max(22, Math.round(ilvl * 1.7 * rm));
+    // Бюджет: полный сет +2 ~+10–15% базы, +8 ~+20–30%, +15 ~+40–50% (см. applyGearToHero)
+    const budget = Math.max(6, Math.round(ilvl * 0.48 * rm));
 
     // Primary split by slot weights
     const wAtk = slot.wAtk * (prefix.weights.atk || 1) * (suffix.weights.atk || 1);
     const wHp = slot.wHp * (prefix.weights.hp || 1) * (suffix.weights.hp || 1);
     const wDef = slot.wDef * (prefix.weights.def || 1) * (suffix.weights.def || 1);
     const wSum = wAtk + wHp + wDef || 1;
-    let atk = Math.round(budget * 0.58 * (wAtk / wSum));
-    let hp = Math.round(budget * 3.2 * (wHp / wSum)); // HP «единицы» → applyGear * STAT_SCALE
-    let def = Math.round(budget * 0.42 * (wDef / wSum));
+    let atk = Math.round(budget * 0.50 * (wAtk / wSum));
+    // HP-очки на вещи: в бою * STAT_SCALE * GEAR_HP_MULT → в «т» ≈ hp * GEAR_HP_MULT
+    let hp = Math.round(budget * 3.2 * (wHp / wSum));
+    let def = Math.round(budget * 0.30 * (wDef / wSum));
 
-    // Secondary budget (крит/иск/унив/скор) — чтобы рейтинг чувствовался
-    const secBudget = Math.max(8, Math.round(ilvl * 0.58 * rm));
+    // Secondary budget (крит/иск/унив/скор) — умеренно; рейтинг = очко * GEAR_*_PER_POINT
+    const secBudget = Math.max(1, Math.round(ilvl * 0.14 * rm));
     const secKeys = ['crit', 'mastery', 'vers', 'speed'];
     // bias from prefix/suffix
     const secW = { crit: 1, mastery: 1, vers: 1, speed: 0.75 };
@@ -152,15 +153,15 @@
       def: Math.max(0, def),
       crit: 0, mastery: 0, vers: 0, speed: 0,
     };
-    stats[s1] = Math.max(3, Math.round(secBudget * split));
-    stats[s2] = Math.max(2, secBudget - stats[s1]);
-    if (slotId === 'weapon') stats.atk = Math.max(stats.atk, Math.round(budget * 0.55));
+    stats[s1] = Math.max(1, Math.round(secBudget * split));
+    stats[s2] = Math.max(0, secBudget - stats[s1]);
+    if (slotId === 'weapon') stats.atk = Math.max(stats.atk, Math.round(budget * 0.42));
     if (slotId === 'trinket') {
-      // trinkets: strong secondaries + solid primary
-      stats.atk = Math.round(stats.atk * 0.95);
-      stats.hp = Math.round(stats.hp * 0.85);
-      stats[s1] = Math.round(stats[s1] * 1.35);
-      stats[s2] = Math.round(stats[s2] * 1.25);
+      // trinkets lean secondary slightly
+      stats.atk = Math.round(stats.atk * 0.8);
+      stats.hp = Math.round(stats.hp * 0.7);
+      stats[s1] = Math.round(stats[s1] * 1.15);
+      stats[s2] = Math.round(stats[s2] * 1.1);
     }
 
     const icons = GEAR_ICONS[slotId] || ['📦'];
@@ -203,9 +204,20 @@
     if (!it?.stats) return '';
     const s = it.stats;
     const parts = [];
-    if (s.atk) parts.push(`+${s.atk} атака`);
-    if (s.hp) parts.push(`+${s.hp} здоровье`);
-    if (s.def) parts.push(`+${s.def} защита`);
+    // Primary: показываем вклад в бою (в «т»), не сырые очки — иначе «+156 HP» выглядит как +156т
+    const atkM = typeof GEAR_ATK_MULT !== 'undefined' ? GEAR_ATK_MULT : 0.05;
+    const defM = typeof GEAR_DEF_MULT !== 'undefined' ? GEAR_DEF_MULT : 0.045;
+    const hpM = typeof GEAR_HP_MULT !== 'undefined' ? GEAR_HP_MULT : 0.10;
+    const scale = typeof STAT_SCALE !== 'undefined' ? STAT_SCALE : 1000;
+    const combatFmt = (raw, mult) => {
+      const combat = Math.round((+raw || 0) * scale * mult);
+      if (typeof fmt === 'function') return fmt(combat);
+      if (combat >= 1000) return (combat / 1000).toFixed(combat >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'т';
+      return String(combat);
+    };
+    if (s.atk) parts.push(`+${combatFmt(s.atk, atkM)} атака`);
+    if (s.hp) parts.push(`+${combatFmt(s.hp, hpM)} здоровье`);
+    if (s.def) parts.push(`+${combatFmt(s.def, defM)} защита`);
     if (s.crit) parts.push(`+${s.crit} крит`);
     if (s.mastery) parts.push(`+${s.mastery} иск.`);
     if (s.vers) parts.push(`+${s.vers} унив.`);
@@ -253,16 +265,19 @@
     if (hero._baseSpeed == null) hero._baseSpeed = hero.speed;
 
     const gs = sumGearStats(hero.gear);
-    // Gear points → combat (STAT_SCALE=1000)
-    const atkBonus = Math.round((gs.atk || 0) * STAT_SCALE * 0.20);
-    const defBonus = Math.round((gs.def || 0) * STAT_SCALE * 0.18);
-    const hpBonus = Math.round((gs.hp || 0) * STAT_SCALE * 0.38);
+    // Gear points → combat. GEAR_*_MULT в state.js (полный novice-сет ~+8–15% HP, не +90%).
+    const atkM = typeof GEAR_ATK_MULT !== 'undefined' ? GEAR_ATK_MULT : 0.05;
+    const defM = typeof GEAR_DEF_MULT !== 'undefined' ? GEAR_DEF_MULT : 0.045;
+    const hpM = typeof GEAR_HP_MULT !== 'undefined' ? GEAR_HP_MULT : 0.10;
+    const atkBonus = Math.round((gs.atk || 0) * STAT_SCALE * atkM);
+    const defBonus = Math.round((gs.def || 0) * STAT_SCALE * defM);
+    const hpBonus = Math.round((gs.hp || 0) * STAT_SCALE * hpM);
     const ratio = hero.maxHp > 0 ? hero.hp / hero.maxHp : 1;
     hero.atk = Math.max(1, Number(hero._baseAtk) + atkBonus);
     hero.def = Math.max(0, Number(hero._baseDef) + defBonus);
     hero.maxHp = Math.max(1, Number(hero._baseMaxHp) + hpBonus);
     hero.hp = clamp(Math.round(hero.maxHp * ratio), hero.alive === false ? 0 : 1, hero.maxHp);
-    hero.speed = Math.max(1, Number(hero._baseSpeed || hero.speed || 10) + Math.floor((gs.speed || 0) / 2));
+    hero.speed = Math.max(1, Number(hero._baseSpeed || hero.speed || 10) + Math.floor((gs.speed || 0) / 4));
 
     // secondary from gear
     hero.sec = ensureSec(hero);

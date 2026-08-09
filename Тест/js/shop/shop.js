@@ -35,6 +35,22 @@
     return setSharedBag(bag);
   }
 
+  /** Поджать статы шаблонов шопа (сырые шаблоны сильно завышены). */
+  function scaleShopTemplateStats(s) {
+    const src = s || {};
+    const prim = 0.22;
+    const sec = 0.16;
+    return {
+      atk: Math.max(0, Math.round((+src.atk || 0) * prim)),
+      hp: Math.max(0, Math.round((+src.hp || 0) * prim)),
+      def: Math.max(0, Math.round((+src.def || 0) * prim)),
+      crit: Math.max(0, Math.round((+src.crit || 0) * sec)),
+      mastery: Math.max(0, Math.round((+src.mastery || 0) * sec)),
+      vers: Math.max(0, Math.round((+src.vers || 0) * sec)),
+      speed: Math.max(0, Math.round((+src.speed || 0) * sec)),
+    };
+  }
+
   /** Материализовать trinket template → item with uid */
   function materializeShopTrinket(t) {
     if (!t) return null;
@@ -48,7 +64,7 @@
       role: t.role || 'any',
       classId: t.classId || null,
       specId: t.specId || null,
-      stats: { ...(t.stats || {}) },
+      stats: scaleShopTemplateStats(t.stats),
       shop: true,
       shopKey: t.shopKey,
       testBuild: true,
@@ -175,10 +191,34 @@
     });
   }
 
+  /** Продать (удалить) всё из общей сумки. Пока без валюты — только очистка. */
+  function sellAllSharedBag() {
+    const bag = getSharedBag();
+    const n = bag.length;
+    if (!n) {
+      toast?.('Сумка пуста — продавать нечего');
+      return 0;
+    }
+    if (!confirm(`Продать весь шмот из сумки (${n} шт.)?\nПока без золота — предметы просто исчезнут.`)) {
+      return 0;
+    }
+    setSharedBag([]);
+    toast?.(`Продано: ${n} предмет(ов)`);
+    try {
+      const el = document.getElementById('shop-bag-count');
+      if (el) el.textContent = '0';
+    } catch (_) {}
+    return n;
+  }
+
   function renderShopBag(body) {
     const bag = getSharedBag();
     if (!bag.length) {
-      body.innerHTML = '<p class="shop-hint">Общая сумка пуста. Купите сет или аксессуар.</p>';
+      body.innerHTML = `
+        <p class="shop-hint">Общая сумка пуста. Купите сет или аксессуар.</p>
+        <div class="shop-bag-actions">
+          <button type="button" class="btn btn-sm shop-sell-all" id="shop-sell-all" disabled title="Нечего продавать">💰 Продать всё из сумки</button>
+        </div>`;
       return;
     }
     body.innerHTML = `
@@ -189,22 +229,20 @@
           <span class="ilvl-badge">${it.ilvl}</span>
           <span class="shop-bag-meta">${GEAR_SLOT_MAP[it.slot]?.name || it.slot}${it.specId ? ' · ' + it.classId + '/' + it.specId : ''}</span>
           ${it.special ? `<span class="shop-special-inline">${it.special.desc}</span>` : ''}
-          <button type="button" class="btn btn-sm btn-danger" data-del="${it.uid}">×</button>
+          <button type="button" class="btn btn-sm btn-danger" data-del="${it.uid}" title="Продать один">×</button>
         </div>`).join('')}</div>
-      <div style="margin-top:.6rem;text-align:center">
-        <button type="button" class="btn btn-sm" id="shop-clear-bag">Очистить сумку</button>
+      <div class="shop-bag-actions">
+        <button type="button" class="btn btn-sm shop-sell-all" id="shop-sell-all" title="Продать весь шмот из общей сумки">💰 Продать всё из сумки (${bag.length})</button>
       </div>`;
     body.querySelectorAll('[data-del]').forEach(b => {
       b.onclick = () => {
         removeFromSharedBag(b.dataset.del);
+        toast?.('Продано');
         renderShop();
       };
     });
-    body.querySelector('#shop-clear-bag')?.addEventListener('click', () => {
-      if (confirm('Очистить общую сумку?')) {
-        setSharedBag([]);
-        renderShop();
-      }
+    body.querySelector('#shop-sell-all')?.addEventListener('click', () => {
+      if (sellAllSharedBag()) renderShop();
     });
   }
 

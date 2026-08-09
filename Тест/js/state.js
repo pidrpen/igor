@@ -20,10 +20,21 @@
   const SEC_VERS_RATING = 0;           // дефолт рейтинга унив.
   const SEC_VERS_PCT_PER_RATING = 0.005; // 0.5% за 1 рейтинг
   const SEC_MASTERY_RATING = 120;      // базовый рейтинг искусности
-  // Конверсия шмоток → рейтинг
-  const GEAR_CRIT_PER_POINT = 14;      // +14 рейтинга крита за 1 crit на шмотке (чтобы % чувствовался)
-  const GEAR_VERS_PER_POINT = 4;       // +4 рейтинг унив. за 1 vers
-  const GEAR_MASTERY_PER_POINT = 10;   // +10 рейтинга иск. за 1 mastery
+  // Конверсия шмоток → рейтинг 1:1 (раньше было ×10–14 — отсюда «бешеные» % в отряде).
+  // Полный сет: обычно +30–80 рейтинга к криту (~+5–14%), не сотни.
+  const GEAR_CRIT_PER_POINT = 1;
+  const GEAR_VERS_PER_POINT = 1;
+  const GEAR_MASTERY_PER_POINT = 1;
+
+  /**
+   * Primary со шмота → боевые числа (как база * STAT_SCALE).
+   * Боевой бонус = gearStat * STAT_SCALE * GEAR_*_MULT.
+   * В UI «т» = боевой / 1000 ≈ gearStat * mult.
+   * Пример: 100 hp на шмоте * 0.10 → +10т HP, не +100т.
+   */
+  const GEAR_ATK_MULT = 0.05;
+  const GEAR_DEF_MULT = 0.045;
+  const GEAR_HP_MULT = 0.10;
 
   /**
    * Искусность по специализации.
