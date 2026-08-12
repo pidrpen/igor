@@ -184,7 +184,7 @@
     if (title) title.textContent = `${pick.className} — ${pick.specName}`;
     if (meta) {
       meta.textContent = heroPack
-        ? `${testAbilities.length} способностей · крылья Гнева по ходам (не таймер)`
+        ? `${testAbilities.length} способностей · 2D ` + (heroPack.label || '')
         : `${testAbilities.length} способностей · спрайта героя нет`;
     }
 

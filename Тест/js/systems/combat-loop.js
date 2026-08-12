@@ -61,6 +61,7 @@
     if (run.restBuffBattles) run.restBuffBattles = 0;
     combat = { type, enemies, pets: [], turnQueue: [], turnIndex: 0, round: 1, over: false, waitingPlayer: false, thunderTimer: 0 };
     spawnClassPets();
+    try { applyBossMechanics(); } catch (e) { console.error('[boss mech]', e); }
     buildTurnQueue();
     log('Бой: ' + ROOM_META[type].name, 'system');
     renderCombat();
@@ -323,6 +324,7 @@
       // оставляем мёртвых основных питомцев (для «Воскрешение питомца»)
       combat.pets = combat.pets.filter(p => p.alive || p.isMainPet || p.petTurnsLeft == null);
     }
+    try { tickBossMechanics(); } catch (e) { console.error('[tickBoss]', e); }
     // Bursting stacks tick
     tickBurstStacks();
     // Thunder marks: mark 2 heroes, discharge or take extra on next storm

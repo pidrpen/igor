@@ -448,6 +448,113 @@
   0%, 100% { box-shadow: 0 0 0 3px rgba(251, 191, 36, .35), 0 10px 28px rgba(0, 0, 0, .45); }
   50% { box-shadow: 0 0 0 6px rgba(167, 139, 250, .4), 0 12px 32px rgba(0, 0, 0, .5); }
 }
+
+/* ═══ Карта маршрута (спуск по данжу) ═══ */
+.route-map {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  font-size: .74rem;
+}
+.rm-forces {
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: .28rem .4rem;
+  margin-bottom: .45rem;
+  border-radius: 8px;
+  background: color-mix(in oklab, #3a70b0 18%, var(--panel2));
+  border: 1px solid color-mix(in oklab, #9b5fd4 40%, var(--border));
+  color: #d8c8ff;
+}
+.rm-forces.ok {
+  background: color-mix(in oklab, #2a8a55 22%, var(--panel2));
+  border-color: color-mix(in oklab, #3dd68c 45%, transparent);
+  color: #b8f0d0;
+}
+.rm-node {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr) auto auto;
+  gap: .22rem .3rem;
+  align-items: center;
+  padding: .28rem .38rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--panel2) 80%, #000);
+  color: var(--muted);
+}
+.rm-node .rm-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 600;
+  font-size: .72rem;
+}
+.rm-node .rm-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+  font-weight: 700;
+  font-size: .68rem;
+}
+.rm-node .rm-pct-0 { color: var(--muted); font-weight: 500; }
+.rm-node .rm-tag {
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  padding: .05rem .28rem;
+  border-radius: 4px;
+  background: color-mix(in oklab, #e07040 25%, #1a1010);
+  border: 1px solid #c06030;
+  color: #ffd0b0;
+}
+.rm-node .rm-tag.aoe {
+  background: color-mix(in oklab, #5080d0 22%, #10141a);
+  border-color: #4a70b0;
+  color: #c8dcff;
+}
+.rm-node.current {
+  border-color: var(--gold);
+  box-shadow: inset 3px 0 0 var(--gold), 0 0 12px rgba(224,192,96,.18);
+  background: linear-gradient(90deg, rgba(224,192,96,.16), transparent);
+  color: var(--text);
+}
+.rm-node.done { opacity: .48; }
+.rm-node.is-st { border-left: 3px solid #d07040; }
+.rm-node.is-boss { border-left: 3px solid #c04040; }
+.rm-node.is-mop { opacity: .9; }
+.rm-line {
+  width: 2px;
+  height: 8px;
+  margin: 1px auto;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--gold) 35%, transparent), color-mix(in oklab, var(--gold) 15%, transparent));
+  border-radius: 2px;
+}
+.rm-fork {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: .25rem;
+  align-items: stretch;
+}
+.rm-fork .rm-node { font-size: .68rem; }
+.rm-or {
+  align-self: center;
+  font-size: .58rem;
+  color: var(--muted);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: .08em;
+}
+.rm-mop-label {
+  text-align: center;
+  font-size: .62rem;
+  color: var(--muted);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin: .15rem 0;
+}
 /* ═══ Gear modal: scroll body + sticky footer ═══ */
 .gear-modal-panel {
   max-width: 480px !important;

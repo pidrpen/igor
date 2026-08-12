@@ -55,9 +55,9 @@
       if (confirm('Сдаться?')) endRun(false, 'Вы покинули ключ.');
     });
     document.getElementById('btn-lobby').addEventListener('click', backToLobby);
-    document.getElementById('rest-heal').addEventListener('click', () => doRest('heal'));
-    document.getElementById('rest-buff').addEventListener('click', () => doRest('buff'));
-    document.getElementById('rest-skip').addEventListener('click', () => doRest('skip'));
+    document.getElementById('rest-heal')?.addEventListener('click', () => doRest('heal'));
+    document.getElementById('rest-buff')?.addEventListener('click', () => doRest('buff'));
+    document.getElementById('rest-skip')?.addEventListener('click', () => doRest('skip'));
     document.getElementById('talent-skip')?.addEventListener('click', () => finishTalentPick(null));
     document.getElementById('loot-skip')?.addEventListener('click', () => finishLootPick(null));
     document.getElementById('btn-pause')?.addEventListener('click', togglePause);
@@ -194,12 +194,7 @@
       return;
     }
     if (e.key === 'a' || e.key === 'A') {
-      // Player controls DPS/heal targets manually — no auto-AI for those roles
-      if (actor.role === 'dps' || actor.role === 'healer') {
-        toast('ДД/хил: выбери способность и цель сам');
-        return;
-      }
-      aiAct(actor); afterAction(); return;
+      return;
     }
     if (e.key === 'p' || e.key === 'P') { togglePause(); return; }
     if (e.key === 's' || e.key === 'S') { cycleSpeed(); return; }
@@ -929,29 +924,74 @@
     const sp = document.getElementById('hud-speed');
     if (sp) sp.textContent = gameSpeed + '×';
   }
+  function routeNodeCard(n, cur, visited) {
+    if (!n) return '';
+    const m = ROOM_META[n.type] || { icon: '•', name: n.type };
+    const isCur = n.id === cur;
+    const isDone = visited.has(n.id) && !isCur;
+    const st = n.pack === 'st';
+    const cls = [
+      'rm-node',
+      isCur ? 'current' : '',
+      isDone ? 'done' : '',
+      st ? 'is-st' : '',
+      n.type === 'boss' || n.type === 'final' ? 'is-boss' : '',
+      n.mopup ? 'is-mop' : '',
+    ].filter(Boolean).join(' ');
+    const pct = n.forceBudget
+      ? `<span class="rm-pct">+${n.forceBudget}%</span>`
+      : `<span class="rm-pct rm-pct-0">${n.type === 'final' ? 'финал' : 'босс'}</span>`;
+    const tag = st ? '<span class="rm-tag">СТ</span>' : (n.pack === 'aoe' ? '<span class="rm-tag aoe">AoE</span>' : '');
+    return `<div class="${cls}" data-node="${n.id}" title="${n.name}">
+      <span class="rm-ico">${m.icon}</span>
+      <span class="rm-name">${n.name}</span>
+      ${tag}${pct}
+    </div>`;
+  }
   function renderPath() {
     const list = document.getElementById('path-list');
     if (!list || !run?.route) { if (list) list.innerHTML = ''; return; }
-    const order = ['start', 'fork1a', 'fork1b', 'side1', 'mid', 'risk', 'fork2a', 'fork2b', 'final', 'mop1', 'mop2', 'mop3'];
+    const N = run.route.nodes;
+    if (!N.start || !N.hall) {
+      list.innerHTML = '<div class="room-node">Старый сейв маршрута — начни новый ключ</div>';
+      return;
+    }
     const cur = run.route.currentId;
     const visited = new Set(run.route.visited || []);
-    const html = order.map(id => {
-      const n = run.route.nodes[id];
-      if (!n) return '';
-      if (n.mopup && !run.route.mopupMode && !visited.has(id) && id !== cur) return '';
-      const m = ROOM_META[n.type] || { icon: '•', name: n.type };
-      const isCur = id === cur;
-      const isDone = visited.has(id) && !isCur;
-      let cls = isCur ? 'current' : isDone ? 'done' : '';
-      const pct = n.forceBudget ? `<span class="rn-meta">⚔ ~${n.forceBudget}%</span>` : '';
-      const br = n.branch ? `<span class="rn-branch">ветка ${n.branch}</span>` : '';
-      const mop = n.mopup ? `<span class="rn-meta">добор</span>` : '';
-      return `<div class="room-node ${cls}" data-node="${id}">
-        <span>${m.icon}</span>
-        <span><b>${n.name}</b>${br ? ' · ' + br : ''}${pct}${mop ? ' · ' + mop : ''}</span>
+    const f = Math.round(run.forces || 0);
+    const need = Math.max(0, FORCES_TARGET - f);
+    const fork = (a, b) =>
+      `<div class="rm-fork">${routeNodeCard(N[a], cur, visited)}<div class="rm-or">или</div>${routeNodeCard(N[b], cur, visited)}</div>`;
+    let mop = '';
+    if (run.route.mopupMode || run.route.finalCleared) {
+      mop = `<div class="rm-line"></div>
+        <div class="rm-mop-label">добор до 100%</div>
+        ${routeNodeCard(N.mop1, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.mop2, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.mop3, cur, visited)}`;
+    }
+    list.innerHTML = `
+      <div class="route-map">
+        <div class="rm-forces ${f >= FORCES_TARGET ? 'ok' : ''}">⚔ ${f} / ${FORCES_TARGET}%${need ? ` · ещё ${need}%` : ' · можно закрыть'}</div>
+        ${routeNodeCard(N.start, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.hall, cur, visited)}
+        <div class="rm-line"></div>
+        ${fork('fork1a', 'fork1b')}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.mid, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.descent, cur, visited)}
+        <div class="rm-line"></div>
+        ${fork('fork2a', 'fork2b')}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.approach, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.final, cur, visited)}
+        ${mop}
       </div>`;
-    }).join('');
-    list.innerHTML = html || '<div class="room-node">—</div>';
   }
   function renderPowers() {
     const el = document.getElementById('party-powers');
@@ -1106,16 +1146,18 @@
       return;
     }
 
-    // Mopup finished node
+    // Mopup: цикл, пока нет 100%. Закрыть ключ с недобором нельзя.
     if (cur.mopup) {
       if (tryFinishKey('Силы набраны!')) return;
-      const opts = (cur.next || []).map(id => routeNode(id)).filter(n => n && !run.route.visited.includes(n.id));
+      let opts = (cur.next || []).map(id => routeNode(id)).filter(n => n && !run.route.visited.includes(n.id));
       if (!opts.length) {
-        // no more mopup — allow end under-cap with warning or force fail soft
-        endRun(true, `Ключ сдан с ⚔${Math.round(run.forces)}% (не полный треш). +${run.keyLevel} · 💀${run.deaths}`);
-        return;
+        ['mop1', 'mop2', 'mop3'].forEach(id => {
+          run.route.visited = (run.route.visited || []).filter(v => v !== id);
+        });
+        opts = [routeNode('mop1')].filter(Boolean);
+        log('Добор: ещё один круг — нужно 100% сил.', 'system');
       }
-      showRouteChoice(opts, '⚔ Добор сил', `Сейчас ${Math.round(run.forces)}/${FORCES_TARGET}%`);
+      showRouteChoice(opts, '⚔ Добор сил', `Сейчас ${Math.round(run.forces)}/${FORCES_TARGET}% · без 100% ключ не закроется`);
       return;
     }
 
@@ -1183,6 +1225,18 @@
       casting: null,
       threat: {}, // uid -> threat number
       missedKicks: 0,
+      mech: tpl.mech ? { ...tpl.mech } : null,
+    };
+  }
+
+  function themePools() {
+    const th = run?.dungeon?.theme || 'crypt';
+    const pack = ENEMIES.theme && ENEMIES.theme[th];
+    if (pack) return pack;
+    return {
+      trash: ENEMIES.trash || [],
+      elite: ENEMIES.elite || [],
+      st: ENEMIES.elite || [],
     };
   }
 
@@ -1230,12 +1284,26 @@
 
   function spawnPack(type) {
     const k = run.keyLevel, enemies = [];
-    const trashPool = ENEMIES.trash || [];
-    const elitePool = ENEMIES.elite || trashPool;
+    const pools = themePools();
+    const node = currentRouteNode();
+    const packKind = node?.pack || (type === 'elite' ? 'mixed' : (type === 'trash' ? 'aoe' : type));
+    const trashPool = pools.trash || ENEMIES.trash || [];
+    const elitePool = pools.elite || ENEMIES.elite || trashPool;
+    const stPool = pools.st || elitePool;
     const fallback = trashPool[0] || { id: 'z', name: 'Нежить', icon: '🧟', role: 'dps', hp: 95, atk: 13, def: 4, speed: 9,
       abilities: [{ id: 'h', name: 'Удар', cost: 0, cd: 0, type: 'damage', power: 1 }] };
     const pickSafe = (arr) => (arr && arr.length ? pick(arr) : fallback) || fallback;
     const randomMode = !!(run?.dungeon?.randomEnemies);
+
+    const pushStChampion = () => {
+      const champ = scaleEnemy(pickSafe(stPool), k, false, true);
+      champ.maxHp = Math.round(champ.maxHp * 1.55);
+      champ.hp = champ.maxHp;
+      champ.atk = Math.round(champ.atk * 1.1);
+      if (!String(champ.name).includes('СТ')) champ.name = champ.name + ' · СТ';
+      enemies.push(champ);
+      if (k >= 12) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
+    };
 
     // Случайные инсты (Разлом / Угольные): каждый заход — уникальный состав пака
     if (randomMode && (type === 'trash' || type === 'elite')) {
@@ -1280,78 +1348,51 @@
         tpl.abilities = picked;
         return tpl;
       };
-      if (type === 'trash') {
-        const n = 3 + Math.floor(Math.random() * 4) + (k >= 8 ? 1 : 0); // 3–7
+      if (packKind === 'st') {
+        const champ = scaleEnemy(makeChaosTpl(pickSafe(stPool), true), k, false, true);
+        champ.maxHp = Math.round(champ.maxHp * 1.5);
+        champ.hp = champ.maxHp;
+        champ.name = champ.name + ' · СТ';
+        enemies.push(champ);
+      } else if (type === 'trash' || packKind === 'aoe') {
+        const n = 3 + Math.floor(Math.random() * 3) + (k >= 8 ? 1 : 0);
         for (let i = 0; i < n; i++) {
-          const base = pickSafe(Math.random() < 0.25 ? elitePool : trashPool);
-          enemies.push(scaleEnemy(makeChaosTpl(base, false), k, false, Math.random() < 0.15));
-        }
-        if (k >= 6 && Math.random() < 0.4) {
-          enemies.push(scaleEnemy(makeChaosTpl(pickSafe(elitePool), true), k, false, true));
+          const base = pickSafe(Math.random() < 0.2 ? elitePool : trashPool);
+          enemies.push(scaleEnemy(makeChaosTpl(base, false), k, false, false));
         }
       } else {
-        // elite: 1–3 элиты + адды, всё рандом
-        const nElite = 1 + (Math.random() < 0.55 ? 1 : 0) + (k >= 8 && Math.random() < 0.4 ? 1 : 0);
-        for (let i = 0; i < nElite; i++) {
-          enemies.push(scaleEnemy(makeChaosTpl(pickSafe(elitePool), true), k, false, true));
-        }
-        const nTrash = 1 + Math.floor(Math.random() * 3) + (k >= 10 ? 1 : 0);
+        enemies.push(scaleEnemy(makeChaosTpl(pickSafe(elitePool), true), k, false, true));
+        const nTrash = 1 + Math.floor(Math.random() * 2);
         for (let i = 0; i < nTrash; i++) {
           enemies.push(scaleEnemy(makeChaosTpl(pickSafe(trashPool), false), k, false, false));
         }
       }
-    } else if (type === 'trash') {
-      const n = 4 + (k >= 5 ? 1 : 0) + (k >= 8 ? 1 : 0) + (k >= 12 ? 1 : 0); // 4–7
+    } else if (packKind === 'st') {
+      pushStChampion();
+    } else if (type === 'trash' || packKind === 'aoe') {
+      const n = 4 + (k >= 5 ? 1 : 0) + (k >= 10 ? 1 : 0);
       for (let i = 0; i < n; i++) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
-      // chance of mini-elite in trash packs on higher keys
-      if (k >= 7 && Math.random() < 0.35) {
-        enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      }
-    } else if (type === 'elite') {
-      // 1–2 named elites + addons
+    } else if (type === 'elite' || packKind === 'mixed') {
       enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      if (k >= 5) enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
       enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
       enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
       if (k >= 10) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
     } else if (type === 'boss') {
       const theme = run.dungeon.theme || 'crypt';
-      const midTpl = (ENEMIES.midBosses && ENEMIES.midBosses[theme])
+      const tpl = (ENEMIES.midBosses && ENEMIES.midBosses[theme])
         || (ENEMIES.bosses && ENEMIES.bosses[theme])
         || ENEMIES.bosses?.crypt
         || fallback;
-      // В разломе иногда подмешиваем случайного мид-босса из других данжей
-      let tpl = midTpl;
-      if (randomMode && ENEMIES.midBosses) {
-        const keys = Object.keys(ENEMIES.midBosses);
-        if (keys.length && Math.random() < 0.55) {
-          tpl = ENEMIES.midBosses[keys[Math.floor(Math.random() * keys.length)]];
-        }
-      }
       enemies.push(scaleEnemy(tpl, k, true, false));
-      // adds
       enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
-      if (k >= 6) enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      else enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
-      if (k >= 10) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
     } else if (type === 'final') {
       const theme = run.dungeon.theme || 'crypt';
-      let finTpl = (ENEMIES.bosses && ENEMIES.bosses[theme]) || ENEMIES.bosses?.crypt || fallback;
-      if (randomMode && ENEMIES.bosses) {
-        const keys = Object.keys(ENEMIES.bosses);
-        if (keys.length && Math.random() < 0.4) {
-          finTpl = ENEMIES.bosses[keys[Math.floor(Math.random() * keys.length)]];
-        }
-      }
-      const fin = scaleEnemy(finTpl, k, true, false);
-      enemies.push(fin);
+      const finTpl = (ENEMIES.bosses && ENEMIES.bosses[theme]) || ENEMIES.bosses?.crypt || fallback;
+      enemies.push(scaleEnemy(finTpl, k, true, false));
       enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      if (k >= 8) enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      if (k >= 10) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
     }
 
     // Distribute node's forceBudget % across trash/elite (bosses = 0)
-    const node = currentRouteNode();
     const budget = node?.forceBudget || 0;
     const weights = enemies.map(e => (e.isBoss ? 0 : (e.isElite ? 2.2 : 1)));
     const wSum = weights.reduce((a, b) => a + b, 0) || 1;

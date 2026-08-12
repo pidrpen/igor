@@ -234,17 +234,6 @@
       }
     }
 
-    const auto = document.createElement('button');
-    auto.className = 'btn btn-sm btn-ok';
-    auto.textContent = 'Автоход (A)';
-    auto.onclick = () => {
-      if (actor.role === 'dps' || actor.role === 'healer') {
-        toast('ДД/хил: выбери способность и цель сам');
-        return;
-      }
-      aiAct(actor); afterAction();
-    };
-    actions.appendChild(auto);
     const skip = document.createElement('button');
     skip.className = 'btn btn-sm';
     skip.textContent = 'Пропуск (Пробел)';
@@ -501,8 +490,11 @@
     const cc = (u.side === 'ally' && typeof classAccentColor === 'function')
       ? classAccentColor(u.classId, u.specId)
       : (CLASS_CSS[u.classId] || (u.side === 'enemy' ? '#a04040' : 'var(--gold)'));
+    const castTurns = Number(u.casting?.turns || u.casting?.resolveIn || 1);
+    const castMax = Number(u.casting?.maxTurns || u.casting?.resolveIn || castTurns) || 1;
+    const castPct = Math.max(18, Math.min(100, Math.round((castTurns / Math.max(1, castMax)) * 100)));
     const castBar = u.casting
-      ? `<div class="slot-cast"><div class="cast-bar" title="${telegraphLabel(u.casting)}"><i></i></div><div class="cast-name">${telegraphLabel(u.casting)}</div></div>`
+      ? `<div class="slot-cast"><div class="cast-bar" title="${telegraphLabel(u.casting)}"><i style="width:${castPct}%;animation:none"></i></div><div class="cast-name">${telegraphLabel(u.casting)}</div></div>`
       : '';
     const shieldHtml = u.shield
       ? `<div class="slot-shield bar-wrap"><div class="bar shield"><i style="width:${clamp(u.shield / u.maxHp * 100, 0, 100)}%"></i></div><span class="bar-label">🛡${fmt(u.shield)}</span></div>`

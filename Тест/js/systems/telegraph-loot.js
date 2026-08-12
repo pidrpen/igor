@@ -88,6 +88,11 @@
     const prio = target.casting.castPrio || 1;
     target.casting = null;
     target.missedKicks = 0; // successful kick resets escalation
+    const heat = (target.buffs || []).find(b => b.id === 'heat');
+    if (heat) {
+      heat.stacks = 0;
+      log('Кик сбивает перегрев!', 'player');
+    }
     applyStatus(target, { id: 'lock', name: 'Немота', icon: '🔇', turns: 2, ccMode: 'silence' });
     if (actor) addThreat(target, actor, 400 * prio);
     log(`${actor ? actor.name + ': ' : ''}прерывает «${name}»! Немота 2 хода`, 'player');

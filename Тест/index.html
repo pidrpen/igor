@@ -22,8 +22,8 @@
   <script src="class-balance/engineer-abilities.js?v=5.4.8.34-test"></script>
   <script src="class-balance/apply-all.js?v=5.4.8.34-test"></script>
   <link rel="stylesheet" href="css/main.css?v=5.4.8.34" />
-  <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34-beta" />
-  <link rel="stylesheet" href="css/test-room.css?v=5.4.8.34-gearui" />
+  <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34-shamfx2" />
+  <link rel="stylesheet" href="css/test-room.css?v=5.4.8.34-route2" />
 </head>
 <body>
   <div id="lobby" class="screen screen-center">
@@ -79,7 +79,7 @@
         </div>
         <p class="keys-hint" id="save-io-hint" style="margin-top:.35rem;opacity:.85">Сейв: отряд + ключ в процессе + история. Файл можно перенести на другой ПК.</p>
         <div class="history" id="run-history"></div>
-        <p class="keys-hint">Пошаговый бой: 1–9 способности · A — авто · Пробел — пропуск · Esc — сброс цели · P — пауза · S — скорость</p>
+        <p class="keys-hint">Пошаговый бой: 1–9 способности · Пробел — пропуск · Esc — сброс цели · P — пауза · S — скорость</p>
       </div>
     </div>
     <p class="src-note">Способности специализаций эпохи Туманов Пандарии. Охотников на демонов и пробудителей в той эпохе ещё не было.</p>
@@ -89,7 +89,7 @@
   <div id="test-picker" class="screen hidden">
     <div class="test-hero">
       <h1>Тестовая комната</h1>
-      <p class="subtitle">Выберите специализацию. Враг — <b>Злой дух</b>. 2D у <b>Паладин · Воздаяние</b>. Панель способностей — как в бою. Крылья Гнева держатся <b>по ходам</b> (buffTurns), не по секундам.</p>
+      <p class="subtitle">Выберите специализацию. Враг — <b>Злой дух</b>. 2D: <b>Паладин · Воздаяние</b> и <b>Шаман · Исцеление</b> (свой каст на каждый скилл).</p>
     </div>
     <div class="test-toolbar">
       <button class="btn" type="button" id="btn-test-back-lobby">← В лобби</button>
@@ -157,9 +157,9 @@
     <div class="forces-bar"><i id="forces-fill"></i></div>
     <div class="run-body">
       <aside class="path-panel">
-        <div class="section-title">Маршрут · развилки</div>
+        <div class="section-title">Маршрут</div>
         <div id="path-list" class="path-list"></div>
-        <div style="font-size:.68rem;color:var(--muted);margin-top:.35rem">⚔ нужно 100% сил · после финала можно добрать</div>
+        <div style="font-size:.68rem;color:var(--muted);margin-top:.35rem">⚔ 100% сил обязательны · СТ-ветки дают больше · без привалов</div>
         <div class="section-title" style="margin-top:.8rem">Силы</div>
         <div class="party-powers" id="party-powers"><span class="power-chip">—</span></div>
       </aside>
@@ -294,17 +294,6 @@
       <div class="route-choice" id="route-choices"></div>
     </div>
   </div>
-  <div id="rest-modal" class="modal-back hidden">
-    <div class="modal" style="max-width:460px;text-align:center">
-      <h2>🏕️ Привал</h2>
-      <p class="hint">В этой комнате нет врагов. Восстановись и переходи к следующему пуллу.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center">
-        <button class="btn btn-ok" type="button" id="rest-heal">Отдых (частично здоровье/мана)</button>
-        <button class="btn" type="button" id="rest-buff">+15% атаки · 2 боя</button>
-        <button class="btn btn-primary" type="button" id="rest-skip">Дальше без отдыха →</button>
-      </div>
-    </div>
-  </div>
   <div id="end-modal" class="modal-back hidden">
     <div class="modal end-modal" id="end-box">
       <h2 id="end-title">Победа</h2>
@@ -318,30 +307,30 @@
   <div id="vignette"></div>
   <div class="skill-fx-layer" id="skill-fx-layer"></div>
   <script src="js/state.js?v=5.4.8.34-gear6"></script>
-  <script src="js/core.js?v=5.4.8.34-test"></script>
+  <script src="js/core.js?v=5.4.8.34-route2"></script>
   <script src="js/ui/balance-panel.js?v=5.4.8.34-beta5"></script>
-  <script src="js/ui/fx.js?v=5.4.8.34"></script>
-  <script src="js/enemies.js?v=5.4.8.34"></script>
-  <script src="js/route.js?v=5.4.8.34-beta5"></script>
+  <script src="js/ui/fx.js?v=5.4.8.34-shamfx2"></script>
+  <script src="js/enemies.js?v=5.4.8.34-route2"></script>
+  <script src="js/route.js?v=5.4.8.34-route2"></script>
   <script src="js/gear.js?v=5.4.8.34-gear6"></script>
   <script src="js/shop/shop-sets.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop-trinkets-data.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop.js?v=5.4.8.34-gear6"></script>
-  <script src="js/systems/telegraph-loot.js?v=5.4.8.34"></script>
+  <script src="js/systems/telegraph-loot.js?v=5.4.8.34-route2"></script>
   <script src="js/systems/stats.js?v=5.4.8.34-gear5"></script>
   <script src="js/systems/passives.js?v=5.4.8.34"></script>
   <script src="js/systems/meter.js?v=5.4.8.34"></script>
   <script src="js/systems/ability-data.js?v=5.4.8.34"></script>
   <script src="js/systems/resources.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-loop.js?v=5.4.8.34-beta5"></script>
-  <script src="js/ui/combat-ui.js?v=5.4.8.34"></script>
-  <script src="js/systems/abilities.js?v=5.4.8.34"></script>
-  <script src="js/systems/damage.js?v=5.4.8.34"></script>
+  <script src="js/systems/combat-loop.js?v=5.4.8.34-route2"></script>
+  <script src="js/ui/combat-ui.js?v=5.4.8.34-route2"></script>
+  <script src="js/systems/abilities.js?v=5.4.8.34-chain"></script>
+  <script src="js/systems/damage.js?v=5.4.8.34-route2"></script>
   <script src="js/systems/ai.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-flow.js?v=5.4.8.34-beta5"></script>
+  <script src="js/systems/combat-flow.js?v=5.4.8.34-route2"></script>
   <script src="js/save.js?v=5.4.8.34"></script>
-  <script src="js/ui.js?v=5.4.8.34-beta5"></script>
-  <script src="js/test-room/sprites.js?v=5.4.8.34-v04"></script>
-  <script src="js/test-room/test-room.js?v=5.4.8.34-v04"></script>
+  <script src="js/ui.js?v=5.4.8.34-route2"></script>
+  <script src="js/test-room/sprites.js?v=5.4.8.34-v06"></script>
+  <script src="js/test-room/test-room.js?v=5.4.8.34-v05"></script>
 </body>
 </html>

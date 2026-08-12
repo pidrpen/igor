@@ -115,22 +115,24 @@
    * Files live in assets/backgrounds/{crypt|forge|tide|jade|rift|ember}/{key}.png
    */
   const NODE_LOC = {
-    // Progressive dungeon walk: each major stop gets a distinct room art.
-    // Only rest1/rest2 share the same safe-camp look on purpose.
     start: 'entrance',
-    fork1a: 'corridor',
+    hall: 'corridor',
+    fork1a: 'gallery',
     fork1b: 'elite',
-    rest1: 'rest',
     mid: 'mid',
-    fork2a: 'gallery',
-    fork2b: 'depths',
-    rest2: 'rest',
+    descent: 'depths',
+    fork2a: 'inner',
+    fork2b: 'sanctum',
+    approach: 'approach',
     final: 'throne',
     mop1: 'mopup',
-    mop2: 'depths',
+    mop2: 'annex',
     mop3: 'gallery',
-    risk: 'elite',
-    side1: 'corridor',
+  };
+  /** If a new loc file is missing, fall back to a neighbouring room of the same dungeon. */
+  const LOC_FALLBACK = {
+    inner: 'depths', sanctum: 'elite', approach: 'mid', annex: 'mopup',
+    champion: 'elite', hall: 'corridor', descent: 'depths',
   };
   /** Fallback by room type if node id unknown */
   const TYPE_LOC = {
@@ -173,7 +175,8 @@
       ? (run?.route?.nodes?.[nodeOrId] || null)
       : (nodeOrId || currentRouteNode());
     const id = node?.id || (typeof nodeOrId === 'string' ? nodeOrId : null);
-    const loc = (id && NODE_LOC[id])
+    const loc = (node && node.loc)
+      || (id && NODE_LOC[id])
       || (node && TYPE_LOC[node.type])
       || 'entrance';
     applyDungeonTheme(theme);
@@ -192,6 +195,20 @@
     const img = new Image();
     img.onload = () => { ba.style.setProperty('--battle-bg', toCssUrl(url)); };
     img.onerror = () => {
+      const alt = LOC_FALLBACK[loc];
+      if (alt && alt !== loc) {
+        const altUrl = ASSETS.bg(artTheme, alt);
+        ba.dataset.bgUrl = altUrl;
+        const img2 = new Image();
+        img2.onload = () => { ba.style.setProperty('--battle-bg', toCssUrl(altUrl)); };
+        img2.onerror = () => {
+          const fallback = ASSETS.bg(artTheme);
+          ba.dataset.bgUrl = fallback;
+          ba.style.setProperty('--battle-bg', toCssUrl(fallback));
+        };
+        img2.src = altUrl;
+        return;
+      }
       const fallback = ASSETS.bg(artTheme);
       ba.dataset.bgUrl = fallback;
       ba.style.setProperty('--battle-bg', toCssUrl(fallback));

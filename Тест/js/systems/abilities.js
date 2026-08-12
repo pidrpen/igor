@@ -425,6 +425,7 @@
           });
           actor.casting.castPrio = castPrio;
           actor.casting.priority = castPrio;
+          actor.casting.maxTurns = actor.casting.turns || actor.casting.resolveIn || 1;
           playSkillAnim(actor, ability, []);
           log(`${actor.name} читает [P${castPrio}]: ${telegraphLabel(actor.casting)}${avoidable ? ' · можно уклониться' : ''}`, 'enemy');
           toast(telegraphLabel(actor.casting));
@@ -652,7 +653,6 @@
       case 'heal_aoe': {
         const healAllies = friends.filter(f => !f.isPet);
         fxTargets = healAllies.length ? healAllies : friends.slice();
-        playSkillAnim(actor, ability, fxTargets);
         let chainTargets = fxTargets.slice();
         if (ability.chainDecay != null || ability.chainPrimary) {
           const primary = (ability.chainPrimary && target && target.alive && target.side === actor.side && !target.isPet)
@@ -663,6 +663,8 @@
           chainTargets = (primary ? [primary] : []).concat(injured, full);
           if (!chainTargets.length) chainTargets = fxTargets.slice();
         }
+        // FX после порядка прыжков: шаман → выбранный → самый раненый → …
+        playSkillAnim(actor, ability, chainTargets);
         let chainMult = 1;
         for (const tt of chainTargets) {
           const useF = abilityFlatWeight(ability) != null;

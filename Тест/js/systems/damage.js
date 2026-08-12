@@ -110,6 +110,7 @@
       }
       if (dr > 0) dmg = Math.max(1, Math.round(dmg * (1 - Math.min(0.9, dr))));
     }
+    try { onStHitBossMech(target, attacker, ctx); } catch (_) {}
     // Блок: база 0%. Пассивка «Щит с озона» даёт +15%. Иск. Защиты воина — сверху.
     // Сила блока −35% фиксирована (баффы могут добавить blockValueAdd).
     if (

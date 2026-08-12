@@ -25,6 +25,70 @@
       },
       skills: {},
     },
+    'shaman:restoration': {
+      id: 'shaman_restoration',
+      label: 'Шаман — Исцеление',
+      folder: 'characters/shaman_restoration',
+      mirror: false,
+      style: 'v02-16bit',
+      anims: {
+        idle: { prefix: 'idle_', count: 1, fps: 1, loop: false },
+        attack: { prefix: 'attack_', count: 6, fps: 11, loop: false },
+        skill_riptide: { prefix: 'skill_riptide_', count: 6, fps: 10, loop: false },
+        skill_hw: { prefix: 'skill_hw_', count: 6, fps: 10, loop: false },
+        skill_chw: { prefix: 'skill_chw_', count: 6, fps: 11, loop: false },
+        skill_ch: { prefix: 'skill_ch_', count: 6, fps: 10, loop: false },
+        skill_hs: { prefix: 'skill_hs_', count: 6, fps: 9, loop: false },
+        skill_hst: { prefix: 'skill_hst_', count: 6, fps: 10, loop: false },
+        skill_spirit_link: { prefix: 'skill_spirit_link_', count: 6, fps: 10, loop: false },
+        skill_unleash: { prefix: 'skill_unleash_', count: 6, fps: 10, loop: false },
+        skill_flame_shock: { prefix: 'skill_flame_shock_', count: 6, fps: 11, loop: false },
+      },
+      skills: {
+        riptide: 'skill_riptide',
+        hw: 'skill_hw',
+        chw: 'skill_chw',
+        ch: 'skill_ch',
+        hs: 'skill_hs',
+        hst: 'skill_hst',
+        spirit_link: 'skill_spirit_link',
+        unleash: 'skill_unleash',
+        flame_shock: 'skill_flame_shock',
+      },
+      noLunge: new Set(['hs', 'hst', 'spirit_link', 'unleash']),
+    },
+    'paladin:protection': {
+      id: 'paladin_protection',
+      label: 'Паладин — Защита',
+      folder: 'characters/paladin_protection',
+      mirror: false,
+      style: 'v02-16bit',
+      anims: {
+        idle: { prefix: 'idle_', count: 1, fps: 1, loop: false },
+        attack: { prefix: 'attack_', count: 6, fps: 11, loop: false },
+        skill_crusader: { prefix: 'skill_crusader_', count: 6, fps: 11, loop: false },
+        skill_judgment: { prefix: 'skill_judgment_', count: 6, fps: 10, loop: false },
+        skill_avengers: { prefix: 'skill_avengers_', count: 6, fps: 10, loop: false },
+        skill_hot_r: { prefix: 'skill_hot_r_', count: 6, fps: 11, loop: false },
+        skill_sot_r: { prefix: 'skill_sot_r_', count: 6, fps: 11, loop: false },
+        skill_consecrate: { prefix: 'skill_consecrate_', count: 6, fps: 9, loop: false },
+        skill_hot_w: { prefix: 'skill_hot_w_', count: 6, fps: 11, loop: false },
+        skill_ardent: { prefix: 'skill_ardent_', count: 6, fps: 9, loop: false },
+        skill_taunt: { prefix: 'skill_taunt_', count: 6, fps: 10, loop: false },
+      },
+      skills: {
+        crusader: 'skill_crusader',
+        judgment: 'skill_judgment',
+        avengers: 'skill_avengers',
+        hot_r: 'skill_hot_r',
+        sot_r: 'skill_sot_r',
+        consecrate: 'skill_consecrate',
+        hot_w: 'skill_hot_w',
+        ardent: 'skill_ardent',
+        taunt: 'skill_taunt',
+      },
+      noLunge: new Set(['ardent', 'taunt', 'consecrate']),
+    },
     'paladin:retribution': {
       id: 'paladin_retribution',
       label: 'Паладин — Воздаяние',
@@ -83,7 +147,7 @@
     const anim = pack.anims[animName];
     if (!anim) return null;
     const i = String(index).padStart(2, '0');
-    return SPRITE_BASE + pack.folder + '/' + anim.prefix + i + '.png?v=v04';
+    return SPRITE_BASE + pack.folder + '/' + anim.prefix + i + '.png?v=v06';
   }
 
   function preloadPack(pack) {

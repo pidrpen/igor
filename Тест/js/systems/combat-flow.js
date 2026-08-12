@@ -82,13 +82,8 @@
     const node = currentRouteNode();
     const type = node?.type || 'trash';
     const afterLoot = () => {
-      // Always go through advanceRoom — it handles final/mopup/branches
-      const offer = type === 'elite' || type === 'boss' || type === 'final' || Math.random() < 0.45;
-      if (offer && (run.talents || []).length < 8 && !node?.mopup) {
-        openTalent(() => advanceRoom());
-      } else {
-        advanceRoom();
-      }
+      // Без межкомнатных баффов/талантов — сразу следующая комната.
+      advanceRoom();
     };
     if (type === 'boss' || type === 'final' || type === 'elite') {
       grantLoot(afterLoot);
