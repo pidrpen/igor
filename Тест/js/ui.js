@@ -542,10 +542,11 @@
   function renderParty() {
     const slots = document.getElementById('party-slots');
     slots.innerHTML = '';
+    const raidLobby = typeof isRaidLobby === 'function' && isRaidLobby();
     for (let i = 0; i < getPartySize(); i++) {
       const p = party[i];
       const div = document.createElement('div');
-      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '');
+      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '') + (raidLobby ? ' raid-member' : '');
       if (p) {
         ensureSec(p);
         p.gear = normalizeGear(p.gear);
@@ -562,7 +563,20 @@
           'ico slot-portrait',
           `--cc:${cc}`
         );
-        div.innerHTML = `
+        if (raidLobby) {
+          const res = `${primary.icon || ''}${secondary ? ' ' + (secondary.icon || '') : ''}`.trim();
+          div.innerHTML = `
+          <button type="button" class="remove" title="Убрать" aria-label="Убрать из отряда">✕</button>
+          <div class="slot-main raid-card">
+            ${face}
+            <div class="meta">
+              <b>${cls.name} · ${spec.name}</b>
+              <span class="${ROLE_CLASS[spec.role]}">${ROLE_LABEL[spec.role]}${res ? ' · ' + res : ''}</span>
+            </div>
+            <button type="button" class="btn btn-sm party-gear-btn" data-gear-idx="${i}">Шмот</button>
+          </div>`;
+        } else {
+          div.innerHTML = `
           <button type="button" class="remove" title="Убрать" aria-label="Убрать из отряда">✕</button>
           <div class="slot-main">
             <div class="slot-identity">
@@ -579,6 +593,7 @@
               ${secPanelHtml(p, i)}
             </div>
           </div>`;
+        }
         div.style.borderColor = cc;
         div.style.setProperty('--cc', cc);
         if (p.classId === 'deathknight' && p.specId === 'unholy') {
@@ -590,6 +605,15 @@
           renderParty();
           savePartyProfile();
         });
+      } else if (raidLobby) {
+        div.innerHTML = `
+          <div class="slot-main raid-card">
+            <div class="ico slot-portrait art-wrap no-art empty-face" aria-hidden="true"><span class="art-emoji">＋</span></div>
+            <div class="meta">
+              <b>Слот ${i + 1}</b>
+              <span>пусто</span>
+            </div>
+          </div>`;
       } else {
         // Та же сетка, что у заполненного слота — высота не сжимается
         div.innerHTML = `

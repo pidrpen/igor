@@ -109,9 +109,11 @@
     if (hint) hint.classList.toggle('hidden', !raid);
     document.getElementById('btn-mode-key')?.classList.toggle('on', !raid);
     document.getElementById('btn-mode-raid')?.classList.toggle('on', raid);
-    const affixBox = document.getElementById('affix-list')?.closest('.section-title')
-      || document.querySelector('.lobby-party-col .section-title + .week-badge');
-    void affixBox;
+    const affixTitle = [...document.querySelectorAll('.lobby-party-col .section-title')]
+      .find(el => /Аффикс/.test(el.textContent || ''));
+    affixTitle?.classList.toggle('hidden', raid);
+    document.getElementById('week-badge')?.classList.toggle('hidden', raid);
+    document.getElementById('affix-list')?.classList.toggle('hidden', raid);
     refreshKeystone();
   }
 

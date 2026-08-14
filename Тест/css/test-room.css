@@ -751,22 +751,73 @@
 
 body.raid-lobby .party-slots,
 .party-slots.raid-slots {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: .35rem;
+  display: flex;
+  flex-direction: column;
+  gap: .32rem;
+  margin-bottom: .45rem;
 }
 body.raid-lobby .party-slots .slot,
-.party-slots.raid-slots .slot {
-  padding: .35rem .4rem;
+.party-slots.raid-slots .slot,
+body.raid-lobby .slot.raid-member {
+  padding: .28rem .4rem .28rem .32rem;
   min-height: 0;
+  overflow: hidden;
 }
-body.raid-lobby .party-slots .slot-portrait,
+body.raid-lobby .slot.raid-member .slot-main,
+body.raid-lobby .raid-card {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  grid-template-columns: none;
+  padding-right: 1.25rem;
+  min-width: 0;
+}
+body.raid-lobby .slot.raid-member .slot-divider,
+body.raid-lobby .slot.raid-member .slot-sec-wrap,
+body.raid-lobby .raid-card .slot-divider,
+body.raid-lobby .raid-card .slot-sec-wrap {
+  display: none !important;
+}
+body.raid-lobby .slot.raid-member .slot-portrait,
 .party-slots.raid-slots .slot-portrait {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 8px;
+}
+body.raid-lobby .slot.raid-member .meta {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+body.raid-lobby .slot.raid-member .meta b {
+  display: block;
+  font-size: .82rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.raid-lobby .slot.raid-member .meta span {
+  display: block;
+  font-size: .68rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.raid-lobby .slot.raid-member .party-gear-btn {
+  flex: 0 0 auto;
+  padding: .18rem .4rem;
+  font-size: .68rem;
 }
 body.raid-lobby .lobby-party-col .section-title {
   font-size: .82rem;
+}
+body.raid-lobby .lobby-wrap {
+  grid-template-columns: minmax(180px, .55fr) minmax(0, 1fr) minmax(380px, 1.25fr);
+}
+body.raid-lobby .raid-affix-block {
+  display: none;
 }
 
 .unit.raid-focus {
@@ -789,13 +840,19 @@ body.raid-lobby .lobby-party-col .section-title {
 }
 
 body.raid-run #ally-row.unit-row {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
   gap: .28rem;
+  overflow-x: hidden;
+  padding-bottom: 10px;
+  flex-wrap: unset;
 }
 body.raid-run #ally-row .unit {
+  width: auto !important;
+  min-width: 0 !important;
+  flex: unset !important;
+  flex-basis: auto !important;
   padding: .22rem .28rem .28rem;
-  min-width: 0;
 }
 body.raid-run #ally-row .portrait,
 body.raid-run #ally-row .portrait img {
@@ -843,6 +900,9 @@ body.raid-run #ally-row .buffs {
   }
   body.raid-lobby .party-slots,
   .party-slots.raid-slots {
+    grid-template-columns: 1fr;
+  }
+  body.raid-lobby .lobby-wrap {
     grid-template-columns: 1fr;
   }
 }
