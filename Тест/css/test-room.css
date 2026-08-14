@@ -708,3 +708,131 @@
 #btn-test-room:hover {
   border-style: solid;
 }
+
+/* ── Рейд 10: лобби + бой (Тест) ──────────────────────── */
+
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .4rem;
+  margin: 0 0 .65rem;
+}
+.mode-toggle .btn {
+  width: 100%;
+  padding: .5rem .4rem;
+  font-weight: 650;
+  letter-spacing: .02em;
+}
+.mode-toggle .btn.on {
+  background: linear-gradient(180deg, #1d4f7a, #12324e);
+  border-color: #6ec8ff;
+  color: #e8f6ff;
+  box-shadow: 0 0 0 1px rgba(110, 200, 255, .35), inset 0 1px 0 rgba(255,255,255,.12);
+}
+#btn-mode-raid.on {
+  background: linear-gradient(180deg, #5a2a12, #3a1608);
+  border-color: #f0b060;
+  color: #fff4e4;
+  box-shadow: 0 0 0 1px rgba(240, 176, 96, .4), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+#raid-hint {
+  border: 1px solid rgba(240, 176, 96, .35);
+  background: rgba(80, 36, 10, .35);
+  border-radius: 10px;
+  padding: .55rem .65rem;
+  line-height: 1.4;
+  color: #f6e2c4;
+}
+#btn-fill-raid {
+  background: linear-gradient(180deg, #6a3214, #3e1a08);
+  border-color: #e0a050;
+}
+
+body.raid-lobby .party-slots,
+.party-slots.raid-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .35rem;
+}
+body.raid-lobby .party-slots .slot,
+.party-slots.raid-slots .slot {
+  padding: .35rem .4rem;
+  min-height: 0;
+}
+body.raid-lobby .party-slots .slot-portrait,
+.party-slots.raid-slots .slot-portrait {
+  width: 36px;
+  height: 36px;
+}
+body.raid-lobby .lobby-party-col .section-title {
+  font-size: .82rem;
+}
+
+.unit.raid-focus {
+  outline: 2px solid #7ad0ff;
+  box-shadow: 0 0 0 3px rgba(122, 208, 255, .28), 0 0 18px rgba(80, 170, 230, .35);
+  position: relative;
+}
+.unit.raid-focus::after {
+  content: 'ВЫ';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: #081018;
+  background: #7ad0ff;
+  border-radius: 4px;
+  padding: .05rem .28rem;
+}
+
+body.raid-run #ally-row.unit-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .35rem;
+}
+body.raid-run #ally-row .unit {
+  padding: .35rem .32rem .4rem;
+}
+body.raid-run #ally-row .portrait,
+body.raid-run #ally-row .portrait img {
+  width: 44px;
+  height: 44px;
+}
+body.raid-run #ally-row .u-name {
+  font-size: .68rem;
+}
+body.raid-run #ally-row .u-role {
+  font-size: .58rem;
+}
+
+.mark-chip {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  font-size: .58rem;
+  font-weight: 700;
+  background: rgba(40, 80, 160, .85);
+  color: #d8ecff;
+  border-radius: 4px;
+  padding: .05rem .28rem;
+}
+
+#btn-raid-auto.on {
+  background: linear-gradient(180deg, #1d4f7a, #12324e);
+  border-color: #6ec8ff;
+  color: #e8f6ff;
+}
+
+@media (max-width: 720px) {
+  body.raid-run #ally-row.unit-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body.raid-lobby .party-slots,
+  .party-slots.raid-slots {
+    grid-template-columns: 1fr;
+  }
+}
+

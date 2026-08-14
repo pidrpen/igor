@@ -33,6 +33,7 @@
         _baseSecCritRating: p._baseSecCritRating, _baseSecVersRating: p._baseSecVersRating,
         _baseSecMasteryRating: p._baseSecMasteryRating,
       })),
+      raid: !!run.raid,
       _roomArt: run._roomArt || {},
     };
   }
@@ -60,6 +61,7 @@
         }),
         dungeonId: document.getElementById('dungeon-select')?.value || null,
         keyLevel: document.getElementById('key-level')?.value || null,
+        gameMode: (typeof gameMode === 'string' ? gameMode : 'key'),
       };
       localStorage.setItem(PROFILE_KEY, JSON.stringify(payload));
     } catch (_) { /* ignore */ }
@@ -87,6 +89,9 @@
       }
       if (data.keyLevel && document.getElementById('key-level')) {
         document.getElementById('key-level').value = String(data.keyLevel);
+      }
+      if ((data.gameMode === 'raid' || (data.party && data.party.length > 5)) && typeof setGameMode === 'function') {
+        setGameMode('raid');
       }
     } catch (_) {}
     return true;

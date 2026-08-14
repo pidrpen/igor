@@ -240,6 +240,38 @@
           ]},
         ]},
     },
+    /** 10-man raid test boss */
+    raidBosses: {
+      leishen: {
+        id: 'ls', name: 'Лэй Шэнь, Повелитель Грома', icon: '⚡', role: 'tank',
+        hp: 2480, atk: 26, def: 12, speed: 9, mana: 80,
+        mech: { id: 'thunder_king', addName: 'Проводник грома', addId: 'eq', addHp: 0.95, n: 2, mustKillTurns: 4 },
+        phases: [
+          { at: 1, name: 'Престол грома', abilities: [
+            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'damage', power: 1.35, school: 'physical' },
+            { id: 'cast', name: 'Сверхзаряд', cost: 12, cd: 2, type: 'cast_aoe', power: 0.92, castKind: 'kick', castPrio: 4, school: 'nature' },
+            { id: 'nova', name: 'Грозовое поле', cost: 12, cd: 3, type: 'aoe', power: 0.62, school: 'nature' },
+          ]},
+          { at: 0.70, name: 'Зал проводников', abilities: [
+            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'damage', power: 1.45, school: 'physical' },
+            { id: 'buster', name: 'Казнь стража', cost: 14, cd: 2, type: 'cast_aoe', power: 1.2, castKind: 'buster', castPrio: 2, school: 'physical' },
+            { id: 'cast', name: 'Цепная молния', cost: 12, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 4, school: 'nature' },
+            { id: 'adds', name: 'Призыв проводников', cost: 10, cd: 4, type: 'summon', power: 1 },
+          ]},
+          { at: 0.40, name: 'Расколотое небо', abilities: [
+            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'damage', power: 1.5, school: 'physical' },
+            { id: 'buster', name: 'Децимация', cost: 14, cd: 2, type: 'cast_aoe', power: 1.25, castKind: 'buster', castPrio: 2, school: 'nature' },
+            { id: 'cast', name: 'Небесный разряд', cost: 12, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'aoe', castPrio: 4, school: 'nature' },
+            { id: 'adds', name: 'Проводники', cost: 10, cd: 3, type: 'summon', power: 1 },
+          ]},
+          { at: 0.15, name: 'Ярость императора', abilities: [
+            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'aoe', power: 0.88, school: 'physical' },
+            { id: 'buster', name: 'Гнев Грома', cost: 12, cd: 1, type: 'cast_aoe', power: 1.3, castKind: 'buster', castPrio: 2, school: 'nature' },
+            { id: 'cast', name: 'Конец династии', cost: 14, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'kick', castPrio: 4, school: 'nature' },
+          ]},
+        ],
+      },
+    },
     /** Mid-bosses: unique per dungeon, used on mid node */
     midBosses: {
       crypt: { id: 'sg', name: 'Хранитель склепа', icon: '🪦', role: 'tank', hp: 380, atk: 18, def: 10, speed: 8, mana: 40,
@@ -605,6 +637,14 @@
       if (m.id === 'heat') {
         applyStatus(boss, { id: 'heat', name: 'Перегрев', icon: '🔥', turns: 99, stacks: 0, tip: 'Кик сбивает жар. 3+ стака жгут отряд.' });
       }
+      if (m.id === 'thunder_king') {
+        applyStatus(boss, {
+          id: 'thunder_king', name: 'Повелитель грома', icon: '⚡', turns: 99,
+          tip: '10-ман: смена танков, проводники СТ, соки молний, кики.',
+        });
+        log('Лэй Шэнь: смена танков по Перегрузке ×3 · Проводники СТ · соки молний живыми.', 'system');
+        toast('Рейд 10 · Лэй Шэнь');
+      }
     }
   }
 
@@ -701,5 +741,155 @@
           log(`${t.name} тонет — лечите / диспел`, 'enemy');
         }
       }
+      if (m.id === 'thunder_king') {
+        tickThunderKing(boss, m);
+      }
+    }
+  }
+
+  function tickThunderKing(boss, m) {
+    if (!combat || !boss?.alive) return;
+    const heroes = livingHeroes();
+    if (!heroes.length) return;
+    const tanks = heroes.filter(h => h.role === 'tank');
+    const mt = (typeof currentMainTank === 'function' ? currentMainTank(boss) : tanks[0]) || heroes[0];
+    const ratio = boss.hp / Math.max(1, boss.maxHp);
+
+    // Tank swap: overload stacks on current MT
+    if (mt && mt.alive) {
+      let ov = (mt.buffs || []).find(b => b.id === 'overload');
+      if (!ov) {
+        applyStatus(mt, {
+          id: 'overload', name: 'Перегрузка', icon: '⚡', turns: 8, stacks: 1,
+          dmgTakenMod: 0.12, tip: 'Стаки на текущем танке. На ×3 — разряд. ОТ должен спровоцировать.',
+        });
+        ov = (mt.buffs || []).find(b => b.id === 'overload');
+      } else {
+        ov.stacks = (ov.stacks || 1) + 1;
+        ov.turns = Math.max(ov.turns || 0, 6);
+        ov.dmgTakenMod = 0.10 * ov.stacks;
+      }
+      const stacks = ov?.stacks || 1;
+      log(`${mt.name}: Перегрузка ×${stacks}`, 'enemy');
+      if (stacks >= 3) {
+        const smash = Math.round(mt.maxHp * 0.42);
+        dealTrue(mt, smash, boss, 'dmg', { school: 'nature', abilityName: 'Разряд перегрузки' });
+        const splash = Math.round((getEff(boss).atk || boss.atk) * 0.35);
+        for (const h of heroes) {
+          if (h.uid === mt.uid || !h.alive) continue;
+          dealTrue(h, splash, boss, 'aoe', { school: 'nature', abilityName: 'Разряд перегрузки', isAoe: true });
+        }
+        ov.stacks = 0;
+        mt.buffs = (mt.buffs || []).filter(b => b.id !== 'overload');
+        log('Разряд перегрузки! Нужна смена танков до ×3.', 'enemy');
+        toast('Разряд! Смена танков');
+      }
+    }
+    if (tanks.length < 2) {
+      const raw = Math.round((getEff(boss).atk || boss.atk) * 0.28);
+      for (const h of heroes) dealTrue(h, raw, boss, 'aoe', { school: 'nature', abilityName: 'Без второго стража', isAoe: true });
+      log('Нет второго танка — рейд горит. Нужны 2 танка.', 'enemy');
+    }
+
+    // Lightning marks every 3 rounds
+    if (combat.round % 3 === 0) {
+      const pool = heroes.filter(h => h.role !== 'tank');
+      const shuf = pool.slice().sort(() => Math.random() - 0.5).slice(0, 2);
+      for (const h of shuf) {
+        const tick = Math.round(h.maxHp * 0.08);
+        applyStatus(h, {
+          id: 'storm_mark', name: 'Метка молнии', icon: '🌩️', turns: 2, dot: tick,
+          school: 'nature', tip: 'Лечите метку. Тик каждый раунд.',
+        });
+        h.thunderMark = true;
+        log(`${h.name} отмечен молнией`, 'enemy');
+      }
+    }
+
+    // Conductors at 70% and 40%
+    if (ratio <= 0.70 && !boss._cond70) {
+      boss._cond70 = true;
+      for (let i = 0; i < (m.n || 2); i++) {
+        const add = spawnMechAdd(boss, { ...m, role: 'conductor' });
+        if (add) {
+          add.mustKillTurns = m.mustKillTurns || 4;
+          add.name = (m.addName || add.name) + ' · ' + (i + 1);
+        }
+      }
+      log('Проводники! Убейте СТ за 4 раунда, иначе рейд получит разряд.', 'enemy');
+      toast('Проводники — бейте СТ');
+    }
+    if (ratio <= 0.40 && !boss._cond40) {
+      boss._cond40 = true;
+      for (let i = 0; i < (m.n || 2); i++) {
+        const add = spawnMechAdd(boss, { ...m, role: 'conductor', addHp: 1.05 });
+        if (add) {
+          add.mustKillTurns = (m.mustKillTurns || 4) - 1;
+          add.name = (m.addName || add.name) + ' · ' + (i + 1);
+        }
+      }
+      // Soak orbs
+      const soaks = heroes.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+      for (const h of soaks) {
+        applyStatus(h, {
+          id: 'soak_orb', name: 'Сфера молнии', icon: '💠', turns: 2,
+          tip: 'Сок: останьтесь выше 35% HP, иначе сфера рванёт рейд.',
+        });
+        log(`${h.name} должен сокнуть сферу (HP > 35%)`, 'enemy');
+      }
+      toast('Соки молний — держите HP');
+    }
+
+    const conds = (combat.enemies || []).filter(x => x.alive && x.mechRole === 'conductor');
+    for (const add of conds) {
+      add.mustKillTurns = (add.mustKillTurns || 4) - 1;
+      if (add.mustKillTurns <= 0) {
+        const raw = Math.round((getEff(boss).atk || boss.atk) * 0.95);
+        for (const h of livingHeroes()) {
+          dealTrue(h, raw, boss, 'aoe', { school: 'nature', abilityName: 'Взрыв проводника', isAoe: true });
+        }
+        add.alive = false; add.hp = 0;
+        log('Проводник взорвался по рейду!', 'enemy');
+        toast('Проводник взорвался');
+      } else {
+        log(`Проводник взорвётся через ${add.mustKillTurns} р.`, 'enemy');
+      }
+    }
+
+    // Soak resolve
+    if (combat.round > 1) {
+      const soakers = heroes.filter(h => (h.buffs || []).some(b => b.id === 'soak_orb' && (b.turns || 0) <= 1));
+      if (soakers.length) {
+        let failed = 0;
+        for (const h of soakers) {
+          if (!h.alive || h.hp / h.maxHp < 0.35) failed++;
+        }
+        if (failed) {
+          const raw = Math.round((getEff(boss).atk || boss.atk) * 0.7 * failed);
+          for (const h of livingHeroes()) {
+            dealTrue(h, raw, boss, 'aoe', { school: 'nature', abilityName: 'Сорванный сок', isAoe: true });
+          }
+          log(`Сорвано соков: ${failed} — рейд получил разряд.`, 'enemy');
+        } else {
+          log('Все сферы сокнуты.', 'player');
+          toast('Соки закрыты');
+        }
+      }
+    }
+
+    if (ratio <= 0.15 && !boss._empEnrage) {
+      boss._empEnrage = true;
+      boss.enraged = true;
+      applyStatus(boss, { id: 'emp_wrath', name: 'Ярость императора', icon: '👑', turns: 99, atkMod: 0.35 });
+      log('Ярость императора — босс бьёт сильнее. Дожмите!', 'enemy');
+      toast('Ярость императора');
+    }
+
+    if (combat.round >= 30) {
+      const raw = Math.round((getEff(boss).atk || boss.atk) * 1.4);
+      for (const h of livingHeroes()) {
+        dealTrue(h, raw, boss, 'aoe', { school: 'nature', abilityName: 'Берсерк', isAoe: true });
+      }
+      log('Берсерк! Рейд топит по таймеру.', 'enemy');
     }
   }

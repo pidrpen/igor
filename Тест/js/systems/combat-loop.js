@@ -172,6 +172,30 @@
     if (paused) return;
     // Player only controls heroes; pets auto-act
     if (actor.side === 'ally' && !actor.isPet) {
+      if (typeof shouldRaidAuto === 'function' && shouldRaidAuto(actor)) {
+        combat.waitingPlayer = false;
+        document.getElementById('ability-bar').innerHTML = '';
+        try { hidePassivePocket(); } catch (_) {}
+        document.getElementById('combat-actions').innerHTML =
+          `<span style="color:var(--muted)">Авто-рейд · ${actor.fullName || actor.name}…</span>`;
+        clearTimeout(aiTimer);
+        aiTimer = setTimeout(() => {
+          try {
+            if (paused || !combat || combat.over) return;
+            if (typeof raidAllyAi === 'function') {
+              if (!raidAllyAi(actor)) aiAct(actor);
+            } else {
+              aiAct(actor);
+            }
+            afterAction();
+          } catch (err) {
+            console.error('[raidAi]', err);
+            if (combat) combat._keepPlayerTurn = false;
+            afterAction();
+          }
+        }, Math.max(40, Math.round(aiDelay() * 0.55)));
+        return;
+      }
       combat.waitingPlayer = true;
       combat._keepPlayerTurn = false;
       actor._debugUsedThisTurn = false;
@@ -231,10 +255,14 @@
       }
     }
     // Passive tank agro pulse — keeps mobs glued to tank without constant taunt
-    const tankPulse = run?.party?.find(p => p.role === 'tank' && p.alive);
-    if (tankPulse && combat) {
+    const tanksPulse = (run?.party || []).filter(p => p.role === 'tank' && p.alive);
+    if (tanksPulse.length && combat) {
       for (const e of living('enemy')) {
-        addThreat(e, tankPulse, e.isBoss ? 350 : (e.isElite ? 220 : 150));
+        const mt = typeof currentMainTank === 'function' ? currentMainTank(e) : tanksPulse[0];
+        for (const t of tanksPulse) {
+          const amt = e.isBoss ? 350 : (e.isElite ? 220 : 150);
+          addThreat(e, t, t.uid === mt?.uid ? amt : Math.round(amt * 0.55));
+        }
       }
     }
     for (const u of allUnits()) {

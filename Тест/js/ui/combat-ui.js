@@ -248,6 +248,10 @@
   }
 
   function onUnitClick(unit) {
+    if (run?.raid && unit?.side === 'ally' && !unit.isPet && !pendingTarget) {
+      setRaidFocus(unit);
+      return;
+    }
     if (!pendingTarget || !combat?.waitingPlayer) return;
     if (!unit?.alive) return toast('Мёртв');
     const { actor, ability } = pendingTarget;
@@ -411,9 +415,9 @@
       ? `<div class="tele-badge ${castKind === 'buster' ? 'buster' : castKind === 'aoe' ? 'aoe' : 'kick'}">${telegraphLabel(u.casting)}</div>`
       : '';
     const topThreat = u.side === 'enemy' ? topThreatUid(u) : null;
-    const tankUid = run?.party?.find(p => p.role === 'tank')?.uid;
+    const tankUids = new Set((run?.party || []).filter(p => p.role === 'tank').map(p => p.uid));
     const threatHtml = (u.side === 'enemy' && topThreat)
-      ? `<div class="threat-chip${topThreat === tankUid ? ' tanking' : ''}">${topThreat === tankUid ? 'ТАНК' : 'ВТОР.'}</div>`
+      ? `<div class="threat-chip${tankUids.has(topThreat) ? ' tanking' : ''}">${tankUids.has(topThreat) ? 'ТАНК' : 'ВТОР.'}</div>`
       : '';
     const burstHtml = (u.burstStacks || 0) > 0
       ? `<div class="burst-chip">💥${u.burstStacks}</div>` : '';
@@ -511,7 +515,7 @@
     const resBarTitle = isDkRunes
       ? `title="Сила рун ${Math.floor(u.res.secondary.current)}/${u.res.secondary.max}"`
       : '';
-    return `<div class="unit ${u.side === 'ally' ? 'ally' : 'enemy'}${u.alive ? '' : ' dead'}${active ? ' active' : ''}${targeting ? ' selected-target' : ''}${castingCls}${low}${kickPrio}" data-uid="${u.uid}" style="--cc:${cc}">
+    return `<div class="unit ${u.side === 'ally' ? 'ally' : 'enemy'}${u.alive ? '' : ' dead'}${active ? ' active' : ''}${targeting ? ' selected-target' : ''}${castingCls}${low}${kickPrio}${typeof raidFocusClass === 'function' ? raidFocusClass(u) : ''}" data-uid="${u.uid}" style="--cc:${cc}">
       ${threatHtml}${teleHtml}${burstHtml}${markHtml}
       ${portraitHtml}
       <div class="u-name" title="${u.fullName || u.name}">${u.fullName || u.name}</div>

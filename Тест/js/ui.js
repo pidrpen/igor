@@ -50,6 +50,7 @@
     ds.addEventListener('change', () => { refreshAffixes(); refreshKeystone(); savePartyProfile(); });
     kl.addEventListener('change', () => { refreshAffixes(); refreshKeystone(); savePartyProfile(); });
     document.getElementById('btn-start').addEventListener('click', startRun);
+    try { bindRaidLobby(); } catch (e) { console.error('[raid]', e); }
 
     document.getElementById('btn-abandon').addEventListener('click', () => {
       if (confirm('Сдаться?')) endRun(false, 'Вы покинули ключ.');
@@ -148,6 +149,7 @@
     }
     renderParty();
     renderBalancePanel();
+    try { syncRaidLobbyUi(); } catch (_) {}
     refreshAffixes();
     refreshKeystone();
     updatePreview();
@@ -479,7 +481,7 @@
     if (editSlot != null && editSlot < party.length) {
       party[editSlot] = entry;
       editSlot = null;
-    } else if (party.length < PARTY_SIZE) {
+    } else if (party.length < getPartySize()) {
       party.push(entry);
     } else {
       toast('Пати полная — кликните слот чтобы заменить');
@@ -540,7 +542,7 @@
   function renderParty() {
     const slots = document.getElementById('party-slots');
     slots.innerHTML = '';
-    for (let i = 0; i < PARTY_SIZE; i++) {
+    for (let i = 0; i < getPartySize(); i++) {
       const p = party[i];
       const div = document.createElement('div');
       div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '');
@@ -643,12 +645,13 @@
     const tanks = roles.filter(r => r === 'tank').length;
     const heals = roles.filter(r => r === 'healer').length;
     const dps = roles.filter(r => r === 'dps').length;
-    const ok = party.length === PARTY_SIZE && tanks === 1 && heals === 1 && dps === 3;
+    const need = getPartyNeed();
+    const ok = party.length === getPartySize() && tanks === need.tank && heals === need.healer && dps === need.dps;
     const req = document.getElementById('party-req');
     req.className = 'party-req ' + (ok ? 'ok' : 'bad');
     req.textContent = ok
-      ? '✓ Состав верный (1 танк · 1 целитель · 3 бойца)'
-      : `Сейчас: танк ${tanks}/1 · целитель ${heals}/1 · боец ${dps}/3 · слотов ${party.length}/${PARTY_SIZE}`;
+      ? `✓ Состав верный (${need.tank} танк${need.tank > 1 ? 'а' : ''} · ${need.healer} целител${need.healer > 1 ? 'я' : 'ь'} · ${need.dps} бойц${need.dps > 1 ? 'ов' : 'а'})`
+      : `Сейчас: танк ${tanks}/${need.tank} · целитель ${heals}/${need.healer} · боец ${dps}/${need.dps} · слотов ${party.length}/${getPartySize()}`;
     document.getElementById('btn-start').disabled = !ok;
   }
 
@@ -792,6 +795,7 @@
     document.getElementById('lobby').classList.add('hidden');
     document.getElementById('run-screen').classList.remove('hidden');
     document.getElementById('end-modal').classList.add('hidden');
+    document.body.classList.toggle('raid-run', !!(run && run.raid));
     paused = false;
     const b = document.getElementById('btn-pause');
     if (b) b.textContent = 'Пауза';
@@ -810,23 +814,38 @@
   function startRun() {
     try {
       savePartyProfile();
-      const dungeon = DUNGEONS.find(d => d.id === document.getElementById('dungeon-select').value);
+      const raid = isRaidLobby();
+      const dungeon = raid
+        ? RAID_DUNGEON
+        : DUNGEONS.find(d => d.id === document.getElementById('dungeon-select').value);
+      if (!dungeon) { toast('Выберите подземелье'); return; }
       const keyLevel = +document.getElementById('key-level').value;
-      const affixes = keyAffixes(keyLevel);
-      const timerMax = Math.max(12 * 60, dungeon.timerBase - (keyLevel - 2) * 25);
+      const affixes = raid ? [] : keyAffixes(keyLevel);
+      const timerMax = raid
+        ? Math.max(8 * 60, 10 * 60 - (keyLevel - 2) * 12)
+        : Math.max(12 * 60, dungeon.timerBase - (keyLevel - 2) * 25);
       run = {
         dungeon, keyLevel, affixes, roomIndex: 0, talents: [], deaths: 0,
         timerMax, timerLeft: timerMax, logs: [], restBuffBattles: 0, finished: false,
         forces: 0, loot: [],
-        route: generateRoute(dungeon),
+        raid: !!raid,
+        route: raid ? generateRaidRoute() : generateRoute(dungeon),
         party: party.map(p => createHero(p.classId, p.specId, keyLevel, p.sec, p.gear)),
         _roomArt: {}, // стабильные фоны комнат (rift/ember)
       };
       assignPartyUniqueNames(run.party);
+      raidPlayerUid = run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid || null;
+      raidAutoAllies = true;
       resetRecount();
       beginRunScreen();
       applyDungeonTheme();
-      log(`Ключ +${keyLevel}: ${dungeon.name}. Маршрут с развилками · нужно ⚔ ${FORCES_TARGET}% сил (на карте ~${FORCES_MAP_BUDGET}%).`, 'system');
+      if (raid) {
+        log(`Рейд 10 · +${keyLevel}: ${dungeon.name}. Лэй Шэнь, Повелитель Грома.`, 'system');
+        log('Механики: смена танков (Перегрузка ×3) · Проводники СТ · метки молнии · соки сфер · кики кастов.', 'system');
+        log('Авто-рейд: союзники ходят сами. Клик по герою — взять управление.', 'system');
+      } else {
+        log(`Ключ +${keyLevel}: ${dungeon.name}. Маршрут с развилками · нужно ⚔ ${FORCES_TARGET}% сил (на карте ~${FORCES_MAP_BUDGET}%).`, 'system');
+      }
       log(`Отряд: ${run.party.map(p => p.fullName).join(', ')}`, 'system');
       updateHud(); renderPath(); renderPowers(); enterRoom();
       saveRun();
@@ -841,7 +860,9 @@
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return toast('Нет сохранения');
       const data = JSON.parse(raw);
-      const dungeon = DUNGEONS.find(d => d.id === data.dungeonId);
+      const dungeon = data.dungeonId === 'throne' || data.raid
+        ? RAID_DUNGEON
+        : DUNGEONS.find(d => d.id === data.dungeonId);
       if (!dungeon) return toast('Данж из сейва не найден');
       party = (data.partyBuild || []).map(x => {
         const e = { classId: x.classId, specId: x.specId, sec: x.sec ? { ...x.sec } : defaultSec(), gear: normalizeGear(x.gear) };
@@ -878,13 +899,21 @@
           if (p.res) h.res = p.res;
           return h;
         }),
+        raid: !!data.raid || data.dungeonId === 'throne',
         _roomArt: data._roomArt || {},
       };
       if (!run.party.length) {
         run.party = party.map(p => createHero(p.classId, p.specId, keyLevel, p.sec, p.gear));
       }
       assignPartyUniqueNames(run.party);
-      if (!run.route?.nodes) run.route = generateRoute(dungeon);
+      if (run.raid) {
+        raidPlayerUid = run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid || null;
+        raidAutoAllies = true;
+        if (!run.route?.nodes || data.dungeonId === 'throne') {
+          if (!run.route?.nodes) run.route = generateRaidRoute();
+        }
+      }
+      if (!run.route?.nodes) run.route = run.raid ? generateRaidRoute() : generateRoute(dungeon);
       beginRunScreen();
       applyDungeonTheme();
       log('Продолжение сохранения…', 'system');
@@ -923,6 +952,7 @@
     document.getElementById('timer-fill').style.width = (run.timerLeft / run.timerMax * 100) + '%';
     const sp = document.getElementById('hud-speed');
     if (sp) sp.textContent = gameSpeed + '×';
+    try { raidHudPatch(); } catch (_) {}
   }
   function routeNodeCard(n, cur, visited) {
     if (!n) return '';
@@ -1044,6 +1074,11 @@
       return;
     }
     startCombat(type);
+    if (run.raid) {
+      try { showRaidBriefing(); } catch (_) {}
+      const auto = document.getElementById('btn-raid-auto');
+      if (auto) auto.classList.remove('hidden');
+    }
   }
 
   /** Пропуск комнаты привала без хила/баффа (темп: пачка → пачка). */
@@ -1261,21 +1296,22 @@
       const v = enemy.threat[h.uid] || 0;
       if (v > bestV) { best = h; bestV = v; }
     }
-    const tank = heroes.find(h => h.role === 'tank');
-    // Sticky agro: stay on tank unless someone has much more threat (or tank is dead)
-    if (tank) {
-      const tankThreat = enemy.threat[tank.uid] || 0;
-      // No real threat table yet → always tank
-      if (bestV <= 0) return tank;
-      // Need ~50% more threat than tank to pull (DPS/heal rarely stick)
-      const PULL_RATIO = 1.5;
-      if (best && best.uid !== tank.uid && bestV < Math.max(tankThreat * PULL_RATIO, tankThreat + 400)) {
-        return tank;
+    const tanks = heroes.filter(h => h.role === 'tank');
+    if (tanks.length) {
+      let mt = tanks[0], mtV = enemy.threat[mt.uid] || 0;
+      for (const t of tanks) {
+        const v = enemy.threat[t.uid] || 0;
+        if (v > mtV) { mt = t; mtV = v; }
       }
-      // Prefer tank when tied / very close
-      if (best && best.uid !== tank.uid && bestV <= tankThreat * 1.1) return tank;
+      if (bestV <= 0) return mt;
+      const PULL_RATIO = 1.5;
+      if (best && best.role !== 'tank' && bestV < Math.max(mtV * PULL_RATIO, mtV + 400)) {
+        return mt;
+      }
+      if (best && best.role !== 'tank' && bestV <= mtV * 1.1) return mt;
+      return best || mt;
     }
-    return best || tank || heroes[0];
+    return best || heroes[0];
   }
   function topThreatUid(enemy) {
     const t = getThreatTarget(enemy);
@@ -1378,18 +1414,26 @@
       enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
       if (k >= 10) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
     } else if (type === 'boss') {
-      const theme = run.dungeon.theme || 'crypt';
-      const tpl = (ENEMIES.midBosses && ENEMIES.midBosses[theme])
-        || (ENEMIES.bosses && ENEMIES.bosses[theme])
-        || ENEMIES.bosses?.crypt
-        || fallback;
-      enemies.push(scaleEnemy(tpl, k, true, false));
-      enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
+      if (run.raid) {
+        enemies.push(...spawnRaidEncounter());
+      } else {
+        const theme = run.dungeon.theme || 'crypt';
+        const tpl = (ENEMIES.midBosses && ENEMIES.midBosses[theme])
+          || (ENEMIES.bosses && ENEMIES.bosses[theme])
+          || ENEMIES.bosses?.crypt
+          || fallback;
+        enemies.push(scaleEnemy(tpl, k, true, false));
+        enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
+      }
     } else if (type === 'final') {
-      const theme = run.dungeon.theme || 'crypt';
-      const finTpl = (ENEMIES.bosses && ENEMIES.bosses[theme]) || ENEMIES.bosses?.crypt || fallback;
-      enemies.push(scaleEnemy(finTpl, k, true, false));
-      enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
+      if (run.raid) {
+        enemies.push(...spawnRaidEncounter());
+      } else {
+        const theme = run.dungeon.theme || 'crypt';
+        const finTpl = (ENEMIES.bosses && ENEMIES.bosses[theme]) || ENEMIES.bosses?.crypt || fallback;
+        enemies.push(scaleEnemy(finTpl, k, true, false));
+        enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
+      }
     }
 
     // Distribute node's forceBudget % across trash/elite (bosses = 0)
@@ -1738,7 +1782,9 @@
     document.getElementById('rest-modal').classList.add('hidden');
     const box = document.getElementById('end-box');
     box.className = 'modal end-modal ' + (win ? 'win' : 'lose');
-    document.getElementById('end-title').textContent = win ? `Ключ закрыт · ${score}!` : 'Ключ провален';
+    document.getElementById('end-title').textContent = win
+      ? (run.raid ? `Рейд закрыт · ${score}!` : `Ключ закрыт · ${score}!`)
+      : (run.raid ? 'Рейд провален' : 'Ключ провален');
     const lootStr = (run.loot || []).map(l => l.icon + ' ' + l.name).join(', ') || 'нет';
     document.getElementById('end-msg').textContent = msg + `\nДобыча: ${lootStr}`;
     document.getElementById('end-modal').classList.remove('hidden');
@@ -1762,6 +1808,8 @@
     document.getElementById('lobby').classList.remove('hidden');
     document.getElementById('vignette')?.classList.remove('on');
     applyDungeonTheme(null);
+    document.body.classList.remove('raid-run');
+    try { if (typeof syncRaidLobbyUi === 'function') syncRaidLobbyUi(); } catch (_) {}
     const cont = document.getElementById('btn-continue');
     if (cont) cont.classList.toggle('hidden', !hasSave());
     renderHistory();

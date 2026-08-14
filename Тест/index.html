@@ -23,7 +23,7 @@
   <script src="class-balance/apply-all.js?v=5.4.8.34-test"></script>
   <link rel="stylesheet" href="css/main.css?v=5.4.8.34" />
   <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34-shamfx2" />
-  <link rel="stylesheet" href="css/test-room.css?v=5.4.8.34-route2" />
+  <link rel="stylesheet" href="css/test-room.css?v=5.4.8.35-raid" />
 </head>
 <body>
   <div id="lobby" class="screen screen-center">
@@ -56,9 +56,15 @@
         </div>
       </div>
       <div class="card lobby-party-col">
+        <div class="mode-toggle" role="tablist" aria-label="Режим">
+          <button class="btn on" type="button" id="btn-mode-key">Ключ 5</button>
+          <button class="btn" type="button" id="btn-mode-raid">Рейд 10</button>
+        </div>
         <div class="section-title">Отряд (5 слотов) — клик по слоту, чтобы заменить</div>
         <div class="party-slots" id="party-slots"></div>
         <p class="party-req bad" id="party-req">Нужны: 1 танк · 1 целитель · 3 бойца</p>
+        <button class="btn btn-ok hidden" type="button" id="btn-fill-raid" style="width:100%;margin:.35rem 0 .55rem">Собрать рейд 10 (пресет)</button>
+        <p class="keys-hint hidden" id="raid-hint">Тест сложного рейдового босса на 10 человек: <b>Лэй Шэнь, Повелитель Грома</b>. Смена танков, проводники, соки молний, кики. Союзники ходят сами — клик по герою, чтобы взять управление.</p>
         <div class="key-row">
           <div class="field"><label>Подземелье</label><select id="dungeon-select"></select></div>
           <div class="field"><label>Уровень ключа</label><select id="key-level"></select></div>
@@ -151,6 +157,7 @@
       <div class="spacer"></div>
       <button class="btn btn-sm" id="btn-pause" type="button">Пауза</button>
       <button class="btn btn-sm" id="btn-speed" type="button">Скорость</button>
+      <button class="btn btn-sm on hidden" id="btn-raid-auto" type="button">Авто-рейд: вкл</button>
       <button class="btn btn-sm btn-danger" id="btn-abandon">Сдаться</button>
     </div>
     <div class="timer-bar"><i id="timer-fill"></i></div>
@@ -310,8 +317,9 @@
   <script src="js/core.js?v=5.4.8.34-route2"></script>
   <script src="js/ui/balance-panel.js?v=5.4.8.34-beta6"></script>
   <script src="js/ui/fx.js?v=5.4.8.34-shamfx2"></script>
-  <script src="js/enemies.js?v=5.4.8.34-route2"></script>
-  <script src="js/route.js?v=5.4.8.34-route2"></script>
+  <script src="js/enemies.js?v=5.4.8.35-raid"></script>
+  <script src="js/route.js?v=5.4.8.35-raid"></script>
+  <script src="js/raid.js?v=5.4.8.35-raid"></script>
   <script src="js/gear.js?v=5.4.8.34-gear6"></script>
   <script src="js/shop/shop-sets.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop-trinkets-data.js?v=5.4.8.34-gear2"></script>
@@ -322,14 +330,14 @@
   <script src="js/systems/meter.js?v=5.4.8.34"></script>
   <script src="js/systems/ability-data.js?v=5.4.8.34"></script>
   <script src="js/systems/resources.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-loop.js?v=5.4.8.34-route2"></script>
-  <script src="js/ui/combat-ui.js?v=5.4.8.34-route2"></script>
+  <script src="js/systems/combat-loop.js?v=5.4.8.35-raid"></script>
+  <script src="js/ui/combat-ui.js?v=5.4.8.35-raid"></script>
   <script src="js/systems/abilities.js?v=5.4.8.34-chain"></script>
   <script src="js/systems/damage.js?v=5.4.8.34-route2"></script>
   <script src="js/systems/ai.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-flow.js?v=5.4.8.34-route2"></script>
-  <script src="js/save.js?v=5.4.8.34"></script>
-  <script src="js/ui.js?v=5.4.8.34-route2"></script>
+  <script src="js/systems/combat-flow.js?v=5.4.8.35-raid"></script>
+  <script src="js/save.js?v=5.4.8.35-raid"></script>
+  <script src="js/ui.js?v=5.4.8.35-raid"></script>
   <script src="js/test-room/sprites.js?v=5.4.8.34-v06"></script>
   <script src="js/test-room/test-room.js?v=5.4.8.34-v05"></script>
 </body>

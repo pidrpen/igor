@@ -62,7 +62,7 @@
     }
     if (!livingHeroes().length) {
       combat.over = true;
-      endRun(false, 'Вайп. Ключ провален.');
+      endRun(false, run.raid ? 'Вайп. Рейд провален.' : 'Вайп. Ключ провален.');
       return true;
     }
     return false;
@@ -79,6 +79,10 @@
 
   function onVictory() {
     if (run.finished) return;
+    if (run.raid) {
+      endRun(true, 'Лэй Шэнь повержен. Рейд 10 человек выстоял.');
+      return;
+    }
     const node = currentRouteNode();
     const type = node?.type || 'trash';
     const afterLoot = () => {
