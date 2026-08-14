@@ -791,21 +791,32 @@ body.raid-lobby .lobby-party-col .section-title {
 body.raid-run #ally-row.unit-row {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: .35rem;
+  gap: .28rem;
 }
 body.raid-run #ally-row .unit {
-  padding: .35rem .32rem .4rem;
+  padding: .22rem .28rem .28rem;
+  min-width: 0;
 }
 body.raid-run #ally-row .portrait,
 body.raid-run #ally-row .portrait img {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
 }
 body.raid-run #ally-row .u-name {
-  font-size: .68rem;
+  font-size: .64rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 body.raid-run #ally-row .u-role {
-  font-size: .58rem;
+  font-size: .54rem;
+}
+body.raid-run #ally-row .bar-wrap {
+  min-height: 0;
+}
+body.raid-run #ally-row .buffs {
+  max-height: 1.35rem;
+  overflow: hidden;
 }
 
 .mark-chip {
