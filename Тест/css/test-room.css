@@ -128,7 +128,7 @@
   gap: .55rem;
   justify-content: center;
   align-items: center;
-  max-width: 720px;
+  max-width: 610px;
   margin: 0 auto;
   padding: .75rem 1rem;
   border-radius: 14px;
@@ -839,41 +839,148 @@ body.raid-lobby .raid-affix-block {
   padding: .05rem .28rem;
 }
 
+/* Raid combat: packed roster, fitted portraits, skills stay on screen */
+body.raid-run .run-body {
+  overflow: hidden;
+}
+body.raid-run #battle-area.battle-area {
+  overflow: hidden;
+  justify-content: flex-start;
+  background-image:
+    linear-gradient(180deg, rgba(10, 16, 12, .38), rgba(8, 12, 10, .52)),
+    var(--battle-bg, none);
+  background-size: cover;
+  background-position: center 40%;
+  background-repeat: no-repeat;
+}
+body.raid-run #battle-area.theme-jade {
+  --theme-glow: rgba(60, 140, 80, .18);
+}
+body.raid-run #boss-frame,
+body.raid-run .phase-banner,
+body.raid-run .phase-sub {
+  flex: 0 0 auto;
+}
+body.raid-run #enemy-row.unit-row {
+  justify-content: center;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+body.raid-run #enemy-row .unit {
+  width: 132px;
+  flex: 0 0 132px;
+}
+body.raid-run #boss-frame {
+  padding: .28rem .5rem .3rem;
+}
+body.raid-run .phase-banner {
+  margin: .1rem 0 0;
+  font-size: .92rem;
+}
+body.raid-run .phase-sub {
+  font-size: .72rem;
+  margin-bottom: .15rem;
+}
 body.raid-run #ally-row.unit-row {
-  display: grid !important;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-  gap: .28rem;
-  overflow-x: hidden;
-  padding-bottom: 10px;
-  flex-wrap: unset;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: .22rem .28rem;
+  overflow: hidden;
+  padding-bottom: 6px !important;
+  max-width: 610px;
+  margin: 0 auto;
+  width: 100%;
+}
+body.raid-run #ally-row .unit-stack {
+  width: 112px;
+  min-width: 112px;
+  max-width: 112px;
+  flex: 0 0 112px;
+  position: relative;
+}
+body.raid-run #ally-row .unit-stack .pet-row {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 2px;
+  z-index: 2;
+  pointer-events: auto;
+}
+body.raid-run #ally-row .unit-stack .pet-row[aria-hidden="true"] {
+  display: none;
 }
 body.raid-run #ally-row .unit {
-  width: auto !important;
-  min-width: 0 !important;
-  flex: unset !important;
-  flex-basis: auto !important;
-  padding: .22rem .28rem .28rem;
+  width: 112px !important;
+  min-width: 112px !important;
+  max-width: 112px !important;
+  flex: none !important;
+  padding: .22rem .18rem .28rem;
+  box-sizing: border-box;
 }
-body.raid-run #ally-row .portrait,
-body.raid-run #ally-row .portrait img {
-  width: 36px;
-  height: 36px;
+body.raid-run #ally-row .unit .portrait.art-wrap {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  min-height: 52px !important;
+  flex: 0 0 52px !important;
+  margin: 0 auto .12rem;
+  border-radius: 50%;
+  overflow: hidden;
+  display: block;
+}
+body.raid-run #ally-row .unit .portrait.art-wrap .art-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center 18%;
+  border-radius: 50%;
 }
 body.raid-run #ally-row .u-name {
-  font-size: .64rem;
+  font-size: .62rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.15;
 }
 body.raid-run #ally-row .u-role {
-  font-size: .54rem;
+  display: none;
 }
 body.raid-run #ally-row .bar-wrap {
   min-height: 0;
+  margin: .08rem 0 0;
+}
+body.raid-run #ally-row .slot-sec,
+body.raid-run #ally-row .slot-runes {
+  margin-top: .08rem;
 }
 body.raid-run #ally-row .buffs {
-  max-height: 1.35rem;
+  max-height: 1.15rem;
   overflow: hidden;
+  margin-top: .08rem;
+}
+body.raid-run .ability-zone {
+  flex: 0 0 auto !important;
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  background: linear-gradient(180deg, transparent, rgba(8, 12, 10, .82) 28%);
+  padding-top: .2rem;
+}
+body.raid-run .ability-bar {
+  max-height: 128px !important;
+  min-height: 72px;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+}
+body.raid-run .ability {
+  min-height: 44px;
+  padding: .28rem .36rem;
+}
+body.raid-run .combat-actions {
+  flex: 0 0 auto;
 }
 
 .mark-chip {
@@ -896,7 +1003,13 @@ body.raid-run #ally-row .buffs {
 
 @media (max-width: 720px) {
   body.raid-run #ally-row.unit-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
+  }
+  body.raid-run #ally-row .unit {
+    width: calc(50% - .2rem) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 calc(50% - .2rem) !important;
   }
   body.raid-lobby .party-slots,
   .party-slots.raid-slots {
@@ -906,4 +1019,3 @@ body.raid-run #ally-row .buffs {
     grid-template-columns: 1fr;
   }
 }
-

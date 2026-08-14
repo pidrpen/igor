@@ -8,7 +8,7 @@
   const RAID_DUNGEON = {
     id: 'throne',
     name: 'Престол Грома',
-    theme: 'rift',
+    theme: 'jade',
     timerBase: 10 * 60,
     raid: true,
     midName: '—',
