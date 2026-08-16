@@ -76,7 +76,7 @@
         abilities: [
           A({ id: 'death_strike', n: 'Удар смерти', en: 'Death Strike', i: '💚',
             cs: 40, t: 'damage', fl: 35, school: 'physical',
-            d: '35т · 40 силы рун · хил 15% запаса + 25% полученного за 2 хода', sid: 49998 }),
+            d: '35т · 40 силы рун · хил 15% запаса + 25% полученного за 2 хода · щит 20% реального хила', sid: 49998 }),
           A({ id: 'heart_strike', n: 'Удар в сердце', en: 'Heart Strike', i: '❤️',
             r: { b: 1 }, rp: 10, t: 'damage', fl: 16, school: 'physical',
             cleaveOnDnd: 1, rpPerExtra: 4,

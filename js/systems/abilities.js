@@ -1634,6 +1634,12 @@
     const amt = Math.max(1, Math.round(actor.maxHp * pct + taken * 0.25));
     const h = healUnit(actor, amt, actor, { abilityId: 'death_strike', abilityName: 'Удар смерти' });
     if (h) log(`${actor.name}: Удар смерти лечит (+${fmt(h)})`, 'heal');
+    if (blood && h > 0) {
+      const mast = (typeof masteryPct === 'function') ? masteryPct(actor) : 0;
+      const sh = Math.max(1, Math.round(h * 0.20 * (1 + mast)));
+      actor.shield = (actor.shield || 0) + sh;
+      log(`${actor.name}: Щит крови 🛡${fmt(sh)} (20% хила)`, 'heal');
+    }
   }
   function dumpOutbreakPlague(actor) {
     const foes = actor.side === 'ally' ? living('enemy') : living('ally');

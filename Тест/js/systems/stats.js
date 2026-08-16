@@ -202,7 +202,7 @@
       return (school === 'holy') ? (1 + pct) : 1;
     }
     // Block / light echo / dodge / pet_tune: no generic damage amp
-    if (k === 'block_chance' || k === 'light_echo' || k === 'dodge_chance' || k === 'pet_tune') return 1;
+    if (k === 'block_chance' || k === 'light_echo' || k === 'dodge_chance' || k === 'pet_tune' || k === 'blood_shield') return 1;
     if (k === 'dmg' || k === 'st') return 1 + pct;
     if (k === 'aoe' && (ctx.isAoe || ctx.type === 'aoe' || ctx.type === 'cast_aoe')) return 1 + pct;
     if (k === 'aoe' && !ctx.isAoe) return 1 + pct * 0.45; // partial on ST
@@ -235,7 +235,7 @@
     const info = masteryInfo(u.classId, u.specId);
     const k = info.kind;
     // Holy: no direct heal amp — echo HoT is applied separately
-    if (k === 'light_echo' || k === 'block_chance' || k === 'avengers' || k === 'holy_dmg' || k === 'bleed' || k === 'fury_stacks' || k === 'dodge_chance' || k === 'pet_tune') return 1;
+    if (k === 'light_echo' || k === 'block_chance' || k === 'avengers' || k === 'holy_dmg' || k === 'bleed' || k === 'fury_stacks' || k === 'dodge_chance' || k === 'pet_tune' || k === 'blood_shield') return 1;
     if (k === 'heal' || k === 'heal_shield') return 1 + pct;
     if (k === 'lowhp_heal') {
       // «Глубокие воды»: 0 при full HP → полная иск. при ≤30% HP (линейно)

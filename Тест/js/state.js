@@ -67,7 +67,7 @@
     priest_holy:         { name: 'Отзвук Света', effect: 'Увеличивает лечение и периодическое исцеление', kind: 'heal', pctAt120: 39 },
     priest_shadow:       { name: 'Теневой отклик', effect: 'Увеличивает периодический урон / урон тьмы', kind: 'dot', pctAt120: 42 },
     // Death Knight
-    deathknight_blood:   { name: 'Кровавый щит', effect: 'Снижает входящий урон; усиливает щит-эффекты', kind: 'tank', pctAt120: 36 },
+    deathknight_blood:   { name: 'Кровавый щит', effect: 'Усиливает щит с Удара смерти (20% реально возвращённого HP)', kind: 'blood_shield', pctAt120: 36 },
     deathknight_frost:   { name: 'Ледяное сердце', effect: 'Увеличивает весь исходящий урон', kind: 'dmg', pctAt120: 41 },
     deathknight_unholy:  { name: 'Клинок ужаса', effect: 'Увеличивает периодический урон / болезни и урон питомца', kind: 'dot_pet', pctAt120: 41 },
     // Shaman

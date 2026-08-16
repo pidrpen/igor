@@ -21,7 +21,7 @@
   const SEC_VERS_PCT_PER_RATING = 0.005; // 0.5% за 1 рейтинг
   const SEC_MASTERY_RATING = 120;      // базовый рейтинг искусности
   // Конверсия шмоток → рейтинг 1:1 (раньше было ×10–14 — отсюда «бешеные» % в отряде).
-  // Полный сет: обычно +30–80 рейтинга к криту (~·5–14%), не сотни.
+  // Полный сет: обычно +30–80 рейтинга к криту (~+5–14%), не сотни.
   const GEAR_CRIT_PER_POINT = 1;
   const GEAR_VERS_PER_POINT = 1;
   const GEAR_MASTERY_PER_POINT = 1;
@@ -118,3 +118,4 @@
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
   /** Recount: reset totals for a new key run */
+
