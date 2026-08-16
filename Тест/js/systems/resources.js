@@ -19,6 +19,24 @@
   function isOutbreakDump(u, ab) {
     return !!(ab && ab.id === 'outbreak' && u && u.specId === 'unholy' && Number(ab.curCd) > 0.05);
   }
+  /** Полный комплект рун. Лёд: пассивка «Преданность ледяному трону» — 3 льда + 3 нечестивости. */
+  function fullRuneSet(specId) {
+    if (specId === 'frost') {
+      return {
+        blood: [],
+        frost: [true, true, true],
+        unholy: [true, true, true],
+        cd: [],
+      };
+    }
+    return {
+      blood: [true, true],
+      frost: [true, true],
+      unholy: [true, true],
+      cd: [],
+    };
+  }
+
   // ── Resources ──
   function makeResourceState(cls, spec) {
     const { primary, secondary } = WOW_MOP.resolveResources(cls, spec);
@@ -41,22 +59,7 @@
       runes: null,
     };
     if (primary.type === 'runes') {
-      // Лёд: пассивка «Преданность ледяному трону» — 3 льда + 3 нечестивости
-      if (spec && spec.id === 'frost') {
-        state.runes = {
-          blood: [],
-          frost: [true, true, true],
-          unholy: [true, true, true],
-          cd: [],
-        };
-      } else {
-        state.runes = {
-          blood: [true, true],
-          frost: [true, true],
-          unholy: [true, true],
-          cd: [],
-        };
-      }
+      state.runes = fullRuneSet(spec && spec.id);
       state.primary.current = 6;
       state.primary.max = 6;
     }

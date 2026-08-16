@@ -725,7 +725,7 @@ def main():
         ("Читер", "Не входит."),
         ("Файл китов", "igor-main/Тест/class-balance/* после заливки S01–S35."),
         ("Послушание", "Не жадный хил. Держит Искупление (щит 5р / Щит небес 5р всем / Молитва 3р) и кормит Карой, Священным огнём, Исповедью во врага и Исчадием ада. Каждый носитель — 55% нанесённого. СТ = 1 носитель. Область = 5 носителей."),
-        ("Хил честный", "Таблицы ниже на листе «Хилы». Искусность, крит, хоты, Искупление, Выбор света, змея/эхо Ткача, цепь −5%, Энергия Света и Добродетель, Громовой чай, Высвободить жизнь, Прилив. СТ = союзник 0. Область = сумма по 5."),
+        ("Хил честный", "Таблицы ниже на листе «Хилы». Искусность, крит, хоты, Искупление, Выбор света, змея/эхо Ткача, цепь −5%, Энергия Света и Добродетель, Громовой чай, Высвободить жизнь, Прилив. Паладин Свет закрывает «срочно одного» Вспышкой/Светом небес, не только ЭС. СТ = союзник 0. Область = сумма по 5."),
         ("Танк старая таблица", "Сверху на листе «Танки»: вход = 18т×N×12×(1 − броня − зашитый сейв). Кнопки на индекс почти не влияют."),
         ("Танк честный сейв", "Таблицы ниже на том же листе. Танк жмёт стены / блок / самохил / броню. Входящий режется бронёй из защиты, стаками Удара воина Света и Щита света, стенами, блоком, париром, уклоном, щитом, пошатыванием, искусностью Крови и Стража. Блок/парир/уклон — ожидание, не один ролл."),
         ("Честный Соло", "(HP + временный пул + самохил) / вход в HP. Вход в HP — что сняли с полоски (удары + тик пошатывания). Больше 1 ≈ карман перекрыл окно."),
@@ -1077,6 +1077,43 @@ def main():
     ))
     ws.cell(start, 1).font = FONT_B
     ws.merge_cells(start_row=start, start_column=1, end_row=start, end_column=8)
+    start += 2
+    ws.cell(start, 1, "Мана — 24 хода той же честной ротации. «Сух» = первый ход, когда нужная кнопка не влезла в ману.")
+    ws.cell(start, 1).font = FONT_T
+    ws.merge_cells(start_row=start, start_column=1, end_row=start, end_column=8)
+    start += 1
+    mana_heads = [
+        "Класс", "Спек", "Реген / ход",
+        "СТ сух", "СТ мана 12х", "СТ мана 24х",
+        "5 раненых сух", "5 мана 12х", "5 мана 24х",
+    ]
+    for ci, h in enumerate(mana_heads, 1):
+        cell = ws.cell(start, ci, h)
+        cell.fill = fill("1C3D2A")
+        cell.font = FONT_H
+        cell.alignment = Alignment(wrap_text=True, vertical="center")
+        cell.border = THIN
+    start += 1
+    for k, _r in healers:
+        st24 = simulate_healer_honest(k, 1, horizon=24)
+        ao24 = simulate_healer_honest(k, 5, horizon=24)
+
+        def dry(res):
+            t = res.get("oom_turn") or res.get("idle_mana_turn")
+            return f"ход {t}" if t else "не сел за 24"
+
+        rec = [
+            k["className"], k["specName"], st24["regen"],
+            dry(st24), st24["mana_log"][11], st24["mana_log"][23],
+            dry(ao24), ao24["mana_log"][11], ao24["mana_log"][23],
+        ]
+        for ci, v in enumerate(rec, 1):
+            cell = ws.cell(start, ci, v)
+            cell.font = FONT
+            cell.alignment = WRAP
+            cell.border = THIN
+            cell.fill = fill("E3F0E8")
+        start += 1
     for i, w in enumerate([14, 16, 12, 12, 12, 14, 14, 10, 62, 62], 1):
         ws.column_dimensions[get_column_letter(i)].width = max(
             ws.column_dimensions[get_column_letter(i)].width or 0, w
@@ -1126,6 +1163,12 @@ def main():
     headers = ["Класс", "Спек", "1 цель", "5 целей", "10 целей"]
     rrows = [[k["className"], k["specName"], r[1]["log"], r[5]["log"], r[10]["log"]] for k, r in pack]
     write_sheet(ws, headers, rrows, [14, 18, 70, 70, 70])
+
+    try:
+        from dps_honest import collect_honest_dmg, write_honest_dmg_sheets
+        write_honest_dmg_sheets(wb, collect_honest_dmg())
+    except Exception as e:
+        print("честный урон: лист не записался:", e)
 
     wb.save(OUT)
     print("wrote", OUT)

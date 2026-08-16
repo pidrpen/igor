@@ -51,20 +51,18 @@
       } else if (p.res.primary.type === 'rage') {
         p.res.primary.current = clamp(Math.max(p.res.primary.current, 15), 0, p.res.primary.max);
       } else if (p.res.runes) {
-        // Каждый бой — полный комплект 6/6 (раньше random гасил 1–3 руны со старта)
-        p.res.runes.blood = [true, true];
-        p.res.runes.frost = [true, true];
-        p.res.runes.unholy = [true, true];
-        p.res.runes.cd = [];
+        // Каждый бой — полный комплект 6/6. Лёд: 3 льда + 3 нечестивости (не 2+2+2).
+        p.res.runes = (typeof fullRuneSet === 'function')
+          ? fullRuneSet(p.specId)
+          : { blood: [true, true], frost: [true, true], unholy: [true, true], cd: [] };
         p.res.primary.current = 6;
       }
-      // secondary (combo/chi/…) decays — not free refill
-      if (p.res.secondary && p.res.secondary.type !== 'runic_power') {
+      // secondary: серия и Энергия Света едут как есть; chi/eclipse/parts — половина
+      if (p.res.secondary && p.res.secondary.type !== 'runic_power'
+          && p.res.secondary.type !== 'combo'
+          && p.res.secondary.type !== 'holy_power') {
         if (p.res.secondary.type === 'soul_shards') {
           p.res.secondary.current = Math.max(1, Math.min(p.res.secondary.current, 2));
-        } else if (p.res.secondary.type === 'holy_power') {
-          // Все спеки паладина: каждый бой с 3 ед. Энергии Света
-          p.res.secondary.current = Math.min(3, p.res.secondary.max || 5);
         } else {
           p.res.secondary.current = Math.max(0, Math.floor(p.res.secondary.current * 0.5));
         }

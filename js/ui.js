@@ -744,8 +744,6 @@
     if (!cls || !spec) {
       throw new Error('Нет класса/спека: ' + String(classId) + '/' + String(specId));
     }
-    // Heroes scale slowly; enemies scale faster → keys get harder
-    const scale = 1 + (keyLevel - 2) * 0.015;
     const res = makeResourceState(cls, spec);
     const sec = ensureSec({ sec: secStats ? { ...secStats } : defaultSec() });
     // Guardian mastery tiny max HP bump (scales with mastery %)
@@ -755,9 +753,10 @@
       const mp = (sec.masteryRating != null ? sec.masteryRating : SEC_MASTERY_RATING) / SEC_MASTERY_RATING * ((mi.pctAt120 || 35) / 100);
       hpBonus = 1 + mp * 0.12;
     }
-    const baseMaxHp = Math.round(spec.stats.hp * scale * STAT_SCALE * hpBonus);
-    const baseAtk = Math.round(spec.stats.atk * scale * STAT_SCALE);
-    const baseDef = Math.round(spec.stats.def * (1 + (keyLevel - 2) * 0.01) * STAT_SCALE);
+    // Кит спека один на любой ключ. Тяжелеют враги и аффиксы, не герой.
+    const baseMaxHp = Math.round(spec.stats.hp * STAT_SCALE * hpBonus);
+    const baseAtk = Math.round(spec.stats.atk * STAT_SCALE);
+    const baseDef = Math.round(spec.stats.def * STAT_SCALE);
     const baseSpeed = spec.stats.speed;
     const hero = {
       uid: uid(),
@@ -1508,12 +1507,10 @@
       if (u.role === 'tank' && te.tankHp) hpM *= te.tankHp;
       if (u.role === 'dps' && te.dpsAtk) atkM *= te.dpsAtk;
       const ratio = u.hp / Math.max(1, u.maxHp);
-      // Как createHero (0.015), не 0.02 — иначе плывут базы
-      const sc = 1 + (run.keyLevel - 2) * 0.015;
-      // Базы БЕЗ шмота; затем applyGearToHero накинет экип (и скиллы через getEff.atk)
-      u._baseMaxHp = Math.round(spec.stats.hp * sc * hpM * STAT_SCALE);
-      u._baseAtk = Math.round(spec.stats.atk * sc * atkM * STAT_SCALE);
-      u._baseDef = Math.round(spec.stats.def * (1 + (run.keyLevel - 2) * 0.01) * defM * STAT_SCALE);
+      // Базы БЕЗ шмота и БЕЗ номера ключа; затем applyGearToHero накинет экип
+      u._baseMaxHp = Math.round(spec.stats.hp * hpM * STAT_SCALE);
+      u._baseAtk = Math.round(spec.stats.atk * atkM * STAT_SCALE);
+      u._baseDef = Math.round(spec.stats.def * defM * STAT_SCALE);
       u._baseSpeed = (spec.stats.speed || 10) + (te.speedFlat || 0);
       // sec-базы без шмота (если ещё не зафиксированы — из текущего sec «голого»)
       if (u._baseSecCritRating == null) {
@@ -1610,22 +1607,19 @@
 
   function createPetUnit(owner, defKey, turnsLeft) {
     const def = PET_DEFS[defKey] || PET_DEFS.imp;
-    const k = run?.keyLevel || 5;
-    // Match hero key scaling so pets stay relevant on high keys
-    const sc = 1 + (k - 2) * 0.015;
     const ownAtk = owner?.atk || (16 * STAT_SCALE);
     let share = petAtkShare(defKey, owner);
     if (owner && owner.specId === 'demonology' && (defKey === 'imp' || defKey === 'imp_boss' || defKey === 'felguard')) {
       share *= 1.15;
     }
-    const baseAtk = def.atk * sc * STAT_SCALE * 0.22;
+    const baseAtk = def.atk * STAT_SCALE * 0.22;
     let atk = Math.max(1, Math.round(ownAtk * share + baseAtk));
     if (owner?.buffs) {
       let petBoost = 0;
       for (const b of owner.buffs) if (b && b.petAtkMod) petBoost += Number(b.petAtkMod) || 0;
       if (petBoost > 0) atk = Math.round(atk * (1 + petBoost));
     }
-    const maxHp = Math.round(def.hp * sc * STAT_SCALE * PET_HP_MULT);
+    const maxHp = Math.round(def.hp * STAT_SCALE * PET_HP_MULT);
     // Temporary summons hit harder (short window)
     const tempBoost = (turnsLeft != null && defKey !== 'hellfiend' && defKey !== 'frost_ghoul' && defKey !== 'water_ele' && defKey !== 'infernal') ? 1.18 : 1;
     let finalAtk = Math.round(atk * tempBoost);
