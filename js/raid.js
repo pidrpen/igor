@@ -54,13 +54,36 @@
     };
   }
 
-  function setGameMode(mode) {
-    const next = mode === 'raid' ? 'raid' : 'key';
-    if (gameMode === next) {
-      syncRaidLobbyUi();
-      return;
-    }
-    gameMode = next;
+  const LOBBY_BG = {
+    key: 'assets/backgrounds/lobby-key.jpg',
+    raid: 'assets/backgrounds/lobby-leishen.jpg',
+  };
+  const lobbyBgImgs = {};
+  let lobbyFxBusy = false;
+  let lobbyFxRaf = 0;
+
+  function lobbyReduceMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function loadLobbyBg(src) {
+    if (lobbyBgImgs[src]) return lobbyBgImgs[src];
+    lobbyBgImgs[src] = new Promise((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error(src));
+      im.src = src;
+    });
+    return lobbyBgImgs[src];
+  }
+
+  function preloadLobbyBgs() {
+    loadLobbyBg(LOBBY_BG.key).catch(() => {});
+    loadLobbyBg(LOBBY_BG.raid).catch(() => {});
+  }
+
+  function applyGameMode(next) {
+    gameMode = next === 'raid' ? 'raid' : 'key';
     if (party.length > getPartySize()) party = party.slice(0, getPartySize());
     editSlot = null;
     syncRaidLobbyUi();
@@ -68,6 +91,308 @@
     refreshAffixes();
     refreshKeystone();
     savePartyProfile();
+  }
+
+  function setGameMode(mode) {
+    const next = mode === 'raid' ? 'raid' : 'key';
+    if (gameMode === next) {
+      syncRaidLobbyUi();
+      return;
+    }
+    if (lobbyFxBusy) return;
+    const lobby = document.getElementById('lobby');
+    const onLobby = lobby && !lobby.classList.contains('hidden');
+    if (!onLobby || lobbyReduceMotion()) {
+      applyGameMode(next);
+      return;
+    }
+    playLobbyDissolve(gameMode, next);
+  }
+
+  function ensureLobbyFx() {
+    let root = document.getElementById('lobby-fx');
+    if (root) return root;
+    const lobby = document.getElementById('lobby');
+    root = document.createElement('div');
+    root.id = 'lobby-fx';
+    root.className = 'lobby-fx';
+    root.setAttribute('aria-hidden', 'true');
+    const canvas = document.createElement('canvas');
+    canvas.id = 'lobby-fx-canvas';
+    root.appendChild(canvas);
+    if (lobby) lobby.insertBefore(root, lobby.firstChild);
+    else document.body.appendChild(root);
+    return root;
+  }
+
+  function drawCoverImg(ctx, img, w, h, posY) {
+    if (!img || !img.width) return;
+    const ir = img.width / img.height;
+    const cr = w / h;
+    let dw, dh;
+    if (ir > cr) {
+      dh = h;
+      dw = h * ir;
+    } else {
+      dw = w;
+      dh = w / ir;
+    }
+    const dx = (w - dw) / 2;
+    const dy = h * posY - dh * posY;
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }
+
+  function midpointBolt(x0, y0, x1, y1, displace, detail) {
+    let pts = [{ x: x0, y: y0 }, { x: x1, y: y1 }];
+    let jag = displace;
+    for (let step = 0; step < detail; step++) {
+      const next = [pts[0]];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i];
+        const b = pts[i + 1];
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const off = (Math.random() * 2 - 1) * jag;
+        next.push({ x: mx + (-dy / len) * off, y: my + (dx / len) * off });
+        next.push(b);
+      }
+      pts = next;
+      jag *= 0.52;
+    }
+    return pts;
+  }
+
+  function strokeBolt(ctx, pts, width, color, blur) {
+    if (!pts || pts.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.shadowColor = color;
+    ctx.shadowBlur = blur;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function buildStrike(w, h, spec) {
+    const x = spec.x + (Math.random() - 0.5) * 0.05;
+    let x0, y0, x1, y1;
+    if (spec.sideways) {
+      x0 = w * (Math.random() < 0.5 ? -0.02 : 1.02);
+      y0 = h * (0.28 + Math.random() * 0.4);
+      x1 = w * (1 - x0 / w);
+      y1 = y0 + (Math.random() - 0.5) * h * 0.18;
+    } else {
+      x0 = w * x;
+      y0 = h * -0.04;
+      x1 = w * (x + (Math.random() - 0.5) * 0.1);
+      y1 = h * (0.82 + Math.random() * 0.14);
+    }
+    const jag = Math.min(w, h) * (spec.fat ? 0.085 : 0.052);
+    const main = midpointBolt(x0, y0, x1, y1, jag, spec.fat ? 7 : 6);
+    const branches = [];
+    const n = spec.branch || 2;
+    for (let i = 0; i < n; i++) {
+      const idx = Math.floor((0.22 + Math.random() * 0.55) * (main.length - 1));
+      const p = main[idx];
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      const len = Math.min(w, h) * (0.1 + Math.random() * 0.2);
+      const bx = p.x + dir * len * (0.55 + Math.random() * 0.5);
+      const by = p.y + len * (0.35 + Math.random() * 0.55);
+      branches.push(midpointBolt(p.x, p.y, bx, by, jag * 0.42, 4));
+    }
+    return { main, branches, fat: !!spec.fat, born: 0 };
+  }
+
+  function playLobbyDissolve(fromMode, toMode) {
+    lobbyFxBusy = true;
+    const fromSrc = fromMode === 'raid' ? LOBBY_BG.raid : LOBBY_BG.key;
+    const toSrc = toMode === 'raid' ? LOBBY_BG.raid : LOBBY_BG.key;
+    const root = ensureLobbyFx();
+    const canvas = root.querySelector('canvas');
+    const ctx = canvas && canvas.getContext('2d', { alpha: false });
+    if (!ctx) {
+      applyGameMode(toMode);
+      lobbyFxBusy = false;
+      return;
+    }
+
+    const finish = () => {
+      if (lobbyFxRaf) cancelAnimationFrame(lobbyFxRaf);
+      lobbyFxRaf = 0;
+      root.classList.remove('on');
+      root.style.opacity = '';
+      document.body.classList.remove('lobby-fx-playing');
+      document.getElementById('btn-mode-key')?.removeAttribute('disabled');
+      document.getElementById('btn-mode-raid')?.removeAttribute('disabled');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      lobbyFxBusy = false;
+    };
+
+    Promise.all([loadLobbyBg(fromSrc), loadLobbyBg(toSrc)]).then(([fromImg, toImg]) => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cssW = window.innerWidth;
+      const cssH = window.innerHeight;
+      canvas.width = Math.max(2, Math.floor(cssW * dpr));
+      canvas.height = Math.max(2, Math.floor(cssH * dpr));
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      const w = canvas.width;
+      const h = canvas.height;
+
+      const mask = document.createElement('canvas');
+      const bolts = document.createElement('canvas');
+      const dest = document.createElement('canvas');
+      const cut = document.createElement('canvas');
+      mask.width = bolts.width = dest.width = cut.width = w;
+      mask.height = bolts.height = dest.height = cut.height = h;
+      const mctx = mask.getContext('2d');
+      const bctx = bolts.getContext('2d');
+      const dctx = dest.getContext('2d');
+      const cctx = cut.getContext('2d');
+      mctx.clearRect(0, 0, w, h);
+      dctx.fillStyle = '#07090c';
+      dctx.fillRect(0, 0, w, h);
+      drawCoverImg(dctx, toImg, w, h, 0.42);
+      ctx.fillStyle = '#0a0c10';
+      ctx.fillRect(0, 0, w, h);
+      drawCoverImg(ctx, fromImg, w, h, 0.42);
+
+      document.body.classList.add('lobby-fx-playing');
+      document.getElementById('btn-mode-key')?.setAttribute('disabled', '');
+      document.getElementById('btn-mode-raid')?.setAttribute('disabled', '');
+      root.classList.add('on');
+      applyGameMode(toMode);
+
+      const schedule = [
+        { t: 90, x: 0.54, branch: 3 },
+        { t: 260, x: 0.26, branch: 2 },
+        { t: 430, x: 0.74, branch: 3 },
+        { t: 620, x: 0.50, branch: 4, fat: true },
+        { t: 780, x: 0.42, branch: 2, sideways: true },
+        { t: 920, x: 0.62, branch: 2 },
+      ];
+      const live = [];
+      let flash = 0;
+      let chromeBack = false;
+      const t0 = performance.now();
+      const TOTAL = 2100;
+      const FLOOD_AT = 980;
+      const FADE_AT = 1780;
+
+      const frame = (now) => {
+        const t = now - t0;
+        for (const s of schedule) {
+          if (!s.done && t >= s.t) {
+            s.done = true;
+            const strike = buildStrike(w, h, s);
+            strike.born = t;
+            live.push(strike);
+            flash = Math.max(flash, s.fat ? 0.72 : 0.42);
+            const paths = [strike.main, ...strike.branches];
+            mctx.save();
+            mctx.globalCompositeOperation = 'lighter';
+            mctx.filter = 'blur(' + (s.fat ? 14 : 8) * dpr + 'px)';
+            for (const p of paths) {
+              strokeBolt(mctx, p, (s.fat ? 22 : 13) * dpr, '#fff', 0);
+            }
+            mctx.filter = 'none';
+            for (const p of paths) {
+              strokeBolt(mctx, p, (s.fat ? 7 : 4) * dpr, '#fff', 0);
+            }
+            mctx.restore();
+          }
+        }
+
+        if ((t / 16 | 0) % 2 === 0) {
+          mctx.save();
+          mctx.filter = 'blur(' + 6 * dpr + 'px)';
+          mctx.globalAlpha = 0.16;
+          mctx.drawImage(mask, 0, 0);
+          mctx.restore();
+        }
+
+        if (t > FLOOD_AT) {
+          const flood = Math.min(1, (t - FLOOD_AT) / 720);
+          const g = mctx.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.42, Math.hypot(w, h) * 0.62 * flood);
+          g.addColorStop(0, 'rgba(255,255,255,' + (0.55 + flood * 0.45) + ')');
+          g.addColorStop(0.55, 'rgba(255,255,255,' + (0.22 + flood * 0.5) + ')');
+          g.addColorStop(1, 'rgba(255,255,255,0)');
+          mctx.fillStyle = g;
+          mctx.fillRect(0, 0, w, h);
+          if (flood > 0.82) {
+            mctx.fillStyle = 'rgba(255,255,255,' + ((flood - 0.82) / 0.18) + ')';
+            mctx.fillRect(0, 0, w, h);
+          }
+        }
+
+        bctx.clearRect(0, 0, w, h);
+        for (const s of live) {
+          const age = t - s.born;
+          const a = age < 70 ? 1 : Math.max(0, 1 - (age - 70) / 240);
+          if (a <= 0) continue;
+          bctx.globalAlpha = a;
+          const fat = s.fat;
+          strokeBolt(bctx, s.main, (fat ? 18 : 11) * dpr, 'rgba(70,180,255,0.55)', 22 * dpr);
+          strokeBolt(bctx, s.main, (fat ? 7 : 4.2) * dpr, 'rgba(170,230,255,0.95)', 8 * dpr);
+          strokeBolt(bctx, s.main, (fat ? 2.4 : 1.6) * dpr, '#fff', 2 * dpr);
+          for (const br of s.branches) {
+            strokeBolt(bctx, br, 6 * dpr, 'rgba(80,190,255,0.4)', 12 * dpr);
+            strokeBolt(bctx, br, 1.6 * dpr, '#eef9ff', 2 * dpr);
+          }
+        }
+        bctx.globalAlpha = 1;
+        flash *= 0.82;
+
+        const shake = flash * 5 * dpr;
+        ctx.setTransform(1, 0, 0, 1, (Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+        ctx.fillStyle = '#0a0c10';
+        ctx.fillRect(-8, -8, w + 16, h + 16);
+        drawCoverImg(ctx, fromImg, w, h, 0.42);
+
+        cctx.globalCompositeOperation = 'source-over';
+        cctx.clearRect(0, 0, w, h);
+        cctx.drawImage(dest, 0, 0);
+        cctx.globalCompositeOperation = 'destination-in';
+        cctx.drawImage(mask, 0, 0);
+        cctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(cut, 0, 0);
+
+        ctx.drawImage(bolts, 0, 0);
+        if (flash > 0.02) {
+          ctx.fillStyle = 'rgba(210, 236, 255,' + (flash * 0.55) + ')';
+          ctx.fillRect(0, 0, w, h);
+        }
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        if (t >= FADE_AT) {
+          if (!chromeBack) {
+            chromeBack = true;
+            document.body.classList.remove('lobby-fx-playing');
+          }
+          const fade = Math.min(1, (t - FADE_AT) / (TOTAL - FADE_AT));
+          root.style.opacity = String(1 - fade);
+        }
+
+        if (t >= TOTAL) {
+          root.style.opacity = '';
+          finish();
+          return;
+        }
+        lobbyFxRaf = requestAnimationFrame(frame);
+      };
+      lobbyFxRaf = requestAnimationFrame(frame);
+    }).catch(() => {
+      applyGameMode(toMode);
+      finish();
+    });
   }
 
   function syncRaidLobbyUi() {
@@ -185,6 +510,7 @@
   }
 
   function bindRaidLobby() {
+    preloadLobbyBgs();
     document.getElementById('btn-mode-key')?.addEventListener('click', () => setGameMode('key'));
     document.getElementById('btn-mode-raid')?.addEventListener('click', () => setGameMode('raid'));
     document.getElementById('btn-fill-raid')?.addEventListener('click', fillRaidPreset);

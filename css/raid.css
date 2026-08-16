@@ -110,6 +110,42 @@ body.raid-lobby .raid-affix-block {
   display: none;
 }
 
+.lobby-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.lobby-fx.on {
+  pointer-events: auto;
+  opacity: 1;
+  visibility: visible;
+}
+.lobby-fx canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+body.lobby-fx-playing #lobby.screen::before {
+  opacity: 0;
+}
+body.lobby-fx-playing #lobby .lobby-hero,
+body.lobby-fx-playing #lobby .subtitle,
+body.lobby-fx-playing #lobby .lobby-wrap,
+body.lobby-fx-playing #lobby .src-note {
+  opacity: 0;
+  pointer-events: none;
+}
+body.lobby-fx-playing #btn-lobby-chrome {
+  opacity: 0;
+  pointer-events: none;
+}
+body.lobby-fx-playing .mode-toggle .btn {
+  pointer-events: none;
+}
+
 body.raid-lobby #lobby.screen {
   position: relative;
   isolation: isolate;
