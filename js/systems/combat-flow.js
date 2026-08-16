@@ -38,6 +38,10 @@
     try { hidePassivePocket(); } catch (_) {}
     if (actions) actions.innerHTML = '';
     if (checkEnd()) return;
+    try {
+      const fin = currentActor();
+      if (typeof tickJadeSerpentsAfterTurn === 'function') tickJadeSerpentsAfterTurn(fin);
+    } catch (e) { console.error('[serpent tick]', e); }
     combat.turnIndex++;
     try { renderCombat(); } catch (err) { console.error('[afterAction render]', err); }
     saveRun();
@@ -45,6 +49,11 @@
   }
 
   function checkEnd() {
+    if (typeof raidVaultMaybeAdvance === 'function') {
+      try { raidVaultMaybeAdvance(); } catch (e) { console.error('[vault]', e); }
+    }
+    const hiddenBoss = (combat?.enemies || []).some(e => e.alive && e.vaultAway);
+    if (!living('enemy').length && hiddenBoss) return false;
     if (!living('enemy').length) {
       combat.over = true;
       log('Пулл зачищен — идём дальше (без полного восстановления)', 'system');
@@ -62,7 +71,7 @@
     }
     if (!livingHeroes().length) {
       combat.over = true;
-      endRun(false, 'Вайп. Ключ провален.');
+      endRun(false, run.raid ? 'Вайп. Рейд провален.' : 'Вайп. Ключ провален.');
       return true;
     }
     return false;
@@ -79,16 +88,15 @@
 
   function onVictory() {
     if (run.finished) return;
+    if (run.raid) {
+      endRun(true, 'Лэй Шэнь повержен. Рейд 10 человек выстоял.');
+      return;
+    }
     const node = currentRouteNode();
     const type = node?.type || 'trash';
     const afterLoot = () => {
-      // Always go through advanceRoom — it handles final/mopup/branches
-      const offer = type === 'elite' || type === 'boss' || type === 'final' || Math.random() < 0.45;
-      if (offer && (run.talents || []).length < 8 && !node?.mopup) {
-        openTalent(() => advanceRoom());
-      } else {
-        advanceRoom();
-      }
+      // Без привала и без выбора силы между комнатами — как в Тесте.
+      advanceRoom();
     };
     if (type === 'boss' || type === 'final' || type === 'elite') {
       grantLoot(afterLoot);
@@ -157,59 +165,19 @@
     }
   }
 
-  function doRest(kind) {
+  function doRest(_kind) {
+    // Привал / отдых / межпулловый бафф отключены — сразу дальше.
     if (!run || run.finished || restBusy) return;
-    const node = currentRouteNode();
-    if (!node || node.type !== 'rest') return;
     restBusy = true;
-    document.getElementById('rest-modal').classList.add('hidden');
-    try {
-      if (kind === 'heal') {
-        // Not a full wipe reset — bandage + partial mana (like food/water between packs)
-        run.party.forEach(p => {
-          if (p.hp <= 0) { p.alive = true; p.hp = Math.round(p.maxHp * 0.35); }
-          else {
-            p.alive = true;
-            const missing = p.maxHp - p.hp;
-            p.hp = clamp(p.hp + Math.round(missing * 0.55), 1, p.maxHp);
-          }
-          if (p.res?.primary?.type === 'mana') {
-            p.res.primary.current = clamp(p.res.primary.current + Math.round(p.res.primary.max * 0.45), 0, p.res.primary.max);
-          } else if (p.res?.primary?.type === 'energy' || p.res?.primary?.type === 'focus') {
-            p.res.primary.current = p.res.primary.max;
-          } else if (p.res?.runes) {
-            p.res.runes.blood = [true, true];
-            p.res.runes.frost = [true, true];
-            p.res.runes.unholy = [true, true];
-            p.res.runes.cd = [];
-            p.res.primary.current = 6;
-          } else if (p.res?.primary) {
-            p.res.primary.current = clamp(p.res.primary.current + 20, 0, p.res.primary.max);
-          }
-        });
-        toast('Отдых: ~половина недостающего HP + мана');
-        log('Привал: частичное восстановление (не full HP/мана).', 'heal');
-      } else if (kind === 'buff') {
-        run.party.forEach(p => {
-          if (p.alive) {
-            const missing = p.maxHp - p.hp;
-            p.hp = clamp(p.hp + Math.round(missing * 0.2), 0, p.maxHp);
-          }
-        });
-        run.restBuffBattles = 2;
-        toast('+15% атаки на 2 боя');
-        log('Настрой: +15% атаки на 2 боя (мало хила).', 'system');
-      } else {
-        toast('Дальше без отдыха!');
-        log('Отряд идёт дальше без лечения.', 'system');
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    // Always offer talent then advance — never soft-lock on rest room
-    openTalent(() => {
-      restBusy = false;
+    try { document.getElementById('rest-modal')?.classList.add('hidden'); } catch (_) {}
+    run.restBuffBattles = 0;
+    log('Отдых отключён — переход без хила и баффов.', 'system');
+    toast('Без привала — дальше');
+    restBusy = false;
+    if (typeof skipRestRoomAndContinue === 'function') {
+      skipRestRoomAndContinue();
+    } else {
       advanceRoom();
-    });
+    }
   }
 

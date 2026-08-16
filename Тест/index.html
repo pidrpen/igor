@@ -7,25 +7,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
-  <script src="wow-mop-data.js?v=5.4.8.34"></script>
-  <script src="class-balance/warrior-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/paladin-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/hunter-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/rogue-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/priest-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/deathknight-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/shaman-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/mage-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/warlock-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/monk-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/druid-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/engineer-abilities.js?v=5.4.8.34-test"></script>
-  <script src="class-balance/apply-all.js?v=5.4.8.34-test"></script>
-  <link rel="stylesheet" href="css/main.css?v=5.4.8.34" />
+  <script src="wow-mop-data.js?v=5.4.9"></script>
+  <script src="class-balance/warrior-abilities.js?v=5.4.8.39-warrior"></script>
+  <script src="class-balance/paladin-abilities.js?v=5.4.9"></script>
+  <script src="class-balance/hunter-abilities.js?v=5.4.8.39-hunter"></script>
+  <script src="class-balance/rogue-abilities.js?v=5.4.8.39-rogue"></script>
+  <script src="class-balance/priest-abilities.js?v=5.4.8.39-priest"></script>
+  <script src="class-balance/deathknight-abilities.js?v=5.4.8.39-dk"></script>
+  <script src="class-balance/shaman-abilities.js?v=5.4.8.39-shaman"></script>
+  <script src="class-balance/mage-abilities.js?v=5.4.8.39-mage"></script>
+  <script src="class-balance/warlock-abilities.js?v=5.4.8.39-lock"></script>
+  <script src="class-balance/monk-abilities.js?v=5.4.8.39-niuzao"></script>
+  <script src="class-balance/druid-abilities.js?v=5.4.8.39-druid"></script>
+  <script src="class-balance/engineer-abilities.js?v=5.4.8.39-eng"></script>
+  <script src="class-balance/cheat-abilities.js?v=5.4.8.38-cheat"></script>
+  <script src="class-balance/apply-all.js?v=5.4.8.38-cheat"></script>
+  <link rel="stylesheet" href="css/main.css?v=5.4.9" />
   <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34-shamfx2" />
-  <link rel="stylesheet" href="css/test-room.css?v=5.4.8.37-raid" />
+  <link rel="stylesheet" href="css/test-room.css?v=5.4.9-keg4" />
 </head>
 <body>
+  <button class="btn btn-sm" type="button" id="btn-lobby-chrome" title="Скрыть карточки и посмотреть фон">Скрыть интерфейс</button>
   <div id="lobby" class="screen screen-center">
     <div class="lobby-hero"><h1>Мифик-ключ</h1><div class="badge-row"><span class="week-badge">Туманы Пандарии</span><span class="week-badge" id="lobby-patch-badge">патч 5.4.8</span><span class="week-badge">🧪 тест</span><a class="week-badge test-build-link" href="../index.html" title="Основная сборка">← Основная игра</a></div></div>
     <p class="subtitle">Классы и специализации <b style="color:var(--text)">эпохи Туманов Пандарии</b>. Выбери класс → специализацию. Ресурсы: ярость, энергия, руны, фокус, мана, ци…</p>
@@ -91,14 +93,230 @@
     <p class="src-note">Способности специализаций эпохи Туманов Пандарии. Охотников на демонов и пробудителей в той эпохе ещё не было.</p>
   </div>
 
+  <!-- ═══ Тестовая комната: хаб ═══ -->
+  <div id="test-hub" class="screen hidden">
+    <div class="test-hero">
+      <h1>Тестовая комната</h1>
+      <p class="subtitle">Только Тест. Тир анимаций: спек слева, 1 или 5 духов, HP не снимается. Старая арена спрайтов — отдельно.</p>
+    </div>
+    <div class="test-toolbar">
+      <button class="btn" type="button" id="btn-hub-lobby">← В лобби</button>
+    </div>
+    <div class="test-hub-grid">
+      <button class="test-hub-card" type="button" id="btn-hub-compare">
+        <span class="hub-kicker">смотреть сейчас</span>
+        <span class="hub-title">Тест анимаций</span>
+        <span class="hub-desc">Хмелевар 8-bit: джаб и бочонок. Слева любой спек. 1 или 5 духов. HP не снимается.</span>
+      </button>
+      <button class="test-hub-card" type="button" id="btn-hub-style">
+        <span class="hub-kicker">новая</span>
+        <span class="hub-title">Рисовка персонажа</span>
+        <span class="hub-desc">Монах по спекам. Сейчас Хмелевар: карточка и пять подач одного лица. Ткач и Ветер — пустые вкладки.</span>
+      </button>
+      <button class="test-hub-card" type="button" id="btn-hub-ink">
+        <span class="hub-kicker">сохранить</span>
+        <span class="hub-title">Тушь</span>
+        <span class="hub-desc">Хмелевар кистью на бумаге. Отдельно от пикселя и боя.</span>
+      </button>
+      <button class="test-hub-card" type="button" id="btn-hub-plans">
+        <span class="hub-kicker">не сейчас</span>
+        <span class="hub-title">Планы: иконки и HP</span>
+        <span class="hub-desc">Что вводить при переходе на новую анимацию. Ссылки, не код.</span>
+      </button>
+      <button class="test-hub-card" type="button" id="btn-hub-arena">
+        <span class="hub-kicker">как было</span>
+        <span class="hub-title">Арена спрайтов</span>
+        <span class="hub-desc">Все спеки. Панель 1–9. Спрайты есть у паладина Защита, паладина Воздаяние, шамана Исцеление и злого духа.</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ Рисовка персонажа ═══ -->
+  <div id="test-style" class="screen hidden">
+    <div class="cmp-top">
+      <div class="title-block">
+        <h2>Рисовка персонажа</h2>
+        <div class="meta">Монах · один персонаж, разные подачи. Клик — крупно.</div>
+      </div>
+      <button class="btn" type="button" id="btn-style-hub">← К выбору комнаты</button>
+    </div>
+    <div class="style-specs" role="tablist" aria-label="Специализации монаха">
+      <button class="btn on" type="button" data-style-spec="brewmaster">Хмелевар</button>
+      <button class="btn" type="button" data-style-spec="mistweaver" disabled>Ткач туманов · скоро</button>
+      <button class="btn" type="button" data-style-spec="windwalker" disabled>Танцующий с ветром · скоро</button>
+    </div>
+    <div class="style-grid" id="style-grid"></div>
+    <p class="test-hint" id="style-note">Пять стилей перерисованы с карточки. Пиксель не стал крупным SNES — модель мельчит. Аниме добрее лицом, чем эталон.</p>
+    <div id="style-lightbox" class="style-lightbox hidden" aria-hidden="true">
+      <button class="style-lightbox-x" type="button" id="btn-style-lb-close">Закрыть</button>
+      <img id="style-lightbox-img" alt="" />
+      <div id="style-lightbox-cap"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Тушь ═══ -->
+  <div id="test-ink" class="screen hidden">
+    <div class="cmp-top">
+      <div class="title-block">
+        <h2>Тушь · Хмелевар</h2>
+        <div class="meta">Кисть и бумага. Не спрайт и не бой.</div>
+      </div>
+      <button class="btn" type="button" id="btn-ink-hub">← К выбору комнаты</button>
+    </div>
+    <div class="ink-stage">
+      <img src="assets/style-lab/monk/ink/full.png" alt="Хмелевар в туши" />
+    </div>
+  </div>
+
+  <!-- ═══ Спрайт Хмелевара ═══ -->
+  <div id="test-brew" class="screen hidden">
+    <div class="cmp-top">
+      <div class="title-block">
+        <h2>Спрайт Хмелевара</h2>
+        <div class="meta">Пиксельные подачи. 8-bit: джаб и удар бочонком.</div>
+      </div>
+      <button class="btn" type="button" id="btn-brew-hub">← К выбору комнаты</button>
+    </div>
+    <div class="brew-styles" id="brew-styles"></div>
+    <div class="cmp-stage cmp-stage-wide brew-stage" id="brew-stage">
+      <img class="cmp-dummy" id="brew-dummy" alt="Злой дух" />
+      <img class="cmp-actor" id="brew-actor" alt="Хмелевар" />
+      <img class="brew-keg" id="brew-keg-proj" alt="" draggable="false" />
+      <img class="brew-keg-shard" id="brew-keg-s0" alt="" draggable="false" />
+      <img class="brew-keg-shard" id="brew-keg-s1" alt="" draggable="false" />
+      <img class="brew-keg-shard" id="brew-keg-s2" alt="" draggable="false" />
+      <canvas class="cmp-canvas" id="brew-fx"></canvas>
+    </div>
+    <div class="test-controls">
+      <button class="btn btn-primary" type="button" id="btn-brew-jab">Джаб</button>
+      <button class="btn" type="button" id="btn-brew-keg">Удар бочонком</button>
+    </div>
+    <p class="test-hint" id="brew-note"></p>
+  </div>
+
+  <!-- ═══ Планы: иконки и HP ═══ -->
+  <div id="test-plans" class="screen hidden">
+    <div class="cmp-top">
+      <div class="title-block">
+        <h2>Планы к новой анимации</h2>
+        <div class="meta">Не код. Когда тело станет спрайтом.</div>
+      </div>
+      <button class="btn" type="button" id="btn-plans-hub">← К выбору комнаты</button>
+    </div>
+    <div class="plans-body">
+      <section>
+        <h3>Иконки способностей</h3>
+        <p>Сейчас на панели эмодзи. При спрайте иконки делать <b>отдельно</b> от кадров героя: один стиль на всю игру, читаются на кнопке 1–9, состояния не ломают геометрию. Не рисовать иконку на портрете лобби.</p>
+        <p class="plans-path">Файл: <code>igor-main/Тест/ПЛАНЫ_новая_анимация.md</code></p>
+      </section>
+      <section>
+        <h3>Полоски HP</h3>
+        <p>Над спрайтом или под шильдиком, не внутри кадра удара. Одна ширина на 1 и на 5 целях. В тире HP по-прежнему не снимается.</p>
+        <p>Живой бой сейчас: карточка <code>.unit</code> в <code>js/ui/combat-ui.js</code>.</p>
+      </section>
+      <section>
+        <h3>Ссылки по комнатам</h3>
+        <ul class="plans-links">
+          <li><button class="btn btn-sm" type="button" id="plans-to-brew">Тест анимаций · Хмелевар</button> — джаб и бочонок</li>
+          <li><button class="btn btn-sm" type="button" id="plans-to-ink">Тушь</button> — кисть, не анимация</li>
+          <li><button class="btn btn-sm" type="button" id="plans-to-anim">Тест анимаций</button> — цепи и 1/5 духов</li>
+        </ul>
+        <p class="plans-path">Отложенное: <code>igor-main/Тест/бэклог_ветки.md</code></p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ═══ Тест анимаций ═══ -->
+  <div id="test-compare" class="screen hidden">
+    <div class="cmp-top">
+      <div class="title-block">
+        <h2>Тест анимаций</h2>
+        <div class="meta" id="cmp-meta">Цель не теряет HP · хожу только я</div>
+      </div>
+      <div class="cmp-top-actions">
+        <div class="cmp-n-toggle" role="group" aria-label="Число духов">
+          <button class="btn btn-sm" type="button" data-cmp-n="1">1 дух</button>
+          <button class="btn btn-sm on" type="button" data-cmp-n="5">5 духов</button>
+        </div>
+        <button class="btn" type="button" id="btn-cmp-hub">← К выбору комнаты</button>
+      </div>
+    </div>
+    <div class="cmp-room">
+      <aside class="cmp-rail" id="cmp-spec-rail" aria-label="Специализации"></aside>
+      <div class="cmp-main">
+        <div class="cmp-stage cmp-stage-wide" id="cmp-stage-aoe">
+          <img class="cmp-actor" id="cmp-aoe-caster" alt="Кастер" draggable="false" />
+          <div class="cmp-portrait hidden" id="cmp-caster-portrait">
+            <img id="cmp-caster-portrait-img" alt="" draggable="false" />
+          </div>
+          <div class="cmp-allies hidden" id="cmp-allies"></div>
+          <div class="cmp-pack" id="cmp-aoe-pack"></div>
+          <img class="cmp-bolt" id="cmp-pixel-bolt" alt="" draggable="false" />
+          <img class="brew-keg" id="cmp-keg-proj" alt="" draggable="false" />
+          <img class="brew-keg-shard" id="cmp-keg-s0" alt="" draggable="false" />
+          <img class="brew-keg-shard" id="cmp-keg-s1" alt="" draggable="false" />
+          <img class="brew-keg-shard" id="cmp-keg-s2" alt="" draggable="false" />
+          <canvas class="cmp-canvas" id="cmp-aoe-fx"></canvas>
+        </div>
+        <p class="test-hint" id="cmp-status">Выбери спек слева, потом кнопку. 1 или 5 духов сверху.</p>
+        <div class="ability-zone test-ability-zone">
+          <div class="section-title" style="text-align:center;margin-bottom:.35rem">Панель спека · 1–9</div>
+          <div class="ability-bar" id="cmp-ability-bar" aria-label="Панель способностей"></div>
+        </div>
+      </div>
+    </div>
+    <details class="cmp-ref">
+      <summary>Справка: три подачи Ледяной стрелы</summary>
+      <div class="cmp-lanes">
+        <section class="cmp-lane" data-lane="pixel">
+          <header>
+            <h3>1. Пиксель</h3>
+            <p>Тело кастует. Стрела — отдельный спрайт, летит до духа.</p>
+          </header>
+          <div class="cmp-stage" id="cmp-stage-pixel">
+            <img class="cmp-actor" id="cmp-pixel-mage" alt="Маг пиксель" draggable="false" />
+            <img class="cmp-dummy" id="cmp-pixel-dummy" alt="Злой дух" draggable="false" />
+          </div>
+          <button class="btn btn-sm" type="button" data-cmp-one="pixel">Только эту</button>
+        </section>
+        <section class="cmp-lane" data-lane="portrait">
+          <header>
+            <h3>2. Портрет</h3>
+            <p>Стрела с центра карточки, холст.</p>
+          </header>
+          <div class="cmp-stage" id="cmp-stage-portrait">
+            <div class="cmp-portrait" id="cmp-portrait-card">
+              <img id="cmp-portrait-img" alt="Портрет мага Льда" draggable="false" />
+            </div>
+            <canvas class="cmp-canvas" id="cmp-portrait-fx"></canvas>
+            <img class="cmp-dummy" id="cmp-portrait-dummy" alt="Злой дух" draggable="false" />
+          </div>
+          <button class="btn btn-sm" type="button" data-cmp-one="portrait">Только эту</button>
+        </section>
+        <section class="cmp-lane" data-lane="baked">
+          <header>
+            <h3>3. Стрела в спрайте</h3>
+            <p>Запечена в кадре. До духа не долетает.</p>
+          </header>
+          <div class="cmp-stage" id="cmp-stage-baked">
+            <img class="cmp-actor cmp-actor-baked" id="cmp-baked-mage" alt="Маг со стрелой в кадре" draggable="false" />
+            <img class="cmp-dummy" id="cmp-baked-dummy" alt="Злой дух" draggable="false" />
+          </div>
+          <button class="btn btn-sm" type="button" data-cmp-one="baked">Только эту</button>
+        </section>
+      </div>
+      <button class="btn btn-sm" type="button" id="btn-cmp-cast">Кастнуть все три</button>
+    </details>
+  </div>
+
   <!-- ═══ Тестовая комната: выбор специализации ═══ -->
   <div id="test-picker" class="screen hidden">
     <div class="test-hero">
-      <h1>Тестовая комната</h1>
+      <h1>Арена спрайтов</h1>
       <p class="subtitle">Выберите специализацию. Враг — <b>Злой дух</b>. 2D: <b>Паладин · Воздаяние</b> и <b>Шаман · Исцеление</b> (свой каст на каждый скилл).</p>
     </div>
     <div class="test-toolbar">
-      <button class="btn" type="button" id="btn-test-back-lobby">← В лобби</button>
+      <button class="btn" type="button" id="btn-test-back-lobby">← К выбору комнаты</button>
     </div>
     <div id="test-spec-grid" class="test-spec-grid" aria-label="Список специализаций"></div>
     <div class="test-launch-bar">
@@ -179,6 +397,19 @@
         </div>
         <div class="phase-banner" id="phase-banner">Бой</div>
         <div class="phase-sub" id="phase-sub"></div>
+        <div id="raid-phase-hud" class="raid-phase-hud hidden">
+          <div class="raid-phase-name" id="raid-phase-name">Рейд</div>
+          <div class="raid-alerts" id="raid-alerts"></div>
+        </div>
+        <div id="raid-cast-dock" class="raid-cast-dock hidden">
+          <img id="raid-cast-portrait" alt="" />
+          <div class="raid-cast-meta">
+            <div id="raid-cast-title">Лэй Шэнь</div>
+            <div id="raid-cast-spell">Небесный гнев</div>
+            <div class="raid-cast-bar"><i id="raid-cast-fill"></i></div>
+          </div>
+        </div>
+        <div id="raid-fx-layer" class="raid-fx-layer hidden"></div>
         <div>
           <div class="section-title" style="text-align:center">Враги</div>
           <div class="unit-row" id="enemy-row"></div>
@@ -314,31 +545,34 @@
   <div id="vignette"></div>
   <div class="skill-fx-layer" id="skill-fx-layer"></div>
   <script src="js/state.js?v=5.4.8.34-gear6"></script>
-  <script src="js/core.js?v=5.4.8.34-route2"></script>
-  <script src="js/ui/balance-panel.js?v=5.4.8.34-beta6"></script>
+  <script src="js/core.js?v=5.4.9"></script>
+  <script src="js/ui/balance-panel.js?v=5.4.9"></script>
   <script src="js/ui/fx.js?v=5.4.8.34-shamfx2"></script>
-  <script src="js/enemies.js?v=5.4.8.35-raid"></script>
-  <script src="js/route.js?v=5.4.8.35-raid"></script>
-  <script src="js/raid.js?v=5.4.8.37-raid"></script>
+  <script src="js/enemies.js?v=5.4.8.38-vault"></script>
+  <script src="js/route.js?v=5.4.8.39-eng"></script>
+  <script src="js/raid.js?v=5.4.9-lobby2"></script>
   <script src="js/gear.js?v=5.4.8.34-gear6"></script>
   <script src="js/shop/shop-sets.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop-trinkets-data.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop.js?v=5.4.8.34-gear6"></script>
-  <script src="js/systems/telegraph-loot.js?v=5.4.8.34-route2"></script>
+  <script src="js/systems/telegraph-loot.js?v=5.4.8.39-monk"></script>
   <script src="js/systems/stats.js?v=5.4.8.34-gear5"></script>
-  <script src="js/systems/passives.js?v=5.4.8.34"></script>
+  <script src="js/systems/passives.js?v=5.4.8.41-desc"></script>
   <script src="js/systems/meter.js?v=5.4.8.34"></script>
-  <script src="js/systems/ability-data.js?v=5.4.8.34"></script>
-  <script src="js/systems/resources.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-loop.js?v=5.4.8.35-raid"></script>
-  <script src="js/ui/combat-ui.js?v=5.4.8.35-raid"></script>
-  <script src="js/systems/abilities.js?v=5.4.8.34-chain"></script>
-  <script src="js/systems/damage.js?v=5.4.8.34-route2"></script>
-  <script src="js/systems/ai.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-flow.js?v=5.4.8.35-raid"></script>
-  <script src="js/save.js?v=5.4.8.35-raid"></script>
-  <script src="js/ui.js?v=5.4.8.36-raid"></script>
+  <script src="js/systems/ability-data.js?v=5.4.8.41-desc"></script>
+  <script src="js/systems/resources.js?v=5.4.8.39-eng"></script>
+  <script src="js/systems/combat-loop.js?v=5.4.8.39-serpent"></script>
+  <script src="js/ui/combat-ui.js?v=5.4.8.43-ui"></script>
+  <script src="js/systems/abilities.js?v=5.4.8.39-eng"></script>
+  <script src="js/systems/damage.js?v=5.4.8.40-aura"></script>
+  <script src="js/systems/ai.js?v=5.4.8.39-eng"></script>
+  <script src="js/systems/combat-flow.js?v=5.4.8.39-serpent"></script>
+  <script src="js/save.js?v=5.4.8.39-boot"></script>
+  <script src="js/ui.js?v=5.4.8.39-eng"></script>
   <script src="js/test-room/sprites.js?v=5.4.8.34-v06"></script>
-  <script src="js/test-room/test-room.js?v=5.4.8.34-v05"></script>
+  <script src="js/test-room/test-room.js?v=5.4.9-brew4"></script>
+  <script src="js/test-room/compare.js?v=5.4.9-cut2"></script>
+  <script src="js/test-room/style-lab.js?v=5.4.9-style2"></script>
+  <script src="js/test-room/brew-rooms.js?v=5.4.9-brew4"></script>
 </body>
 </html>

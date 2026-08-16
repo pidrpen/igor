@@ -2,13 +2,26 @@
 /* --- fight loop --- */
   function startCombat(type) {
     applyRoomBackground(currentRouteNode());
+    const tempHpSnap = {};
+    for (const p of (run.party || [])) {
+      const sum = (p.buffs || []).reduce((s, b) => s + (b && b.tempHp ? Number(b.tempHp) : 0), 0);
+      if (sum > 0 && p.maxHp > 0) tempHpSnap[p.uid] = { sum, ratio: p.hp / p.maxHp };
+    }
     applyTalentStats();
+    for (const p of (run.party || [])) {
+      const snap = tempHpSnap[p.uid];
+      if (!snap) continue;
+      p.maxHp += snap.sum;
+      p.hp = clamp(Math.round(p.maxHp * snap.ratio), p.alive === false ? 0 : 1, p.maxHp);
+    }
     resetKeyPowersForCombat();
     const enemies = spawnPack(type);
     for (const p of run.party) {
       if (p.hp <= 0) { p.alive = false; p.hp = 0; } else p.alive = true;
       p.shield = 0;
-      p.buffs = [];
+      p._debugUsedThisTurn = false;
+      p._oncePerTurnUsed = {};
+      // Баффы/дебаффы едут в следующий пулл и тикают как обычно. КД не сбрасываем.
       p.abilities.forEach(a => {
         // Между пачками откаты НЕ сбрасываются (M+ feel): curCd и charges живут через весь ключ.
         if (a.maxCharges) {
@@ -75,23 +88,29 @@
     if (side === 'ally') {
       return [...run.party, ...((combat?.pets) || [])].filter(u => u.side === 'ally' && u.alive && u.hp > 0);
     }
-    return (combat?.enemies || []).filter(u => u.alive && u.hp > 0);
+    return (combat?.enemies || []).filter(u => u.alive && u.hp > 0 && !u.vaultAway);
   }
   function livingHeroes() {
     return run.party.filter(u => u.alive && u.hp > 0);
   }
-  function getEff(u) {
+  function getEff(u, viewer) {
     let atk = u.atk, def = u.def, speed = u.speed;
     for (const b of (u.buffs || [])) {
       if (!b) continue;
       if (b.atkMod) atk *= (1 + b.atkMod);
-      if (b.defMod) def *= (1 + b.defMod);
+      if (b.defMod) {
+        if (typeof statusIsPerCaster === 'function' && statusIsPerCaster(b) && b.fromUid
+            && typeof statusAffectsViewer === 'function' && !statusAffectsViewer(b, viewer)) {
+          continue;
+        }
+        def *= (1 + b.defMod);
+      }
     }
     if (u.enraged) atk *= 1.5;
     return { atk: Math.round(atk), def: Math.round(def), speed };
   }
   function buildTurnQueue() {
-    const units = allUnits().filter(u => u.alive && u.hp > 0);
+    const units = allUnits().filter(u => u.alive && u.hp > 0 && u.petKey !== 'jade_serpent');
     units.sort((a, b) => getEff(b).speed - getEff(a).speed);
     combat.turnQueue = units.map(u => u.uid);
     combat.turnIndex = 0;
@@ -121,6 +140,10 @@
 
   function processTurn() {
     if (!combat || combat.over || run.finished) return;
+    if (combat.vaultLock) {
+      scheduleProcessTurn(180);
+      return;
+    }
     // Сохраняем текущего актора, фильтруем мёртвых, чиним индекс (иначе endRound/скип → «зависание»)
     const prevId = combat.turnQueue[combat.turnIndex];
     combat.turnQueue = combat.turnQueue.filter(id => {
@@ -135,17 +158,21 @@
     }
     if (combat.turnIndex >= combat.turnQueue.length) { endRound(); return; }
     const actor = currentActor();
-    if (!actor?.alive) {
+    if (!actor?.alive || actor.vaultAway || actor.petKey === 'jade_serpent') {
       combat.turnIndex++;
       scheduleProcessTurn(0);
       return;
     }
     if (isStunned(actor)) {
       log((actor.fullName || actor.name) + ' оглушён — ход пропущен', 'system');
+      try {
+        if (typeof tickJadeSerpentsAfterTurn === 'function') tickJadeSerpentsAfterTurn(actor);
+      } catch (e) { console.error('[serpent tick]', e); }
       combat.turnIndex++;
       scheduleProcessTurn(Math.max(80, Math.round(200 / gameSpeed)));
       return;
     }
+    actor._oncePerTurnUsed = {};
     actor.abilities.forEach(a => {
       if (a.curCd > 0) {
         a.curCd--;
@@ -312,8 +339,15 @@
       }
       // Brewmaster stagger ticks (~25% of pool per round)
       if (u.stagger > 0 && u.side === 'ally') {
-        const tick = Math.max(1, Math.round(u.stagger * 0.25));
+        let tick = Math.max(1, Math.round(u.stagger * 0.25));
         u.stagger = Math.max(0, u.stagger - tick);
+        const ox = (combat.pets || []).find(p => p.alive && p.ownerUid === u.uid && p.petKey === 'niuzao');
+        if (ox && tick > 1) {
+          const share = Math.max(1, Math.round(tick * 0.25));
+          tick = Math.max(1, tick - share);
+          dealTrue(ox, share, u, 'dmg', { abilityName: 'Пошатывание', isDot: true });
+          log(`${ox.name}: принял шат −${fmt(share)}`, 'system');
+        }
         dealTrue(u, tick, null, 'dmg', { abilityName: 'Пошатывание', isDot: true });
         log(`${u.name}: Пошатывание −${fmt(tick)} (остаток ${fmt(u.stagger)})`, 'enemy');
       }
@@ -345,6 +379,16 @@
         if (!p.alive || p.petTurnsLeft == null) continue;
         p.petTurnsLeft--;
         if (p.petTurnsLeft <= 0) {
+          if (p.petKey === 'infernal' && p.ownerUid && combat.pets) {
+            for (const q of combat.pets) {
+              if (q.ownerUid === p.ownerUid && q._holstered && q.petKey === 'imp') {
+                q._holstered = false;
+                q.alive = true;
+                if (!(q.hp > 0)) q.hp = Math.max(1, Math.round((q.maxHp || 1) * 0.6));
+                log(`${q.name} возвращается`, 'system');
+              }
+            }
+          }
           p.alive = false; p.hp = 0;
           log(`${p.name} исчезает`, 'system');
         }

@@ -1,4 +1,24 @@
 /* systems/resources: resources + ability charges */
+  const RUNE_READY_TURNS = 3; // тик в начале своего хода
+  function hasPyroHot(u) {
+    return !!(u && (u.buffs || []).some(b => b && b.id === 'pyro_hot' && (b.turns == null || Number(b.turns) > 0)));
+  }
+  function effectiveManaCost(u, ab) {
+    if (!ab) return 0;
+    if (ab.id === 'ab' && u && u.specId === 'arcane') {
+      const st = Math.min(3, Math.max(0, Number(u._arcaneStacks) || 0));
+      return 10 + st * 4;
+    }
+    if (ab.id === 'pyroblast' && hasPyroHot(u)) return 10;
+    if (ab.id !== 'thunder_focus' && (ab.type === 'heal' || ab.type === 'heal_aoe')
+        && u && (u.buffs || []).some(b => b && b.id === 'tea_free' && Number(b.abilityCharges) > 0)) {
+      return 0;
+    }
+    return Number(ab.cost) || 0;
+  }
+  function isOutbreakDump(u, ab) {
+    return !!(ab && ab.id === 'outbreak' && u && u.specId === 'unholy' && Number(ab.curCd) > 0.05);
+  }
   // ── Resources ──
   function makeResourceState(cls, spec) {
     const { primary, secondary } = WOW_MOP.resolveResources(cls, spec);
@@ -21,12 +41,22 @@
       runes: null,
     };
     if (primary.type === 'runes') {
-      state.runes = {
-        blood: [true, true],
-        frost: [true, true],
-        unholy: [true, true],
-        cd: [], // { type, turns }
-      };
+      // Лёд: пассивка «Преданность ледяному трону» — 3 льда + 3 нечестивости
+      if (spec && spec.id === 'frost') {
+        state.runes = {
+          blood: [],
+          frost: [true, true, true],
+          unholy: [true, true, true],
+          cd: [],
+        };
+      } else {
+        state.runes = {
+          blood: [true, true],
+          frost: [true, true],
+          unholy: [true, true],
+          cd: [],
+        };
+      }
       state.primary.current = 6;
       state.primary.max = 6;
     }
@@ -42,18 +72,21 @@
   function spendRunes(u, costRunes) {
     if (!costRunes || !u.res.runes) return true;
     const r = u.res.runes;
+    const runeCd = (typeof RUNE_READY_TURNS === 'number' ? RUNE_READY_TURNS : 3);
     const take = (type, n) => {
       let left = n;
-      for (let i = 0; i < r[type].length && left > 0; i++) {
-        if (r[type][i]) { r[type][i] = false; r.cd.push({ type, idx: i, turns: 2 }); left--; }
+      const row = r[type] || [];
+      for (let i = 0; i < row.length && left > 0; i++) {
+        if (row[i]) { row[i] = false; r.cd.push({ type, idx: i, turns: runeCd }); left--; }
       }
       return left === 0;
     };
     if (costRunes.any) {
       let n = costRunes.any;
       for (const type of ['blood', 'frost', 'unholy']) {
-        for (let i = 0; i < r[type].length && n > 0; i++) {
-          if (r[type][i]) { r[type][i] = false; r.cd.push({ type, idx: i, turns: 2 }); n--; }
+        const row = r[type] || [];
+        for (let i = 0; i < row.length && n > 0; i++) {
+          if (row[i]) { row[i] = false; r.cd.push({ type, idx: i, turns: runeCd }); n--; }
         }
       }
       return n === 0;
@@ -68,7 +101,20 @@
     if (ab.maxCharges) {
       if (ab.charges == null) ab.charges = ab.maxCharges;
       if (ab.charges <= 0) return false;
-    } else if (ab.curCd > 0.05) return false;
+    } else if (ab.curCd > 0.05 && !isOutbreakDump(u, ab)) return false;
+    if (isOutbreakDump(u, ab)) {
+      return !!(u.res && u.res.secondary && u.res.secondary.type === 'runic_power'
+        && u.res.secondary.current >= 60);
+    }
+    if (ab.id === 'fire_nova' && typeof unitHasFlameShock === 'function') {
+      if (target && target.side !== u.side) {
+        if (!unitHasFlameShock(target, u)) return false;
+      } else if (typeof combat !== 'undefined' && combat && typeof living === 'function') {
+        const foes = living(u.side === 'ally' ? 'enemy' : 'ally');
+        if (!foes.some(e => unitHasFlameShock(e, u))) return false;
+      }
+    }
+    if (ab.oncePerTurn && u._oncePerTurnUsed && u._oncePerTurnUsed[ab.id]) return false;
     if (typeof PET_SUMMONS !== 'undefined' && PET_SUMMONS[ab.id] && u && typeof canSummonAbility === 'function' && !canSummonAbility(u, ab.id)) return false;
     if (ab.costRunes) {
       if (!u.res.runes) return false;
@@ -80,7 +126,10 @@
         if (ab.costRunes.u && r.unholy.filter(Boolean).length < ab.costRunes.u) return false;
       }
     }
-    if (ab.cost > 0 && u.res.primary.type !== 'runes' && u.res.primary.current < ab.cost) return false;
+    {
+      const manaNeed = effectiveManaCost(u, ab);
+      if (manaNeed > 0 && u.res.primary.type !== 'runes' && u.res.primary.current < manaNeed) return false;
+    }
     if (ab.costSec > 0) {
       if (!u.res.secondary) return false;
       const need = ab.costSec;
@@ -96,6 +145,13 @@
       const foes = living('enemy');
       if (!foes.some(e => e.hp / e.maxHp <= 0.35)) return false;
     }
+    if (ab.id === 'touch_death' && target && target.side === 'enemy') {
+      if (!(target.hp < u.hp)) return false;
+    }
+    if (ab.id === 'touch_death' && !target && combat) {
+      const foes = living('enemy');
+      if (!foes.some(e => e.hp < u.hp)) return false;
+    }
     if ((ab.type === 'interrupt' || INTERRUPT_IDS.has(ab.id)) && target) {
       if (!target.casting) return false;
     }
@@ -105,7 +161,9 @@
       if (pet && pet.alive && pet.hp > 0) return false;
       if (!mainPetKeyFor(u.classId, u.specId)) return false;
     }
-    if (ab.id === 'wrench_heal') {
+    if (ab.id === 'wrench_heal' || ab.id === 'emergency_repair'
+        || ab.id === 'plasma_cutter' || ab.id === 'bot_overdrive'
+        || ab.id === 'call_siege_walker') {
       const pet = getMainPet(u, false);
       if (!pet) return false;
     }
@@ -113,6 +171,17 @@
   }
 
   function payAbility(u, ab) {
+    if (isOutbreakDump(u, ab)) {
+      u.res.secondary.current = Math.max(0, u.res.secondary.current - 60);
+      u._outbreakDump = true;
+      u._spentSec = 60;
+      return;
+    }
+    const sootheRetarget = ab.id === 'soothing'
+      && typeof actorHasJadeSerpent === 'function' && actorHasJadeSerpent(u);
+    const teaFree = ab.id !== 'thunder_focus' && (ab.type === 'heal' || ab.type === 'heal_aoe')
+      && !sootheRetarget
+      && (u.buffs || []).some(b => b && b.id === 'tea_free' && Number(b.abilityCharges) > 0);
     // remember secondary stacks for finisher scaling before spend
     if (ab.costSec > 0 && u.res.secondary) {
       u._spentSec = u.res.secondary.type === 'combo'
@@ -121,8 +190,18 @@
     } else u._spentSec = 0;
 
     if (ab.costRunes) spendRunes(u, ab.costRunes);
-    else if (ab.cost > 0 && u.res.primary.type !== 'runes') {
-      u.res.primary.current = Math.max(0, u.res.primary.current - ab.cost);
+    else {
+      const manaNeed = effectiveManaCost(u, ab);
+      if (manaNeed > 0 && u.res.primary.type !== 'runes') {
+        u.res.primary.current = Math.max(0, u.res.primary.current - manaNeed);
+      }
+    }
+    if (teaFree) {
+      const tea = (u.buffs || []).find(b => b && b.id === 'tea_free' && Number(b.abilityCharges) > 0);
+      if (tea) {
+        tea.abilityCharges = Number(tea.abilityCharges) - 1;
+        if (tea.abilityCharges <= 0) u.buffs = (u.buffs || []).filter(b => b !== tea);
+      }
     }
     if (ab.gen && u.res.primary.type !== 'runes') {
       u.res.primary.current = clamp(u.res.primary.current + ab.gen, 0, u.res.primary.max);
@@ -219,6 +298,11 @@
     if (u.res.secondary?.type === 'runic_power') {
       u.res.secondary.current = clamp(u.res.secondary.current + 5, 0, u.res.secondary.max);
     }
+    if (p.type === 'energy' && u.classId === 'monk' && u.specId === 'windwalker'
+        && combat && combat.pets && combat.pets.some(x => x.alive && x.ownerUid === u.uid && x.petKey === 'xuen')) {
+      // +100% реген уже учтём вторым тиком той же величины
+      if (p.regen) p.current = clamp(p.current + p.regen, 0, p.max);
+    }
   }
 
   function costLabel(u, ab) {
@@ -230,7 +314,10 @@
         if (ab.costRunes.f) bits.push(ab.costRunes.f + ' льда');
         if (ab.costRunes.u) bits.push(ab.costRunes.u + ' нечестивости');
       }
-    } else if (ab.cost > 0) bits.push(ab.cost + ' ' + (u.res.primary.icon || '') + ' ' + u.res.primary.name);
+    } else {
+      const manaNeed = effectiveManaCost(u, ab);
+      if (manaNeed > 0) bits.push(manaNeed + ' ' + (u.res.primary.icon || '') + ' ' + u.res.primary.name);
+    }
     if (ab.costSec > 0 && u.res.secondary) {
       bits.push(ab.costSec + ' ' + u.res.secondary.icon + ' ' + u.res.secondary.name);
     }
@@ -238,6 +325,9 @@
     if (ab.genSec && u.res.secondary) bits.push('+' + ab.genSec + ' ' + u.res.secondary.name);
     if (ab.genRunic) bits.push('+' + ab.genRunic + ' силы рун');
     if (ab.cd) bits.push('КД ' + ab.cd);
+    if (ab.id === 'outbreak' && u && u.specId === 'unholy' && Number(ab.curCd) > 0) {
+      bits.push('в КД: 60 силы рун — сброс чумы');
+    }
     if (!bits.length) bits.push('бесплатно');
     return bits.join(' · ');
   }

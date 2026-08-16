@@ -5,13 +5,16 @@
     const grid = document.getElementById('class-grid');
     grid.innerHTML = WOW_MOP.classes.map(c => {
       const unlocked = isClassPatched(c.id);
+      const hasTestSpec = unlocked && (c.specs || []).some(s => isTestSpec(c.id, s.id));
       const roles = classRoleList(c);
       const lockCls = unlocked ? '' : ' locked';
-      const note = unlocked ? '' : '<div class="lock-note">без правок</div>';
+      const note = !unlocked
+        ? '<div class="lock-note">без правок</div>'
+        : (hasTestSpec ? '<div class="lock-note test-build-note">Тест</div>' : '');
       return `
-      <div class="pick-card${lockCls}" data-id="${c.id}" data-locked="${unlocked ? '0' : '1'}"
+      <div class="pick-card${lockCls}${hasTestSpec ? ' test-build-card' : ''}" data-id="${c.id}" data-locked="${unlocked ? '0' : '1'}"
            style="--cc:${CLASS_CSS[c.id] || c.color};border-color:${c.color}66"
-           title="${unlocked ? c.name : c.name + ' — пока без правок'}">
+           title="${unlocked ? (hasTestSpec ? c.name + ' — тестовая ветка' : c.name) : c.name + ' — пока без правок'}">
         ${artHtml(ASSETS.classP(c.id), c.icon, 'medallion', `--cc:${CLASS_CSS[c.id] || c.color}`)}
         <div class="nm">${c.name}</div>
         <div class="sub">${c.resource.icon} ${c.resource.name}</div>
@@ -47,14 +50,15 @@
     ds.addEventListener('change', () => { refreshAffixes(); refreshKeystone(); savePartyProfile(); });
     kl.addEventListener('change', () => { refreshAffixes(); refreshKeystone(); savePartyProfile(); });
     document.getElementById('btn-start').addEventListener('click', startRun);
+    try { bindRaidLobby(); } catch (e) { console.error('[raid]', e); }
 
     document.getElementById('btn-abandon').addEventListener('click', () => {
       if (confirm('Сдаться?')) endRun(false, 'Вы покинули ключ.');
     });
     document.getElementById('btn-lobby').addEventListener('click', backToLobby);
-    document.getElementById('rest-heal').addEventListener('click', () => doRest('heal'));
-    document.getElementById('rest-buff').addEventListener('click', () => doRest('buff'));
-    document.getElementById('rest-skip').addEventListener('click', () => doRest('skip'));
+    document.getElementById('rest-heal')?.addEventListener('click', () => doRest('heal'));
+    document.getElementById('rest-buff')?.addEventListener('click', () => doRest('buff'));
+    document.getElementById('rest-skip')?.addEventListener('click', () => doRest('skip'));
     document.getElementById('talent-skip')?.addEventListener('click', () => finishTalentPick(null));
     document.getElementById('loot-skip')?.addEventListener('click', () => finishLootPick(null));
     document.getElementById('btn-pause')?.addEventListener('click', togglePause);
@@ -62,12 +66,37 @@
     document.getElementById('btn-continue')?.addEventListener('click', continueRun);
     document.getElementById('btn-export-save')?.addEventListener('click', exportSaveFile);
     document.getElementById('gear-close')?.addEventListener('click', closeGearModal);
+    document.getElementById('gear-auto-equip')?.addEventListener('click', () => {
+      const target = getGearModalTarget();
+      if (!target) return;
+      autoEquipBest(target);
+      if (gearModalMode === 'run') applyGearToHero(target);
+      syncGearToLobbyIfNeeded(target);
+      savePartyProfile();
+      if (run) saveRun();
+      renderGearModal();
+      if (gearModalMode === 'lobby') renderParty();
+      try {
+        const n = (typeof getSharedBag === 'function') ? getSharedBag().length : 0;
+        const el = document.getElementById('shop-bag-count');
+        if (el) el.textContent = String(n);
+      } catch (_) {}
+      toast('Авто-одето из общей сумки');
+    });
     document.getElementById('gear-unequip-all')?.addEventListener('click', () => {
       const target = getGearModalTarget();
       if (!target) return;
       const g = normalizeGear(target.gear);
       for (const slot of GEAR_SLOT_IDS) {
-        if (g.equipped[slot]) { g.bag.push(g.equipped[slot]); delete g.equipped[slot]; }
+        if (g.equipped[slot]) {
+          try {
+            if (typeof addToSharedBag === 'function') addToSharedBag(g.equipped[slot]);
+            else g.bag.push(g.equipped[slot]);
+          } catch (_) {
+            g.bag.push(g.equipped[slot]);
+          }
+          delete g.equipped[slot];
+        }
       }
       target.gear = g;
       if (gearModalMode === 'run') applyGearToHero(target);
@@ -120,6 +149,7 @@
     }
     renderParty();
     renderBalancePanel();
+    try { syncRaidLobbyUi(); } catch (_) {}
     refreshAffixes();
     refreshKeystone();
     updatePreview();
@@ -166,12 +196,7 @@
       return;
     }
     if (e.key === 'a' || e.key === 'A') {
-      // Player controls DPS/heal targets manually — no auto-AI for those roles
-      if (actor.role === 'dps' || actor.role === 'healer') {
-        toast('ДД/хил: выбери способность и цель сам');
-        return;
-      }
-      aiAct(actor); afterAction(); return;
+      return;
     }
     if (e.key === 'p' || e.key === 'P') { togglePause(); return; }
     if (e.key === 's' || e.key === 'S') { cycleSpeed(); return; }
@@ -225,6 +250,16 @@
     document.getElementById('tab-class').classList.add('on');
     document.getElementById('tab-spec').classList.remove('on');
     document.getElementById('tab-spec').disabled = !pickClass;
+    // Баланс: назад к «Все» / «все спеки» (не оставлять фильтр выбранного спека)
+    if (typeof syncBalanceFilterFromPick === 'function') {
+      syncBalanceFilterFromPick(null, null);
+    } else {
+      try {
+        if (typeof balanceFilterClass !== 'undefined') balanceFilterClass = 'all';
+        if (typeof balanceFilterSpec !== 'undefined') balanceFilterSpec = 'all';
+        if (typeof renderBalancePanel === 'function') renderBalancePanel();
+      } catch (_) {}
+    }
   }
 
   function showSpecTab() {
@@ -235,14 +270,17 @@
     sg.classList.remove('hidden');
     sg.innerHTML = cls.specs.map(s => {
       const unlocked = isSpecPatched(cls.id, s.id);
+      const testOnly = isTestSpec(cls.id, s.id);
       const lockCls = unlocked ? '' : ' locked';
-      const note = unlocked ? '' : '<div class="lock-note">без правок</div>';
+      const note = !unlocked
+        ? '<div class="lock-note">без правок</div>'
+        : (testOnly ? '<div class="lock-note test-build-note">Тест</div>' : '');
       return `
-      <div class="pick-card spec-card${lockCls}" data-id="${s.id}" data-locked="${unlocked ? '0' : '1'}"
+      <div class="pick-card spec-card${lockCls}${testOnly ? ' test-build-card' : ''}" data-id="${s.id}" data-locked="${unlocked ? '0' : '1'}"
            style="--role-c:${ROLE_CSS[s.role]};--cc:${(typeof classAccentColor === 'function' ? classAccentColor(cls.id, s.id) : (CLASS_CSS[cls.id] || cls.color))}"
-           title="${unlocked ? s.name : s.name + ' — пока без правок'}">
+           title="${unlocked ? (testOnly ? s.name + ' — Тест' : s.name) : s.name + ' — пока без правок'}">
         ${artHtml(ASSETS.specP(cls.id, s.id), s.icon || cls.icon, 'medallion', `--cc:${(typeof classAccentColor === 'function' ? classAccentColor(cls.id, s.id) : (ROLE_CSS[s.role] || CLASS_CSS[cls.id] || cls.color))}`)}
-        <div class="nm">${s.name}</div>
+        <div class="nm">${s.name}${testOnly ? ' <span class="test-spec-tag">Тест</span>' : ''}</div>
         <div class="spec-role-line ${ROLE_CLASS[s.role]}">Роль в группе: ${ROLE_LABEL[s.role]}</div>
         ${note}
       </div>`;
@@ -281,13 +319,19 @@
       return;
     }
     const cls = WOW_MOP.getClass(pickClass);
+    if (!cls) {
+      box.innerHTML = 'Класс не найден.';
+      addBtn.disabled = true;
+      return;
+    }
     if (!pickSpec) {
-      const { primary, secondary } = WOW_MOP.resolveResources(cls, cls.specs[0]);
+      const { primary, secondary } = WOW_MOP.resolveResources(cls, (cls.specs || [])[0]);
       const roles = classRoleList(cls);
       const roleStr = roles.map(r => `<span class="${ROLE_CLASS[r]}">${ROLE_LABEL[r]}</span>`).join(' · ');
       const specsLine = cls.specs.map(s => {
         const ok = isSpecPatched(cls.id, s.id);
-        const mark = ok ? '' : ' (без правок)';
+        const testOnly = isTestSpec(cls.id, s.id);
+        const mark = !ok ? ' (без правок)' : (testOnly ? ' <b style="color:#c4b5fd">Тест</b>' : '');
         return `<span class="${ROLE_CLASS[s.role]}">${s.name}</span>${mark}`;
       }).join(', ');
       box.innerHTML = `<b>${cls.icon} ${cls.name}</b> — ресурс: ${primary.icon} ${primary.name}` +
@@ -298,6 +342,11 @@
       return;
     }
     const spec = WOW_MOP.getSpec(pickClass, pickSpec);
+    if (!spec) {
+      box.innerHTML = 'Спек не найден: ' + pickClass + ' / ' + pickSpec;
+      addBtn.disabled = true;
+      return;
+    }
     const { primary, secondary } = WOW_MOP.resolveResources(cls, spec);
     let html = `<div style="margin-bottom:.45rem;color:var(--text)">
       <b>${cls.icon} ${cls.name} — ${spec.icon} ${spec.name}</b>
@@ -442,7 +491,7 @@
     if (editSlot != null && editSlot < party.length) {
       party[editSlot] = entry;
       editSlot = null;
-    } else if (party.length < PARTY_SIZE) {
+    } else if (party.length < getPartySize()) {
       party.push(entry);
     } else {
       toast('Пати полная — кликните слот чтобы заменить');
@@ -503,15 +552,23 @@
   function renderParty() {
     const slots = document.getElementById('party-slots');
     slots.innerHTML = '';
-    for (let i = 0; i < PARTY_SIZE; i++) {
+    const raidLobby = typeof isRaidLobby === 'function' && isRaidLobby();
+    for (let i = 0; i < getPartySize(); i++) {
       const p = party[i];
       const div = document.createElement('div');
-      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '');
+      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '') + (raidLobby ? ' raid-member' : '');
       if (p) {
         ensureSec(p);
         p.gear = normalizeGear(p.gear);
         const cls = WOW_MOP.getClass(p.classId);
         const spec = WOW_MOP.getSpec(p.classId, p.specId);
+        if (!cls || !spec) {
+          div.className = 'slot empty-slot' + (raidLobby ? ' raid-member' : '');
+          div.innerHTML = '<div class="slot-empty">нет данных · ' +
+            String(p.classId || '?') + '/' + String(p.specId || '?') + '</div>';
+          slots.appendChild(div);
+          continue;
+        }
         const { primary, secondary } = WOW_MOP.resolveResources(cls, spec);
         // ДК Нечестивость — зелёный контур; иначе цвет класса
         const cc = (typeof classAccentColor === 'function')
@@ -523,7 +580,20 @@
           'ico slot-portrait',
           `--cc:${cc}`
         );
-        div.innerHTML = `
+        if (raidLobby) {
+          const res = `${primary.icon || ''}${secondary ? ' ' + (secondary.icon || '') : ''}`.trim();
+          div.innerHTML = `
+          <button type="button" class="remove" title="Убрать" aria-label="Убрать из отряда">✕</button>
+          <div class="slot-main raid-card">
+            ${face}
+            <div class="meta">
+              <b>${cls.name} · ${spec.name}</b>
+              <span class="${ROLE_CLASS[spec.role]}">${ROLE_LABEL[spec.role]}${res ? ' · ' + res : ''}</span>
+            </div>
+            <button type="button" class="btn btn-sm party-gear-btn" data-gear-idx="${i}">Шмот</button>
+          </div>`;
+        } else {
+          div.innerHTML = `
           <button type="button" class="remove" title="Убрать" aria-label="Убрать из отряда">✕</button>
           <div class="slot-main">
             <div class="slot-identity">
@@ -540,6 +610,7 @@
               ${secPanelHtml(p, i)}
             </div>
           </div>`;
+        }
         div.style.borderColor = cc;
         div.style.setProperty('--cc', cc);
         if (p.classId === 'deathknight' && p.specId === 'unholy') {
@@ -551,6 +622,15 @@
           renderParty();
           savePartyProfile();
         });
+      } else if (raidLobby) {
+        div.innerHTML = `
+          <div class="slot-main raid-card">
+            <div class="ico slot-portrait art-wrap no-art empty-face" aria-hidden="true"><span class="art-emoji">＋</span></div>
+            <div class="meta">
+              <b>Слот ${i + 1}</b>
+              <span>пусто</span>
+            </div>
+          </div>`;
       } else {
         // Та же сетка, что у заполненного слота — высота не сжимается
         div.innerHTML = `
@@ -602,16 +682,17 @@
         openGearModalForLobby(+btn.getAttribute('data-gear-idx'));
       });
     });
-    const roles = party.map(p => WOW_MOP.getSpec(p.classId, p.specId).role);
+    const roles = party.map(p => (WOW_MOP.getSpec(p.classId, p.specId) || {}).role);
     const tanks = roles.filter(r => r === 'tank').length;
     const heals = roles.filter(r => r === 'healer').length;
     const dps = roles.filter(r => r === 'dps').length;
-    const ok = party.length === PARTY_SIZE && tanks === 1 && heals === 1 && dps === 3;
+    const need = getPartyNeed();
+    const ok = party.length === getPartySize() && tanks === need.tank && heals === need.healer && dps === need.dps;
     const req = document.getElementById('party-req');
     req.className = 'party-req ' + (ok ? 'ok' : 'bad');
     req.textContent = ok
-      ? '✓ Состав верный (1 танк · 1 целитель · 3 бойца)'
-      : `Сейчас: танк ${tanks}/1 · целитель ${heals}/1 · боец ${dps}/3 · слотов ${party.length}/${PARTY_SIZE}`;
+      ? `✓ Состав верный (${need.tank} танк${need.tank > 1 ? 'а' : ''} · ${need.healer} целител${need.healer > 1 ? 'я' : 'ь'} · ${need.dps} бойц${need.dps > 1 ? 'ов' : 'а'})`
+      : `Сейчас: танк ${tanks}/${need.tank} · целитель ${heals}/${need.healer} · боец ${dps}/${need.dps} · слотов ${party.length}/${getPartySize()}`;
     document.getElementById('btn-start').disabled = !ok;
   }
 
@@ -660,6 +741,9 @@
   function createHero(classId, specId, keyLevel, secStats, gearState) {
     const cls = WOW_MOP.getClass(classId);
     const spec = WOW_MOP.getSpec(classId, specId);
+    if (!cls || !spec) {
+      throw new Error('Нет класса/спека: ' + String(classId) + '/' + String(specId));
+    }
     // Heroes scale slowly; enemies scale faster → keys get harder
     const scale = 1 + (keyLevel - 2) * 0.015;
     const res = makeResourceState(cls, spec);
@@ -671,6 +755,10 @@
       const mp = (sec.masteryRating != null ? sec.masteryRating : SEC_MASTERY_RATING) / SEC_MASTERY_RATING * ((mi.pctAt120 || 35) / 100);
       hpBonus = 1 + mp * 0.12;
     }
+    const baseMaxHp = Math.round(spec.stats.hp * scale * STAT_SCALE * hpBonus);
+    const baseAtk = Math.round(spec.stats.atk * scale * STAT_SCALE);
+    const baseDef = Math.round(spec.stats.def * (1 + (keyLevel - 2) * 0.01) * STAT_SCALE);
+    const baseSpeed = spec.stats.speed;
     const hero = {
       uid: uid(),
       classId, specId,
@@ -683,11 +771,16 @@
       specName: spec.name,
       side: 'ally',
       sec: { ...sec },
-      maxHp: Math.round(spec.stats.hp * scale * STAT_SCALE * hpBonus),
-      hp: Math.round(spec.stats.hp * scale * STAT_SCALE * hpBonus),
-      atk: Math.round(spec.stats.atk * scale * STAT_SCALE),
-      def: Math.round(spec.stats.def * (1 + (keyLevel - 2) * 0.01) * STAT_SCALE),
-      speed: spec.stats.speed,
+      maxHp: baseMaxHp,
+      hp: baseMaxHp,
+      atk: baseAtk,
+      def: baseDef,
+      speed: baseSpeed,
+      // базы до шмота — applyGearToHero накинет экип (скиллы через getEff.atk)
+      _baseMaxHp: baseMaxHp,
+      _baseAtk: baseAtk,
+      _baseDef: baseDef,
+      _baseSpeed: baseSpeed,
       shield: 0,
       stagger: 0,
       abilities: (() => {
@@ -711,8 +804,9 @@
           stampAbilitySchool(ab, classId, specId);
           return ab;
         });
-        const kickClasses = new Set(['rogue', 'warrior', 'mage', 'shaman', 'deathknight', 'monk', 'paladin']);
-        if (kickClasses.has(classId) && !list.some(a => INTERRUPT_IDS.has(a.id) || a.type === 'interrupt')) {
+        const kickClasses = new Set(['warrior', 'mage', 'shaman', 'monk', 'paladin']);
+        if (kickClasses.has(classId) && specId !== 'mistweaver'
+            && !list.some(a => INTERRUPT_IDS.has(a.id) || a.type === 'interrupt')) {
           list.push({
             id: 'kick', name: 'Прерывание', nameEn: 'Прерывание', icon: '🦵',
             cost: 0, gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0,
@@ -746,6 +840,7 @@
     document.getElementById('lobby').classList.add('hidden');
     document.getElementById('run-screen').classList.remove('hidden');
     document.getElementById('end-modal').classList.add('hidden');
+    document.body.classList.toggle('raid-run', !!(run && run.raid));
     paused = false;
     const b = document.getElementById('btn-pause');
     if (b) b.textContent = 'Пауза';
@@ -764,23 +859,39 @@
   function startRun() {
     try {
       savePartyProfile();
-      const dungeon = DUNGEONS.find(d => d.id === document.getElementById('dungeon-select').value);
+      party = (party || []).filter(p => p && WOW_MOP.getSpec(p.classId, p.specId));
+      const raid = isRaidLobby();
+      const dungeon = raid
+        ? RAID_DUNGEON
+        : DUNGEONS.find(d => d.id === document.getElementById('dungeon-select').value);
+      if (!dungeon) { toast('Выберите подземелье'); return; }
       const keyLevel = +document.getElementById('key-level').value;
-      const affixes = keyAffixes(keyLevel);
-      const timerMax = Math.max(12 * 60, dungeon.timerBase - (keyLevel - 2) * 25);
+      const affixes = raid ? [] : keyAffixes(keyLevel);
+      const timerMax = raid
+        ? Math.max(8 * 60, 10 * 60 - (keyLevel - 2) * 12)
+        : Math.max(12 * 60, dungeon.timerBase - (keyLevel - 2) * 25);
       run = {
         dungeon, keyLevel, affixes, roomIndex: 0, talents: [], deaths: 0,
         timerMax, timerLeft: timerMax, logs: [], restBuffBattles: 0, finished: false,
         forces: 0, loot: [],
-        route: generateRoute(dungeon),
+        raid: !!raid,
+        route: raid ? generateRaidRoute() : generateRoute(dungeon),
         party: party.map(p => createHero(p.classId, p.specId, keyLevel, p.sec, p.gear)),
         _roomArt: {}, // стабильные фоны комнат (rift/ember)
       };
       assignPartyUniqueNames(run.party);
+      raidPlayerUid = run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid || null;
+      raidAutoAllies = true;
       resetRecount();
       beginRunScreen();
       applyDungeonTheme();
-      log(`Ключ +${keyLevel}: ${dungeon.name}. Маршрут с развилками · нужно ⚔ ${FORCES_TARGET}% сил (на карте ~${FORCES_MAP_BUDGET}%).`, 'system');
+      if (raid) {
+        log(`Рейд 10 · +${keyLevel}: ${dungeon.name}. Лэй Шэнь, Повелитель Грома.`, 'system');
+        log('Механики: смена танков (Перегрузка ×3) · Проводники СТ · метки молнии · соки сфер · кики кастов.', 'system');
+        log('Авто-рейд: союзники ходят сами. Клик по герою — взять управление.', 'system');
+      } else {
+        log(`Ключ +${keyLevel}: ${dungeon.name}. Маршрут с развилками · нужно ⚔ ${FORCES_TARGET}% сил (на карте ~${FORCES_MAP_BUDGET}%).`, 'system');
+      }
       log(`Отряд: ${run.party.map(p => p.fullName).join(', ')}`, 'system');
       updateHud(); renderPath(); renderPowers(); enterRoom();
       saveRun();
@@ -795,7 +906,9 @@
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return toast('Нет сохранения');
       const data = JSON.parse(raw);
-      const dungeon = DUNGEONS.find(d => d.id === data.dungeonId);
+      const dungeon = data.dungeonId === 'throne' || data.raid
+        ? RAID_DUNGEON
+        : DUNGEONS.find(d => d.id === data.dungeonId);
       if (!dungeon) return toast('Данж из сейва не найден');
       party = (data.partyBuild || []).map(x => {
         const e = { classId: x.classId, specId: x.specId, sec: x.sec ? { ...x.sec } : defaultSec(), gear: normalizeGear(x.gear) };
@@ -832,13 +945,21 @@
           if (p.res) h.res = p.res;
           return h;
         }),
+        raid: !!data.raid || data.dungeonId === 'throne',
         _roomArt: data._roomArt || {},
       };
       if (!run.party.length) {
         run.party = party.map(p => createHero(p.classId, p.specId, keyLevel, p.sec, p.gear));
       }
       assignPartyUniqueNames(run.party);
-      if (!run.route?.nodes) run.route = generateRoute(dungeon);
+      if (run.raid) {
+        raidPlayerUid = run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid || null;
+        raidAutoAllies = true;
+        if (!run.route?.nodes || data.dungeonId === 'throne') {
+          if (!run.route?.nodes) run.route = generateRaidRoute();
+        }
+      }
+      if (!run.route?.nodes) run.route = run.raid ? generateRaidRoute() : generateRoute(dungeon);
       beginRunScreen();
       applyDungeonTheme();
       log('Продолжение сохранения…', 'system');
@@ -877,30 +998,76 @@
     document.getElementById('timer-fill').style.width = (run.timerLeft / run.timerMax * 100) + '%';
     const sp = document.getElementById('hud-speed');
     if (sp) sp.textContent = gameSpeed + '×';
+    try { raidHudPatch(); } catch (_) {}
+  }
+  function routeNodeCard(n, cur, visited) {
+    if (!n) return '';
+    const m = ROOM_META[n.type] || { icon: '•', name: n.type };
+    const isCur = n.id === cur;
+    const isDone = visited.has(n.id) && !isCur;
+    const st = n.pack === 'st';
+    const cls = [
+      'rm-node',
+      isCur ? 'current' : '',
+      isDone ? 'done' : '',
+      st ? 'is-st' : '',
+      n.type === 'boss' || n.type === 'final' ? 'is-boss' : '',
+      n.mopup ? 'is-mop' : '',
+    ].filter(Boolean).join(' ');
+    const pct = n.forceBudget
+      ? `<span class="rm-pct">+${n.forceBudget}%</span>`
+      : `<span class="rm-pct rm-pct-0">${n.type === 'final' ? 'финал' : 'босс'}</span>`;
+    const tag = st ? '<span class="rm-tag">СТ</span>' : (n.pack === 'aoe' ? '<span class="rm-tag aoe">AoE</span>' : '');
+    return `<div class="${cls}" data-node="${n.id}" title="${n.name}">
+      <span class="rm-ico">${m.icon}</span>
+      <span class="rm-name">${n.name}</span>
+      ${tag}${pct}
+    </div>`;
   }
   function renderPath() {
     const list = document.getElementById('path-list');
     if (!list || !run?.route) { if (list) list.innerHTML = ''; return; }
-    const order = ['start', 'fork1a', 'fork1b', 'rest1', 'mid', 'fork2a', 'fork2b', 'rest2', 'final', 'mop1', 'mop2', 'mop3'];
+    const N = run.route.nodes;
+    if (!N.start || !N.hall) {
+      list.innerHTML = '<div class="room-node">Старый сейв маршрута — начни новый ключ</div>';
+      return;
+    }
     const cur = run.route.currentId;
     const visited = new Set(run.route.visited || []);
-    const html = order.map(id => {
-      const n = run.route.nodes[id];
-      if (!n) return '';
-      if (n.mopup && !run.route.mopupMode && !visited.has(id) && id !== cur) return '';
-      const m = ROOM_META[n.type] || { icon: '•', name: n.type };
-      const isCur = id === cur;
-      const isDone = visited.has(id) && !isCur;
-      let cls = isCur ? 'current' : isDone ? 'done' : '';
-      const pct = n.forceBudget ? `<span class="rn-meta">⚔ ~${n.forceBudget}%</span>` : '';
-      const br = n.branch ? `<span class="rn-branch">ветка ${n.branch}</span>` : '';
-      const mop = n.mopup ? `<span class="rn-meta">добор</span>` : '';
-      return `<div class="room-node ${cls}" data-node="${id}">
-        <span>${m.icon}</span>
-        <span><b>${n.name}</b>${br ? ' · ' + br : ''}${pct}${mop ? ' · ' + mop : ''}</span>
+    const f = Math.round(run.forces || 0);
+    const need = Math.max(0, FORCES_TARGET - f);
+    const fork = (a, b) =>
+      `<div class="rm-fork">${routeNodeCard(N[a], cur, visited)}<div class="rm-or">или</div>${routeNodeCard(N[b], cur, visited)}</div>`;
+    let mop = '';
+    if (run.route.mopupMode || run.route.finalCleared) {
+      mop = `<div class="rm-line"></div>
+        <div class="rm-mop-label">добор до 100%</div>
+        ${routeNodeCard(N.mop1, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.mop2, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.mop3, cur, visited)}`;
+    }
+    list.innerHTML = `
+      <div class="route-map">
+        <div class="rm-forces ${f >= FORCES_TARGET ? 'ok' : ''}">⚔ ${f} / ${FORCES_TARGET}%${need ? ` · ещё ${need}%` : ' · можно закрыть'}</div>
+        ${routeNodeCard(N.start, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.hall, cur, visited)}
+        <div class="rm-line"></div>
+        ${fork('fork1a', 'fork1b')}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.mid, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.descent, cur, visited)}
+        <div class="rm-line"></div>
+        ${fork('fork2a', 'fork2b')}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.approach, cur, visited)}
+        <div class="rm-line"></div>
+        ${routeNodeCard(N.final, cur, visited)}
+        ${mop}
       </div>`;
-    }).join('');
-    list.innerHTML = html || '<div class="room-node">—</div>';
   }
   function renderPowers() {
     const el = document.getElementById('party-powers');
@@ -948,38 +1115,40 @@
           : meta.name + ` · силы ${f}/${FORCES_TARGET}%`);
     combat = null; pendingTarget = null;
     if (type === 'rest') {
-      showRestRoom();
+      // Привалы отключены: legacy-сейвы / старые маршруты — сразу дальше
+      skipRestRoomAndContinue();
       return;
     }
     startCombat(type);
+    if (run.raid) {
+      try { showRaidBriefing(); } catch (_) {}
+      const auto = document.getElementById('btn-raid-auto');
+      if (auto) auto.classList.remove('hidden');
+    }
   }
 
-  /** Rest room: no enemies by design — show clear continue UI (panel + modal). */
+  /** Пропуск комнаты привала без хила/баффа (темп: пачка → пачка). */
+  function skipRestRoomAndContinue() {
+    try { document.getElementById('rest-modal')?.classList.add('hidden'); } catch (_) {}
+    if (run?.route?.currentId) markNodeVisited(run.route.currentId);
+    log('Привал отключён — сразу следующая комната (CD скиллов сохраняются).', 'system');
+    const nextIds = (currentRouteNode()?.next || []);
+    const options = nextIds.map(id => routeNode(id)).filter(Boolean)
+      .filter(n => !run.route.visited.includes(n.id));
+    if (options.length === 1) {
+      goToNode(options[0].id);
+      return;
+    }
+    if (options.length > 1) {
+      showRouteChoice(options, '🗺 Дальше', 'Привал пропущен.');
+      return;
+    }
+    advanceRoom();
+  }
+
+  /** @deprecated Привал UI отключён — оставлено на случай вызова. */
   function showRestRoom() {
-    renderAllies();
-    document.getElementById('ability-bar').innerHTML = '';
-    try { hidePassivePocket(); } catch (_) {}
-    document.getElementById('combat-actions').innerHTML =
-      '<button class="btn btn-primary" type="button" id="rest-inline-go">🏕️ Привал — выбрать отдых</button>';
-    document.getElementById('rest-inline-go')?.addEventListener('click', () => {
-      document.getElementById('rest-modal').classList.remove('hidden');
-    });
-    document.getElementById('enemy-row').innerHTML = `
-      <div class="rest-panel">
-        <h3>🏕️ Привал</h3>
-        <p>Здесь нет врагов — это комната отдыха. Восстановись и переходи к следующей комнате.</p>
-        <div class="rest-btns">
-          <button class="btn btn-ok" type="button" data-rest="heal">Отдых (частичный)</button>
-          <button class="btn" type="button" data-rest="buff">+15% атаки · 2 боя</button>
-          <button class="btn btn-primary" type="button" data-rest="skip">Дальше без отдыха →</button>
-        </div>
-      </div>`;
-    document.querySelectorAll('#enemy-row [data-rest]').forEach(btn => {
-      btn.addEventListener('click', () => doRest(btn.getAttribute('data-rest')));
-    });
-    document.getElementById('rest-modal').classList.remove('hidden');
-    log('Привал: врагов нет. Выбери отдых, чтобы идти дальше.', 'system');
-    toast('Привал — выбери отдых, чтобы продолжить');
+    skipRestRoomAndContinue();
   }
 
   function markNodeVisited(id) {
@@ -1058,16 +1227,18 @@
       return;
     }
 
-    // Mopup finished node
+    // Mopup: цикл, пока нет 100%. Закрыть ключ с недобором нельзя.
     if (cur.mopup) {
       if (tryFinishKey('Силы набраны!')) return;
-      const opts = (cur.next || []).map(id => routeNode(id)).filter(n => n && !run.route.visited.includes(n.id));
+      let opts = (cur.next || []).map(id => routeNode(id)).filter(n => n && !run.route.visited.includes(n.id));
       if (!opts.length) {
-        // no more mopup — allow end under-cap with warning or force fail soft
-        endRun(true, `Ключ сдан с ⚔${Math.round(run.forces)}% (не полный треш). +${run.keyLevel} · 💀${run.deaths}`);
-        return;
+        ['mop1', 'mop2', 'mop3'].forEach(id => {
+          run.route.visited = (run.route.visited || []).filter(v => v !== id);
+        });
+        opts = [routeNode('mop1')].filter(Boolean);
+        log('Добор: ещё один круг — нужно 100% сил.', 'system');
       }
-      showRouteChoice(opts, '⚔ Добор сил', `Сейчас ${Math.round(run.forces)}/${FORCES_TARGET}%`);
+      showRouteChoice(opts, '⚔ Добор сил', `Сейчас ${Math.round(run.forces)}/${FORCES_TARGET}% · без 100% ключ не закроется`);
       return;
     }
 
@@ -1135,6 +1306,18 @@
       casting: null,
       threat: {}, // uid -> threat number
       missedKicks: 0,
+      mech: tpl.mech ? { ...tpl.mech } : null,
+    };
+  }
+
+  function themePools() {
+    const th = run?.dungeon?.theme || 'crypt';
+    const pack = ENEMIES.theme && ENEMIES.theme[th];
+    if (pack) return pack;
+    return {
+      trash: ENEMIES.trash || [],
+      elite: ENEMIES.elite || [],
+      st: ENEMIES.elite || [],
     };
   }
 
@@ -1159,21 +1342,22 @@
       const v = enemy.threat[h.uid] || 0;
       if (v > bestV) { best = h; bestV = v; }
     }
-    const tank = heroes.find(h => h.role === 'tank');
-    // Sticky agro: stay on tank unless someone has much more threat (or tank is dead)
-    if (tank) {
-      const tankThreat = enemy.threat[tank.uid] || 0;
-      // No real threat table yet → always tank
-      if (bestV <= 0) return tank;
-      // Need ~50% more threat than tank to pull (DPS/heal rarely stick)
-      const PULL_RATIO = 1.5;
-      if (best && best.uid !== tank.uid && bestV < Math.max(tankThreat * PULL_RATIO, tankThreat + 400)) {
-        return tank;
+    const tanks = heroes.filter(h => h.role === 'tank');
+    if (tanks.length) {
+      let mt = tanks[0], mtV = enemy.threat[mt.uid] || 0;
+      for (const t of tanks) {
+        const v = enemy.threat[t.uid] || 0;
+        if (v > mtV) { mt = t; mtV = v; }
       }
-      // Prefer tank when tied / very close
-      if (best && best.uid !== tank.uid && bestV <= tankThreat * 1.1) return tank;
+      if (bestV <= 0) return mt;
+      const PULL_RATIO = 1.5;
+      if (best && best.role !== 'tank' && bestV < Math.max(mtV * PULL_RATIO, mtV + 400)) {
+        return mt;
+      }
+      if (best && best.role !== 'tank' && bestV <= mtV * 1.1) return mt;
+      return best || mt;
     }
-    return best || tank || heroes[0];
+    return best || heroes[0];
   }
   function topThreatUid(enemy) {
     const t = getThreatTarget(enemy);
@@ -1182,12 +1366,26 @@
 
   function spawnPack(type) {
     const k = run.keyLevel, enemies = [];
-    const trashPool = ENEMIES.trash || [];
-    const elitePool = ENEMIES.elite || trashPool;
+    const pools = themePools();
+    const node = currentRouteNode();
+    const packKind = node?.pack || (type === 'elite' ? 'mixed' : (type === 'trash' ? 'aoe' : type));
+    const trashPool = pools.trash || ENEMIES.trash || [];
+    const elitePool = pools.elite || ENEMIES.elite || trashPool;
+    const stPool = pools.st || elitePool;
     const fallback = trashPool[0] || { id: 'z', name: 'Нежить', icon: '🧟', role: 'dps', hp: 95, atk: 13, def: 4, speed: 9,
       abilities: [{ id: 'h', name: 'Удар', cost: 0, cd: 0, type: 'damage', power: 1 }] };
     const pickSafe = (arr) => (arr && arr.length ? pick(arr) : fallback) || fallback;
     const randomMode = !!(run?.dungeon?.randomEnemies);
+
+    const pushStChampion = () => {
+      const champ = scaleEnemy(pickSafe(stPool), k, false, true);
+      champ.maxHp = Math.round(champ.maxHp * 1.55);
+      champ.hp = champ.maxHp;
+      champ.atk = Math.round(champ.atk * 1.1);
+      if (!String(champ.name).includes('СТ')) champ.name = champ.name + ' · СТ';
+      enemies.push(champ);
+      if (k >= 12) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
+    };
 
     // Случайные инсты (Разлом / Угольные): каждый заход — уникальный состав пака
     if (randomMode && (type === 'trash' || type === 'elite')) {
@@ -1232,78 +1430,59 @@
         tpl.abilities = picked;
         return tpl;
       };
-      if (type === 'trash') {
-        const n = 3 + Math.floor(Math.random() * 4) + (k >= 8 ? 1 : 0); // 3–7
+      if (packKind === 'st') {
+        const champ = scaleEnemy(makeChaosTpl(pickSafe(stPool), true), k, false, true);
+        champ.maxHp = Math.round(champ.maxHp * 1.5);
+        champ.hp = champ.maxHp;
+        champ.name = champ.name + ' · СТ';
+        enemies.push(champ);
+      } else if (type === 'trash' || packKind === 'aoe') {
+        const n = 3 + Math.floor(Math.random() * 3) + (k >= 8 ? 1 : 0);
         for (let i = 0; i < n; i++) {
-          const base = pickSafe(Math.random() < 0.25 ? elitePool : trashPool);
-          enemies.push(scaleEnemy(makeChaosTpl(base, false), k, false, Math.random() < 0.15));
-        }
-        if (k >= 6 && Math.random() < 0.4) {
-          enemies.push(scaleEnemy(makeChaosTpl(pickSafe(elitePool), true), k, false, true));
+          const base = pickSafe(Math.random() < 0.2 ? elitePool : trashPool);
+          enemies.push(scaleEnemy(makeChaosTpl(base, false), k, false, false));
         }
       } else {
-        // elite: 1–3 элиты + адды, всё рандом
-        const nElite = 1 + (Math.random() < 0.55 ? 1 : 0) + (k >= 8 && Math.random() < 0.4 ? 1 : 0);
-        for (let i = 0; i < nElite; i++) {
-          enemies.push(scaleEnemy(makeChaosTpl(pickSafe(elitePool), true), k, false, true));
-        }
-        const nTrash = 1 + Math.floor(Math.random() * 3) + (k >= 10 ? 1 : 0);
+        enemies.push(scaleEnemy(makeChaosTpl(pickSafe(elitePool), true), k, false, true));
+        const nTrash = 1 + Math.floor(Math.random() * 2);
         for (let i = 0; i < nTrash; i++) {
           enemies.push(scaleEnemy(makeChaosTpl(pickSafe(trashPool), false), k, false, false));
         }
       }
-    } else if (type === 'trash') {
-      const n = 4 + (k >= 5 ? 1 : 0) + (k >= 8 ? 1 : 0) + (k >= 12 ? 1 : 0); // 4–7
+    } else if (packKind === 'st') {
+      pushStChampion();
+    } else if (type === 'trash' || packKind === 'aoe') {
+      const n = 4 + (k >= 5 ? 1 : 0) + (k >= 10 ? 1 : 0);
       for (let i = 0; i < n; i++) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
-      // chance of mini-elite in trash packs on higher keys
-      if (k >= 7 && Math.random() < 0.35) {
-        enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      }
-    } else if (type === 'elite') {
-      // 1–2 named elites + addons
+    } else if (type === 'elite' || packKind === 'mixed') {
       enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      if (k >= 5) enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
       enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
       enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
       if (k >= 10) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
     } else if (type === 'boss') {
-      const theme = run.dungeon.theme || 'crypt';
-      const midTpl = (ENEMIES.midBosses && ENEMIES.midBosses[theme])
-        || (ENEMIES.bosses && ENEMIES.bosses[theme])
-        || ENEMIES.bosses?.crypt
-        || fallback;
-      // В разломе иногда подмешиваем случайного мид-босса из других данжей
-      let tpl = midTpl;
-      if (randomMode && ENEMIES.midBosses) {
-        const keys = Object.keys(ENEMIES.midBosses);
-        if (keys.length && Math.random() < 0.55) {
-          tpl = ENEMIES.midBosses[keys[Math.floor(Math.random() * keys.length)]];
-        }
+      if (run.raid) {
+        enemies.push(...spawnRaidEncounter());
+      } else {
+        const theme = run.dungeon.theme || 'crypt';
+        const tpl = (ENEMIES.midBosses && ENEMIES.midBosses[theme])
+          || (ENEMIES.bosses && ENEMIES.bosses[theme])
+          || ENEMIES.bosses?.crypt
+          || fallback;
+        enemies.push(scaleEnemy(tpl, k, true, false));
+        enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
       }
-      enemies.push(scaleEnemy(tpl, k, true, false));
-      // adds
-      enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
-      if (k >= 6) enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      else enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
-      if (k >= 10) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
     } else if (type === 'final') {
-      const theme = run.dungeon.theme || 'crypt';
-      let finTpl = (ENEMIES.bosses && ENEMIES.bosses[theme]) || ENEMIES.bosses?.crypt || fallback;
-      if (randomMode && ENEMIES.bosses) {
-        const keys = Object.keys(ENEMIES.bosses);
-        if (keys.length && Math.random() < 0.4) {
-          finTpl = ENEMIES.bosses[keys[Math.floor(Math.random() * keys.length)]];
-        }
+      if (run.raid) {
+        enemies.push(...spawnRaidEncounter());
+      } else {
+        const theme = run.dungeon.theme || 'crypt';
+        const finTpl = (ENEMIES.bosses && ENEMIES.bosses[theme]) || ENEMIES.bosses?.crypt || fallback;
+        enemies.push(scaleEnemy(finTpl, k, true, false));
+        enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
       }
-      const fin = scaleEnemy(finTpl, k, true, false);
-      enemies.push(fin);
-      enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      if (k >= 8) enemies.push(scaleEnemy(pickSafe(elitePool), k, false, true));
-      if (k >= 10) enemies.push(scaleEnemy(pickSafe(trashPool), k, false, false));
     }
 
     // Distribute node's forceBudget % across trash/elite (bosses = 0)
-    const node = currentRouteNode();
     const budget = node?.forceBudget || 0;
     const weights = enemies.map(e => (e.isBoss ? 0 : (e.isElite ? 2.2 : 1)));
     const wSum = weights.reduce((a, b) => a + b, 0) || 1;
@@ -1323,17 +1502,48 @@
     for (const u of run.party) {
       const cls = WOW_MOP.getClass(u.classId);
       const spec = WOW_MOP.getSpec(u.classId, u.specId);
+      if (!spec) continue;
       let hpM = te.hpMult || 1, atkM = te.atkMult || 1, defM = te.defMult || 1;
       if (te.allMult) { hpM *= te.allMult; atkM *= te.allMult; defM *= te.allMult; }
       if (u.role === 'tank' && te.tankHp) hpM *= te.tankHp;
       if (u.role === 'dps' && te.dpsAtk) atkM *= te.dpsAtk;
       const ratio = u.hp / Math.max(1, u.maxHp);
-      const sc = 1 + (run.keyLevel - 2) * 0.02;
-      u.maxHp = Math.round(spec.stats.hp * sc * hpM * STAT_SCALE);
+      // Как createHero (0.015), не 0.02 — иначе плывут базы
+      const sc = 1 + (run.keyLevel - 2) * 0.015;
+      // Базы БЕЗ шмота; затем applyGearToHero накинет экип (и скиллы через getEff.atk)
+      u._baseMaxHp = Math.round(spec.stats.hp * sc * hpM * STAT_SCALE);
+      u._baseAtk = Math.round(spec.stats.atk * sc * atkM * STAT_SCALE);
+      u._baseDef = Math.round(spec.stats.def * (1 + (run.keyLevel - 2) * 0.01) * defM * STAT_SCALE);
+      u._baseSpeed = (spec.stats.speed || 10) + (te.speedFlat || 0);
+      // sec-базы без шмота (если ещё не зафиксированы — из текущего sec «голого»)
+      if (u._baseSecCritRating == null) {
+        u.sec = ensureSec(u);
+        u._baseSecCritRating = Math.round(Number(u.sec.critRating != null ? u.sec.critRating : SEC_CRIT_RATING));
+        u._baseSecVersRating = Math.round(Number(u.sec.versRating != null ? u.sec.versRating : SEC_VERS_RATING));
+        u._baseSecMasteryRating = Math.round(Number(u.sec.masteryRating != null ? u.sec.masteryRating : SEC_MASTERY_RATING));
+      }
+      // временно выставить базы, чтобы ratio и applyGear работали
+      u.maxHp = u._baseMaxHp;
+      u.atk = u._baseAtk;
+      u.def = u._baseDef;
+      u.speed = u._baseSpeed;
       u.hp = clamp(Math.round(u.maxHp * ratio), 0, u.maxHp);
-      u.atk = Math.round(spec.stats.atk * sc * atkM * STAT_SCALE);
-      u.def = Math.round(spec.stats.def * defM * STAT_SCALE);
-      u.speed = spec.stats.speed + (te.speedFlat || 0);
+      if (typeof applyGearToHero === 'function') {
+        applyGearToHero(u);
+        // после шмота сохранить % HP
+        u.hp = clamp(Math.round(u.maxHp * ratio), 0, u.maxHp);
+      }
+      // Лут ключа (+атака / защита / HP) — на живую базу, от неё считается flat.
+      for (const item of (run.loot || [])) {
+        if (!item) continue;
+        if (item.atkMult) u.atk = Math.round(u.atk * (1 + Number(item.atkMult)));
+        if (item.defFlat) u.def = Math.round(u.def * (1 + Number(item.defFlat)));
+        if (item.hpFlat) {
+          const r2 = u.hp / Math.max(1, u.maxHp);
+          u.maxHp = Math.round(u.maxHp * (1 + Number(item.hpFlat)));
+          u.hp = clamp(Math.round(u.maxHp * r2), 0, u.maxHp);
+        }
+      }
     }
   }
 
@@ -1417,8 +1627,13 @@
     }
     const maxHp = Math.round(def.hp * sc * STAT_SCALE * PET_HP_MULT);
     // Temporary summons hit harder (short window)
-    const tempBoost = turnsLeft != null ? 1.18 : 1;
-    const finalAtk = Math.round(atk * tempBoost);
+    const tempBoost = (turnsLeft != null && defKey !== 'hellfiend' && defKey !== 'frost_ghoul' && defKey !== 'water_ele' && defKey !== 'infernal') ? 1.18 : 1;
+    let finalAtk = Math.round(atk * tempBoost);
+    // Исчадие ада / боевой бот: удар от веса «т», не от доли хозяина
+    if (defKey === 'hellfiend' || defKey === 'frost_ghoul' || defKey === 'water_ele' || defKey === 'infernal' || defKey === 'combat_bot') {
+      const ref = (typeof FLAT_REF === 'number' ? FLAT_REF : 15);
+      finalAtk = ref * STAT_SCALE;
+    }
     // Slightly faster pets so they act more often
     const speed = Math.max(8, def.speed + (turnsLeft != null ? 1 : 0));
     const isMain = turnsLeft == null && owner && mainPetKeyFor(owner.classId, owner.specId) === defKey;
@@ -1444,8 +1659,7 @@
       abilities: (function () {
         const kits = {
           combat_bot: [
-            { id: 'pet_claw', name: 'Гидравлика', icon: '⚙️', power: 1.0 },
-            { id: 'pet_rend', name: 'Циркулярка', icon: '🪚', power: 1.32, cd: 2 },
+            { id: 'bot_hit', name: 'Гидравлика', icon: '⚙️', power: 1, flat: 25, type: 'damage' },
           ],
           pocket_bot: [
             { id: 'pet_claw', name: 'Искровой укол', icon: '⚡', power: 1.0 },
@@ -1475,6 +1689,18 @@
           ],
           scrap_bot: [
             { id: 'pet_claw', name: 'Цап', icon: '⚙️', power: 1, flat: 14, type: 'damage' },
+          ],
+          hellfiend: [
+            { id: 'hell_hit', name: 'Удар Скверны', icon: '👿', power: 1, flat: 34, type: 'damage' },
+          ],
+          frost_ghoul: [
+            { id: 'ghoul_hit', name: 'Укус', icon: '🧟', power: 1, flat: 15, type: 'damage' },
+          ],
+          water_ele: [
+            { id: 'water_bolt', name: 'Водяная стрела', icon: '💧', power: 1, flat: 40, type: 'damage' },
+          ],
+          infernal: [
+            { id: 'infernal_stomp', name: 'Топот', icon: '😈', power: 1, flat: 20, type: 'aoe' },
           ],
           imp_boss: [
             { id: 'pet_aoe', name: 'Огонь бесов', icon: '🔥', power: 1, flat: 7.5, type: 'aoe' },
@@ -1538,7 +1764,11 @@
       if (pet._pairStamp === stamp) return;
       pet._pairStamp = stamp;
     }
-    const gain = 3 + Math.floor(Math.random() * 5); // 3..7
+    let gain = 3 + Math.floor(Math.random() * 5); // 3..7 у сапёра / изобретателя
+    if (owner.specId === 'mechanist' && pet.petKey === 'combat_bot') {
+      const over = (owner.buffs || []).some(b => b && b.id === 'bot_overdrive' && (b.turns == null || Number(b.turns) > 0));
+      gain = over ? 20 : 5;
+    }
     owner.res.primary.current = clamp(owner.res.primary.current + gain, 0, owner.res.primary.max);
     floatText(owner.uid, '+' + gain + ' пар', 'buff');
   }
@@ -1629,7 +1859,9 @@
     document.getElementById('rest-modal').classList.add('hidden');
     const box = document.getElementById('end-box');
     box.className = 'modal end-modal ' + (win ? 'win' : 'lose');
-    document.getElementById('end-title').textContent = win ? `Ключ закрыт · ${score}!` : 'Ключ провален';
+    document.getElementById('end-title').textContent = win
+      ? (run.raid ? `Рейд закрыт · ${score}!` : `Ключ закрыт · ${score}!`)
+      : (run.raid ? 'Рейд провален' : 'Ключ провален');
     const lootStr = (run.loot || []).map(l => l.icon + ' ' + l.name).join(', ') || 'нет';
     document.getElementById('end-msg').textContent = msg + `\nДобыча: ${lootStr}`;
     document.getElementById('end-modal').classList.remove('hidden');
@@ -1653,6 +1885,8 @@
     document.getElementById('lobby').classList.remove('hidden');
     document.getElementById('vignette')?.classList.remove('on');
     applyDungeonTheme(null);
+    document.body.classList.remove('raid-run');
+    try { if (typeof syncRaidLobbyUi === 'function') syncRaidLobbyUi(); } catch (_) {}
     const cont = document.getElementById('btn-continue');
     if (cont) cont.classList.toggle('hidden', !hasSave());
     renderHistory();

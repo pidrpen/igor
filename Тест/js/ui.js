@@ -319,8 +319,13 @@
       return;
     }
     const cls = WOW_MOP.getClass(pickClass);
+    if (!cls) {
+      box.innerHTML = 'Класс не найден.';
+      addBtn.disabled = true;
+      return;
+    }
     if (!pickSpec) {
-      const { primary, secondary } = WOW_MOP.resolveResources(cls, cls.specs[0]);
+      const { primary, secondary } = WOW_MOP.resolveResources(cls, (cls.specs || [])[0]);
       const roles = classRoleList(cls);
       const roleStr = roles.map(r => `<span class="${ROLE_CLASS[r]}">${ROLE_LABEL[r]}</span>`).join(' · ');
       const specsLine = cls.specs.map(s => {
@@ -337,6 +342,11 @@
       return;
     }
     const spec = WOW_MOP.getSpec(pickClass, pickSpec);
+    if (!spec) {
+      box.innerHTML = 'Спек не найден: ' + pickClass + ' / ' + pickSpec;
+      addBtn.disabled = true;
+      return;
+    }
     const { primary, secondary } = WOW_MOP.resolveResources(cls, spec);
     let html = `<div style="margin-bottom:.45rem;color:var(--text)">
       <b>${cls.icon} ${cls.name} — ${spec.icon} ${spec.name}</b>
@@ -552,6 +562,13 @@
         p.gear = normalizeGear(p.gear);
         const cls = WOW_MOP.getClass(p.classId);
         const spec = WOW_MOP.getSpec(p.classId, p.specId);
+        if (!cls || !spec) {
+          div.className = 'slot empty-slot' + (raidLobby ? ' raid-member' : '');
+          div.innerHTML = '<div class="slot-empty">нет данных · ' +
+            String(p.classId || '?') + '/' + String(p.specId || '?') + '</div>';
+          slots.appendChild(div);
+          continue;
+        }
         const { primary, secondary } = WOW_MOP.resolveResources(cls, spec);
         // ДК Нечестивость — зелёный контур; иначе цвет класса
         const cc = (typeof classAccentColor === 'function')
@@ -665,7 +682,7 @@
         openGearModalForLobby(+btn.getAttribute('data-gear-idx'));
       });
     });
-    const roles = party.map(p => WOW_MOP.getSpec(p.classId, p.specId).role);
+    const roles = party.map(p => (WOW_MOP.getSpec(p.classId, p.specId) || {}).role);
     const tanks = roles.filter(r => r === 'tank').length;
     const heals = roles.filter(r => r === 'healer').length;
     const dps = roles.filter(r => r === 'dps').length;
@@ -724,6 +741,9 @@
   function createHero(classId, specId, keyLevel, secStats, gearState) {
     const cls = WOW_MOP.getClass(classId);
     const spec = WOW_MOP.getSpec(classId, specId);
+    if (!cls || !spec) {
+      throw new Error('Нет класса/спека: ' + String(classId) + '/' + String(specId));
+    }
     // Heroes scale slowly; enemies scale faster → keys get harder
     const scale = 1 + (keyLevel - 2) * 0.015;
     const res = makeResourceState(cls, spec);
@@ -784,8 +804,9 @@
           stampAbilitySchool(ab, classId, specId);
           return ab;
         });
-        const kickClasses = new Set(['rogue', 'warrior', 'mage', 'shaman', 'deathknight', 'monk', 'paladin']);
-        if (kickClasses.has(classId) && !list.some(a => INTERRUPT_IDS.has(a.id) || a.type === 'interrupt')) {
+        const kickClasses = new Set(['warrior', 'mage', 'shaman', 'monk', 'paladin']);
+        if (kickClasses.has(classId) && specId !== 'mistweaver'
+            && !list.some(a => INTERRUPT_IDS.has(a.id) || a.type === 'interrupt')) {
           list.push({
             id: 'kick', name: 'Прерывание', nameEn: 'Прерывание', icon: '🦵',
             cost: 0, gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0,
@@ -838,6 +859,7 @@
   function startRun() {
     try {
       savePartyProfile();
+      party = (party || []).filter(p => p && WOW_MOP.getSpec(p.classId, p.specId));
       const raid = isRaidLobby();
       const dungeon = raid
         ? RAID_DUNGEON
@@ -1511,6 +1533,17 @@
         // после шмота сохранить % HP
         u.hp = clamp(Math.round(u.maxHp * ratio), 0, u.maxHp);
       }
+      // Лут ключа (+атака / защита / HP) — на живую базу, от неё считается flat.
+      for (const item of (run.loot || [])) {
+        if (!item) continue;
+        if (item.atkMult) u.atk = Math.round(u.atk * (1 + Number(item.atkMult)));
+        if (item.defFlat) u.def = Math.round(u.def * (1 + Number(item.defFlat)));
+        if (item.hpFlat) {
+          const r2 = u.hp / Math.max(1, u.maxHp);
+          u.maxHp = Math.round(u.maxHp * (1 + Number(item.hpFlat)));
+          u.hp = clamp(Math.round(u.maxHp * r2), 0, u.maxHp);
+        }
+      }
     }
   }
 
@@ -1594,8 +1627,13 @@
     }
     const maxHp = Math.round(def.hp * sc * STAT_SCALE * PET_HP_MULT);
     // Temporary summons hit harder (short window)
-    const tempBoost = turnsLeft != null ? 1.18 : 1;
-    const finalAtk = Math.round(atk * tempBoost);
+    const tempBoost = (turnsLeft != null && defKey !== 'hellfiend' && defKey !== 'frost_ghoul' && defKey !== 'water_ele' && defKey !== 'infernal') ? 1.18 : 1;
+    let finalAtk = Math.round(atk * tempBoost);
+    // Исчадие ада / боевой бот: удар от веса «т», не от доли хозяина
+    if (defKey === 'hellfiend' || defKey === 'frost_ghoul' || defKey === 'water_ele' || defKey === 'infernal' || defKey === 'combat_bot') {
+      const ref = (typeof FLAT_REF === 'number' ? FLAT_REF : 15);
+      finalAtk = ref * STAT_SCALE;
+    }
     // Slightly faster pets so they act more often
     const speed = Math.max(8, def.speed + (turnsLeft != null ? 1 : 0));
     const isMain = turnsLeft == null && owner && mainPetKeyFor(owner.classId, owner.specId) === defKey;
@@ -1621,8 +1659,7 @@
       abilities: (function () {
         const kits = {
           combat_bot: [
-            { id: 'pet_claw', name: 'Гидравлика', icon: '⚙️', power: 1.0 },
-            { id: 'pet_rend', name: 'Циркулярка', icon: '🪚', power: 1.32, cd: 2 },
+            { id: 'bot_hit', name: 'Гидравлика', icon: '⚙️', power: 1, flat: 25, type: 'damage' },
           ],
           pocket_bot: [
             { id: 'pet_claw', name: 'Искровой укол', icon: '⚡', power: 1.0 },
@@ -1652,6 +1689,18 @@
           ],
           scrap_bot: [
             { id: 'pet_claw', name: 'Цап', icon: '⚙️', power: 1, flat: 14, type: 'damage' },
+          ],
+          hellfiend: [
+            { id: 'hell_hit', name: 'Удар Скверны', icon: '👿', power: 1, flat: 34, type: 'damage' },
+          ],
+          frost_ghoul: [
+            { id: 'ghoul_hit', name: 'Укус', icon: '🧟', power: 1, flat: 15, type: 'damage' },
+          ],
+          water_ele: [
+            { id: 'water_bolt', name: 'Водяная стрела', icon: '💧', power: 1, flat: 40, type: 'damage' },
+          ],
+          infernal: [
+            { id: 'infernal_stomp', name: 'Топот', icon: '😈', power: 1, flat: 20, type: 'aoe' },
           ],
           imp_boss: [
             { id: 'pet_aoe', name: 'Огонь бесов', icon: '🔥', power: 1, flat: 7.5, type: 'aoe' },
@@ -1715,7 +1764,11 @@
       if (pet._pairStamp === stamp) return;
       pet._pairStamp = stamp;
     }
-    const gain = 3 + Math.floor(Math.random() * 5); // 3..7
+    let gain = 3 + Math.floor(Math.random() * 5); // 3..7 у сапёра / изобретателя
+    if (owner.specId === 'mechanist' && pet.petKey === 'combat_bot') {
+      const over = (owner.buffs || []).some(b => b && b.id === 'bot_overdrive' && (b.turns == null || Number(b.turns) > 0));
+      gain = over ? 20 : 5;
+    }
     owner.res.primary.current = clamp(owner.res.primary.current + gain, 0, owner.res.primary.max);
     floatText(owner.uid, '+' + gain + ' пар', 'buff');
   }

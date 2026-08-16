@@ -53,6 +53,7 @@
     if (o.enemyDmgMod != null) ab.enemyDmgMod = o.enemyDmgMod;
     if (o.grantBlock) ab.grantBlock = true;
     if (o.holyShock) ab.holyShock = o.holyShock;
+    if (o.oncePerTurn || o.opt) ab.oncePerTurn = true;
     if (o.interruptPrimary != null) ab.interruptPrimary = o.interruptPrimary;
     if (o.interruptAoeChance != null) ab.interruptAoeChance = o.interruptAoeChance;
     if (o.judgmentConsecrateSplash != null) ab.judgmentConsecrateSplash = o.judgmentConsecrateSplash;
@@ -135,8 +136,8 @@
             applyDot: { flat: 3, turns: 4, name: 'Освящение', school: 'holy' },
             d: '', sid: 26573 }),
           A({ id: 'hot_w', n: 'Молот гнева', en: 'Hammer of Wrath', i: '⚡',
-            c: 6, gs: 1, t: 'damage', p: 1.4, school: 'holy', fa: 1,
-            d: 'Только при ≤35% HP цели · не тратит ход · +1 ES', sid: 24275 }),
+            c: 6, gs: 1, t: 'damage', p: 1.4, school: 'holy', fa: 1, oncePerTurn: 1,
+            d: 'Только при ≤35% HP цели · без хода · один раз за ход · +1 ES', sid: 24275 }),
           A({ id: 'ardent', n: 'Ревностный защитник', en: 'Ardent Defender', i: '❤️',
             cd: 6, t: 'buff', fa: 1, dr: 0.6, bt: 3, d: '', sid: 31850 }),
           A({ id: 'taunt', n: 'Длань расплаты', en: 'Hand of Reckoning', i: '📢',
@@ -155,14 +156,14 @@
           A({ id: 'crusader', n: 'Удар воина Света', en: 'Crusader Strike', i: '⚔️',
             c: 5, gs: 1, t: 'damage', p: 1.1, school: 'holy', d: '', sid: 35395 }),
           A({ id: 'judgment', n: 'Правосудие', en: 'Judgment', i: '⚖️',
-            c: 6, gs: 1, cd: 1, t: 'damage', fl: 23, school: 'holy', d: '', sid: 20271 }),
+            c: 6, gs: 1, cd: 2, t: 'damage', fl: 23, school: 'holy', d: '', sid: 20271 }),
           A({ id: 'templar', n: 'Вердикт храмовника', en: "Templar's Verdict", i: '⚖️',
             cs: 3, t: 'damage', fl: 38, school: 'holy', d: '', sid: 85256 }),
           A({ id: 'divine_storm', n: 'Божественная буря', en: 'Divine Storm', i: '🌪️',
-            cs: 4, t: 'aoe', fl: 40, school: 'holy', d: '', sid: 53385 }),
+            cs: 3, t: 'aoe', fl: 32, school: 'holy', d: '', sid: 53385 }),
           A({ id: 'hot_w', n: 'Молот гнева', en: 'Hammer of Wrath', i: '⚡',
-            c: 6, gs: 1, t: 'damage', p: 1.45, school: 'holy', fa: 1,
-            d: 'Только при ≤35% HP цели · не тратит ход · +1 ES', sid: 24275 }),
+            c: 6, gs: 1, t: 'damage', p: 1.45, school: 'holy', fa: 1, oncePerTurn: 1,
+            d: 'Только при ≤35% HP цели · без хода · один раз за ход · +1 ES', sid: 24275 }),
           A({ id: 'inquisition', n: 'Инквизиция', en: 'Inquisition', i: '📜',
             cd: 4, t: 'buff', fa: 1, atkMod: 0.15, bt: 2, d: '', sid: 84963 }),
           A({ id: 'avenging', n: 'Гнев карателя', en: 'Avenging Wrath', i: '😇',

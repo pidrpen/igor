@@ -7,23 +7,26 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
-  <script src="wow-mop-data.js?v=5.4.8.34"></script>
-  <script src="class-balance/warrior-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/paladin-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/hunter-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/rogue-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/priest-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/deathknight-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/shaman-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/mage-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/warlock-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/monk-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/druid-abilities.js?v=5.4.8.34"></script>
-  <script src="class-balance/apply-all.js?v=5.4.8.34"></script>
-  <link rel="stylesheet" href="css/main.css?v=5.4.8.34" />
+  <script src="wow-mop-data.js?v=5.4.9"></script>
+  <script src="class-balance/warrior-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/paladin-abilities.js?v=5.4.9"></script>
+  <script src="class-balance/hunter-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/rogue-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/priest-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/deathknight-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/shaman-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/mage-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/warlock-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/monk-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/druid-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/engineer-abilities.js?v=5.4.8.40-pour"></script>
+  <script src="class-balance/apply-all.js?v=5.4.8.40-pour"></script>
+  <link rel="stylesheet" href="css/main.css?v=5.4.9" />
   <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34-tl" />
+  <link rel="stylesheet" href="css/raid.css?v=5.4.9" />
 </head>
 <body>
+  <button class="btn btn-sm" type="button" id="btn-lobby-chrome" title="Скрыть карточки и посмотреть фон">Скрыть интерфейс</button>
   <div id="lobby" class="screen screen-center">
     <div class="lobby-hero">
       <h1>Мифик-ключ</h1>
@@ -60,9 +63,15 @@
         </div>
       </div>
       <div class="card lobby-party-col">
+        <div class="mode-toggle" role="tablist" aria-label="Режим">
+          <button class="btn on" type="button" id="btn-mode-key">Ключ 5</button>
+          <button class="btn" type="button" id="btn-mode-raid">Рейд 10</button>
+        </div>
         <div class="section-title">Отряд (5 слотов) — клик по слоту, чтобы заменить</div>
         <div class="party-slots" id="party-slots"></div>
         <p class="party-req bad" id="party-req">Нужны: 1 танк · 1 целитель · 3 бойца</p>
+        <button class="btn btn-ok hidden" type="button" id="btn-fill-raid" style="width:100%;margin:.35rem 0 .55rem">Собрать рейд 10 (пресет)</button>
+        <p class="keys-hint hidden" id="raid-hint">Сложный рейдовый босс на 10 человек: <b>Лэй Шэнь, Повелитель Грома</b>. Смена танков, проводники, соки молний, кики. Союзники ходят сами — клик по герою, чтобы взять управление.</p>
         <div class="key-row">
           <div class="field"><label>Подземелье</label><select id="dungeon-select"></select></div>
           <div class="field"><label>Уровень ключа</label><select id="key-level"></select></div>
@@ -100,6 +109,7 @@
       <div class="spacer"></div>
       <button class="btn btn-sm" id="btn-pause" type="button">Пауза</button>
       <button class="btn btn-sm" id="btn-speed" type="button">Скорость</button>
+      <button class="btn btn-sm on hidden" id="btn-raid-auto" type="button">Авто-рейд: вкл</button>
       <button class="btn btn-sm btn-danger" id="btn-abandon">Сдаться</button>
     </div>
     <div class="timer-bar"><i id="timer-fill"></i></div>
@@ -121,6 +131,19 @@
         </div>
         <div class="phase-banner" id="phase-banner">Бой</div>
         <div class="phase-sub" id="phase-sub"></div>
+        <div id="raid-phase-hud" class="raid-phase-hud hidden">
+          <div class="raid-phase-name" id="raid-phase-name">Рейд</div>
+          <div class="raid-alerts" id="raid-alerts"></div>
+        </div>
+        <div id="raid-cast-dock" class="raid-cast-dock hidden">
+          <img id="raid-cast-portrait" alt="" />
+          <div class="raid-cast-meta">
+            <div id="raid-cast-title">Лэй Шэнь</div>
+            <div id="raid-cast-spell">Небесный гнев</div>
+            <div class="raid-cast-bar"><i id="raid-cast-fill"></i></div>
+          </div>
+        </div>
+        <div id="raid-fx-layer" class="raid-fx-layer hidden"></div>
         <div>
           <div class="section-title" style="text-align:center">Враги</div>
           <div class="unit-row" id="enemy-row"></div>
@@ -249,26 +272,27 @@
   <div id="float-layer" aria-hidden="true"></div>
   <div id="vignette"></div>
   <div class="skill-fx-layer" id="skill-fx-layer"></div>
-  <script src="js/state.js?v=5.4.8.34"></script>
-  <script src="js/core.js?v=5.4.8.34"></script>
-  <script src="js/ui/balance-panel.js?v=5.4.8.34"></script>
+  <script src="js/state.js?v=5.4.8.40-pour"></script>
+  <script src="js/core.js?v=5.4.9"></script>
+  <script src="js/ui/balance-panel.js?v=5.4.9"></script>
   <script src="js/ui/fx.js?v=5.4.8.34"></script>
-  <script src="js/enemies.js?v=5.4.8.34"></script>
-  <script src="js/route.js?v=5.4.8.34"></script>
-  <script src="js/gear.js?v=5.4.8.34"></script>
-  <script src="js/systems/telegraph-loot.js?v=5.4.8.34"></script>
-  <script src="js/systems/stats.js?v=5.4.8.34-secgear"></script>
-  <script src="js/systems/passives.js?v=5.4.8.34"></script>
+  <script src="js/enemies.js?v=5.4.8.40-pour"></script>
+  <script src="js/route.js?v=5.4.8.42-key"></script>
+  <script src="js/raid.js?v=5.4.9"></script>
+  <script src="js/gear.js?v=5.4.8.40-pour"></script>
+  <script src="js/systems/telegraph-loot.js?v=5.4.8.40-pour"></script>
+  <script src="js/systems/stats.js?v=5.4.8.40-pour"></script>
+  <script src="js/systems/passives.js?v=5.4.8.40-pour"></script>
   <script src="js/systems/meter.js?v=5.4.8.34"></script>
-  <script src="js/systems/ability-data.js?v=5.4.8.34"></script>
-  <script src="js/systems/resources.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-loop.js?v=5.4.8.34"></script>
-  <script src="js/ui/combat-ui.js?v=5.4.8.34"></script>
-  <script src="js/systems/abilities.js?v=5.4.8.34"></script>
-  <script src="js/systems/damage.js?v=5.4.8.34"></script>
-  <script src="js/systems/ai.js?v=5.4.8.34"></script>
-  <script src="js/systems/combat-flow.js?v=5.4.8.34"></script>
-  <script src="js/save.js?v=5.4.8.34"></script>
-  <script src="js/ui.js?v=5.4.8.34-secgear"></script>
+  <script src="js/systems/ability-data.js?v=5.4.8.40-pour"></script>
+  <script src="js/systems/resources.js?v=5.4.8.40-pour"></script>
+  <script src="js/systems/combat-loop.js?v=5.4.8.40-pour"></script>
+  <script src="js/ui/combat-ui.js?v=5.4.8.43-ui"></script>
+  <script src="js/systems/abilities.js?v=5.4.8.40-pour"></script>
+  <script src="js/systems/damage.js?v=5.4.8.40-pour"></script>
+  <script src="js/systems/ai.js?v=5.4.8.40-pour"></script>
+  <script src="js/systems/combat-flow.js?v=5.4.8.42-key"></script>
+  <script src="js/save.js?v=5.4.8.39-boot"></script>
+  <script src="js/ui.js?v=5.4.8.40-pour"></script>
 </body>
 </html>

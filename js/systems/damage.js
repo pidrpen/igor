@@ -27,10 +27,17 @@
     );
   }
 
+  function maybeSpiritLinkEqualize(reason) {
+    if (!partyHasSpiritLink()) return;
+    if (typeof combat === 'undefined' || !combat) return;
+    combat._spiritLinkHits = (combat._spiritLinkHits || 0) + 1;
+    if (combat._spiritLinkHits % 2 !== 0) return;
+    equalizePartyHpByPct(reason);
+  }
+
   /**
    * Spirit Link: выровнять % HP всего отряда.
-   * Вызывается при касте тотема и после КАЖДОГО удара (dealDmg/dealTrue),
-   * который нанёс урон союзнику — 5 ударов = до 5 выравниваний.
+   * После каста тотема и каждые 2 удара по отряду (не каждый удар).
    */
   function equalizePartyHpByPct(reason) {
     if (!run?.party) return;
@@ -54,6 +61,27 @@
       log(`Духовная связь: HP выровнены по %${reason ? ' ← удар ' + reason : ''}`, 'heal');
       for (const p of allies) floatText(p.uid, 'связь', 'heal');
     }
+  }
+
+  /** Механист: боевой бот принимает 50% урона по хозяину (без 90% резиста пета). */
+  function shareMechanistOwnerHit(target, dmg, attacker) {
+    if (!(dmg > 0) || !target || target.isPet) return dmg;
+    if (target.classId !== 'engineer' || target.specId !== 'mechanist') return dmg;
+    if (typeof getMainPet !== 'function') return dmg;
+    const pet = getMainPet(target, false);
+    if (!pet || !pet.alive || !(pet.hp > 0)) return dmg;
+    const share = Math.max(1, Math.round(dmg * 0.5));
+    const keep = Math.max(0, dmg - share);
+    pet.hp -= share;
+    try { floatText(pet.uid, '−' + fmt(share), 'dmg'); } catch (_) {}
+    try { pulseUnit(pet.uid, 'hit'); } catch (_) {}
+    log(`${pet.name}: принял ${fmt(share)} вместо ${target.name}`, 'system');
+    try { meterOnDamage(attacker || null, pet, share, { abilityName: 'Делит удар' }); } catch (_) {}
+    if (pet.hp <= 0) {
+      pet.hp = 0;
+      if (typeof killUnit === 'function') killUnit(pet, attacker || null);
+    }
+    return keep;
   }
 
   function dealDmg(target, raw, attacker, ctx) {
@@ -90,9 +118,13 @@
     }
     if (!school && attacker) school = abilityDamageSchool(attacker, null);
     if (!school) school = 'physical';
-    // Броня: физ. режется сильно, магия — слабо (тип урона влияет на геймплей)
-    const armorFactor = isPhysicalSchool(school) ? 0.5 : 0.12;
-    let dmg = Math.max(1, raw - Math.floor(getEff(target).def * armorFactor));
+    // Броня: процент входящего, в ноль не уходит. Физ. сильнее магии.
+    const defNow = getEff(target, attacker).def;
+    const kArmor = isPhysicalSchool(school)
+      ? (typeof STAT_SCALE === 'number' ? STAT_SCALE * 20 : 20000)
+      : (typeof STAT_SCALE === 'number' ? STAT_SCALE * 85 : 85000);
+    const armorCut = Math.min(0.75, defNow / (defNow + kArmor));
+    let dmg = Math.max(1, Math.round(raw * (1 - armorCut)));
     if (isPhysicalSchool(school)) {
       let armorPct = 0;
       try { armorPct += passiveArmorMod(target); } catch (_) {}
@@ -110,6 +142,7 @@
       }
       if (dr > 0) dmg = Math.max(1, Math.round(dmg * (1 - Math.min(0.9, dr))));
     }
+    try { onStHitBossMech(target, attacker, ctx); } catch (_) {}
     // Блок: база 0%. Пассивка «Щит с озона» даёт +15%. Иск. Защиты воина — сверху.
     // Сила блока −35% фиксирована (баффы могут добавить blockValueAdd).
     if (
@@ -156,12 +189,13 @@
         }
       }
     }
-    // Уязвимость (Удар колосса): +% входящего; physOnly → только физ. школы
+    // Уязвимость (Удар колосса / Вендетта): +% входящего только от наложившего
     if (target.buffs && target.buffs.length) {
       let vuln = 0;
       for (const b of target.buffs) {
         if (!b || !b.dmgTakenMod) continue;
         if (b.physOnly && !isPhysicalSchool(school)) continue;
+        if (b.fromUid && typeof statusAffectsViewer === 'function' && !statusAffectsViewer(b, attacker)) continue;
         vuln += Number(b.dmgTakenMod) || 0;
       }
       if (vuln) dmg = Math.max(1, Math.round(dmg * (1 + vuln)));
@@ -187,14 +221,18 @@
       dmg = Math.round(dmg * versInDmgMult(target) * masteryTankInMult(target));
     }
     let crit = false;
-    // Pets inherit owner sec → critChance/critMult work; enemies keep flat values
-    let cChance = attacker && attacker.side === 'ally' ? critChance(attacker) : 0.12;
-    if (attacker && ctx && ctx.abilityId) {
-      const abC = (attacker.abilities || []).find(a => a.id === ctx.abilityId);
-      if (abC && abC.critBonus) cChance = Math.min(0.9, cChance + Number(abC.critBonus));
+    if (!(ctx && ctx.skipCrit)) {
+      // Pets inherit owner sec → critChance/critMult work; enemies keep flat values
+      let cChance = attacker && attacker.side === 'ally' ? critChance(attacker) : 0.12;
+      if (attacker && ctx && ctx.abilityId) {
+        const abC = (attacker.abilities || []).find(a => a.id === ctx.abilityId);
+        if (abC && abC.critBonus) cChance = Math.min(0.9, cChance + Number(abC.critBonus));
+      }
+      const cMul = attacker && attacker.side === 'ally' ? critMult(attacker) : 1.5;
+      if (ctx && ctx.forceCrit) { dmg = Math.round(dmg * cMul); crit = true; }
+      else if (Math.random() < cChance) { dmg = Math.round(dmg * cMul); crit = true; }
     }
-    const cMul = attacker && attacker.side === 'ally' ? critMult(attacker) : 1.5;
-    if (Math.random() < cChance) { dmg = Math.round(dmg * cMul); crit = true; }
+    if (attacker) attacker._justCrit = !!crit;
     if (target.shield > 0) {
       const a = Math.min(target.shield, dmg);
       target.shield -= a; dmg -= a;
@@ -213,6 +251,7 @@
         dmg -= toStagger;
       }
     }
+    if (dmg > 0) dmg = shareMechanistOwnerHit(target, dmg, attacker);
     if (dmg <= 0) {
       if (target._pendingLuckyStack) target._pendingLuckyStack = false;
       if (target.stagger > 0) floatText(target.uid, 'шат ' + fmt(target.stagger), 'dmg');
@@ -248,9 +287,8 @@
     }
     if (target.hp <= 0) { target.hp = 0; killUnit(target, attacker); }
     else if (target.isBoss) checkBossPhase(target);
-    // Spirit Link: каждый удар, что нанёс урон союзнику (5 ударов → до 5 выравниваний)
     if (dmg > 0 && target.side === 'ally' && !target.isPet && partyHasSpiritLink()) {
-      try { equalizePartyHpByPct(target.name); } catch (e) { console.error('[spirit_link]', e); }
+      try { maybeSpiritLinkEqualize(target.name); } catch (e) { console.error('[spirit_link]', e); }
     }
     // Threat: tanks generate heavy agro so mobs stay on them
     if (attacker && attacker.side === 'ally' && target.side === 'enemy') {
@@ -263,17 +301,23 @@
     updateBossFrame();
     updateVignette();
     meterOnDamage(attacker, target, dmg, ctx || null);
+    if (dmg > 0 && attacker && target && target.side === 'enemy') {
+      try { maybeFeedAtonement(attacker, dmg, ctx || null); } catch (_) {}
+      try { maybeHavocCleave(attacker, target, dmg, ctx || null); } catch (_) {}
+      try { maybeMistweaverEcho(attacker, dmg); } catch (_) {}
+    }
     return dmg;
   }
   function dealTrue(t, d, source, floatKind, ctx) {
     if (!t?.alive) return 0;
-    // DoT-тики тоже учитывают слом брони (физ. кровотечения под Колоссом)
+    // DoT-тики тоже учитывают слом брони, но только уязв. наложившего этот тик
     const school = (ctx && ctx.school) || 'physical';
     if (t.buffs && t.buffs.length) {
       let vuln = 0;
       for (const b of t.buffs) {
         if (!b || !b.dmgTakenMod) continue;
         if (b.physOnly && !isPhysicalSchool(school)) continue;
+        if (b.fromUid && typeof statusAffectsViewer === 'function' && !statusAffectsViewer(b, source)) continue;
         vuln += Number(b.dmgTakenMod) || 0;
       }
       if (vuln) d = Math.max(1, Math.round(d * (1 + vuln)));
@@ -281,6 +325,7 @@
     // True damage still respects vers/tank mastery for allies
     if (t.side === 'ally') d = Math.round(d * versInDmgMult(t) * masteryTankInMult(t));
     if (t.isPet) d = Math.max(1, Math.round(d * 0.1));
+    if (d > 0) d = shareMechanistOwnerHit(t, d, source);
     if (!(d > 0)) return 0;
     t.hp -= d;
     floatText(t.uid, '−' + fmt(d), floatKind || 'dmg');
@@ -288,9 +333,14 @@
     if (t.hp <= 0) { t.hp = 0; killUnit(t, source || null); }
     updateVignette();
     meterOnDamage(source || null, t, d, ctx || null);
-    // Spirit Link: DoT/true — тоже выравнивать после каждой просадки
+    if (d > 0 && source && t.side === 'enemy') {
+      try { maybeFeedAtonement(source, d, ctx || { abilityName: ctx && ctx.abilityName, isDot: true }); } catch (_) {}
+    }
+    if (d > 0) {
+      try { noteTakenDamage(t, d); } catch (_) {}
+    }
     if (d > 0 && t.side === 'ally' && !t.isPet && partyHasSpiritLink()) {
-      try { equalizePartyHpByPct(t.name); } catch (e) { console.error('[spirit_link]', e); }
+      try { maybeSpiritLinkEqualize(t.name); } catch (e) { console.error('[spirit_link]', e); }
     }
     return d;
   }
@@ -299,6 +349,11 @@
     // opts.exact — flat «т» из таблицы без mastery/vers/loot поверх
     // opts.noEcho — не вешать «Выбор света» (тики HoT)
     // opts.abilityId / abilityName / sourceName / isHot / lifesteal — для Recount
+    let takenMod = 0;
+    for (const b of (t.buffs || [])) {
+      if (b && b.healTakenMod) takenMod += Number(b.healTakenMod) || 0;
+    }
+    if (takenMod) amount = Math.round(amount * (1 + takenMod));
     if (healer && healer.side === 'ally' && !(opts && opts.exact)) {
       amount = Math.round(amount * versHealMult(healer) * masteryHealMult(healer, t) * (run?.healLootMult || 1));
       if (combat) {
@@ -339,8 +394,6 @@
         if (pct > 0) {
           const echoTotal = Math.max(1, Math.round(healed * pct));
           const tick = Math.max(1, Math.round(echoTotal / 2));
-          // refresh / replace existing light_choice on this target
-          t.buffs = (t.buffs || []).filter(x => !x || x.id !== 'light_choice');
           applyStatus(t, {
             id: 'light_choice',
             name: 'Выбор света',

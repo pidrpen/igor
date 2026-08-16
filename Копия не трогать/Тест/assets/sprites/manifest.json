@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "style": "v02-16bit-snes",
+  "source": "предложения ИИ/02_pixel_16bit_snes.jpg",
+  "note": "Пиксель 72×72 → ×5 nearest. Idle 8 / attack 6. Сборка: tools/build_v02_anims.py",
+  "defaultEnemy": "evil_spirit",
+  "characters": {
+    "evil_spirit": {
+      "label": "Злой дух",
+      "role": "enemy",
+      "folder": "characters/evil_spirit",
+      "anims": {
+        "idle": { "prefix": "idle_", "count": 8, "fps": 7, "loop": true },
+        "attack": { "prefix": "attack_", "count": 6, "fps": 11, "loop": false }
+      }
+    },
+    "paladin_protection": {
+      "label": "Паладин — Защита / Свет (shared)",
+      "classId": "paladin",
+      "specId": "protection",
+      "folder": "characters/paladin_protection",
+      "anims": {
+        "idle": { "prefix": "idle_", "count": 8, "fps": 6, "loop": true },
+        "attack": { "prefix": "attack_", "count": 6, "fps": 11, "loop": false }
+      }
+    },
+    "paladin_retribution": {
+      "label": "Паладин — Воздаяние",
+      "classId": "paladin",
+      "specId": "retribution",
+      "folder": "characters/paladin_retribution",
+      "anims": {
+        "idle": { "prefix": "idle_", "count": 8, "fps": 6, "loop": true },
+        "attack": { "prefix": "attack_", "count": 6, "fps": 11, "loop": false }
+      }
+    }
+  }
+}

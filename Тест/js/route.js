@@ -117,9 +117,9 @@
       { classId: 'warrior', specId: 'arms' },
     ],
   };
-  const EXECUTE_IDS = new Set(['execute', 'kill_shot', 'soul_reaper', 'shadowburn', 'hot_w', 'dispatch', 'swd', 'touch_death']);
+  const EXECUTE_IDS = new Set(['execute', 'kill_shot', 'soul_reaper', 'shadowburn', 'hot_w', 'swd']);
   // Finisher scale only meaningful for combo-point spenders (see castAbility). Shard/HP/chi use flat power.
-  const FINISHER_IDS = new Set(['envenom', 'eviscerate', 'rupture', 'slice', 'templar', 'divine_storm', 'word_glory', 'light_dawn', 'sot_r', 'blackout', 'bok', 'rsk', 'fists', 'enveloping', 'uft', 'touch_death', 'ferocious', 'rip', 'savage_roar']);
+  const FINISHER_IDS = new Set(['dispatch', 'eviscerate', 'rupture', 'templar', 'divine_storm', 'word_glory', 'light_dawn', 'sot_r', 'blackout', 'bok', 'rsk', 'fists', 'enveloping', 'uft', 'touch_death', 'ferocious', 'rip']);
 
   /**
    * Targeting rules (design-notes/03):
@@ -134,13 +134,15 @@
     // paladin
     'sot_r', 'ardent', 'divine_prot',
     // DK blood
-    'bone_shield', 'icebound', 'vampiric_blood', 'rune_tap',
+    'icebound', 'vampiric_blood', 'rune_tap',
     // brewmaster
     'guard', 'elusive', 'fort_brew', 'purifying',
     // guardian
     'savage_def', 'barkskin', 'survival', 'frenzied',
     // other self
     'dispersion', 'ember_tap',
+    // engineer mechanist
+    'plasma_cutter', 'bot_overdrive', 'call_siege_walker', 'emergency_repair',
   ]);
   /** Healer external shields/saves — can target allies */
   const TARGET_ALLY_ANY = new Set([
@@ -154,6 +156,8 @@
     if (TARGET_ALLY_ANY.has(ab.id)) return 'ally_any';
     // Holy Shock etc.: click ally OR enemy
     if (ab.holyShock) return 'ally_or_enemy';
+    if (ab.id === 'penance') return 'ally_or_enemy';
+    if (ab.id === 'heaven_shield' || ab.partyShield) return 'party';
     if (ab.type === 'dispel') return 'ally_any';
     if (ab.type === 'purge' || ab.type === 'cc') return 'enemy';
     if (ab.type === 'heal') return 'ally_any';
@@ -204,5 +208,5 @@
     { id: 'power_kick', name: 'Печать прерывания', icon: '⚡', desc: 'Прерывания: −1 КД (мин. 1)', kickCdBonus: 1, playStyle: true },
     { id: 'power_skip', name: 'Карта обхода', icon: '🗺️', desc: '1×: пропустить trash-пулл (силы 0)', keyPower: 'skip_trash', playStyle: true },
     { id: 'power_shield', name: 'Оберег группы', icon: '🛡️', desc: 'Актив 1×/бой: щит 18% здоровья отряду', keyPower: 'party_shield', playStyle: true },
-    { id: 'power_focus', name: 'Метка охотника', icon: '🏹', desc: 'Актив: +40% урона по цели 2 хода', keyPower: 'hunter_mark', playStyle: true },
+    { id: 'power_focus', name: 'Метка охотника', icon: '🏹', desc: 'Актив: −25% защиты цели на 2 хода', keyPower: 'hunter_mark', playStyle: true },
   ];

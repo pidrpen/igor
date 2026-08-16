@@ -16,6 +16,8 @@
     rogue: 'var(--rogue)', priest: 'var(--priest)', deathknight: 'var(--dk)',
     shaman: 'var(--shaman)', mage: 'var(--mage)', warlock: 'var(--warlock)',
     monk: 'var(--monk)', druid: 'var(--druid)', engineer: 'var(--engineer)',
+    demonhunter: 'var(--dh)',
+    cheat: '#ff4dd2',
   };
   /** Спек-оверрайд цвета контура (отряд / портрет). Unholy DK — зелёный. */
   const SPEC_ACCENT_CSS = {
@@ -32,44 +34,30 @@
     return CLASS_CSS[classId] || 'var(--gold)';
   }
 
-  /** Specs with applied balance patches (Правки_спеков) — основная ветка. */
+  /** Открытые спеки лобби. Бейдж «Тест» снят — киты залиты. */
   const PATCHED_SPECS = new Set([
     'warrior:arms', 'warrior:fury', 'warrior:protection',
     'paladin:holy', 'paladin:protection', 'paladin:retribution',
-    'deathknight:blood', 'deathknight:unholy',
-    'shaman:restoration',
-    'warlock:demonology',
-    'monk:brewmaster',
-    'engineer:tinkerer',
-  ]);
-  /**
-   * Тестовая ветка (папка Тест): разблокированные для плейтеста спеки.
-   * В лобби помечаются бейджем «Тест». Не путать с PATCHED_SPECS.
-   */
-  const TEST_SPECS = new Set([
     'hunter:beast_mastery', 'hunter:marksmanship', 'hunter:survival',
     'rogue:assassination', 'rogue:combat', 'rogue:subtlety',
     'priest:discipline', 'priest:holy', 'priest:shadow',
-    'deathknight:frost',
-    'shaman:elemental', 'shaman:enhancement',
+    'deathknight:blood', 'deathknight:frost', 'deathknight:unholy',
+    'shaman:elemental', 'shaman:enhancement', 'shaman:restoration',
     'mage:arcane', 'mage:fire', 'mage:frost',
-    'warlock:affliction', 'warlock:destruction',
-    'monk:mistweaver', 'monk:windwalker',
+    'warlock:affliction', 'warlock:demonology', 'warlock:destruction',
+    'monk:brewmaster', 'monk:mistweaver', 'monk:windwalker',
     'druid:balance', 'druid:feral', 'druid:guardian', 'druid:restoration',
-    'engineer:mechanist', 'engineer:sapper',
+    'engineer:mechanist', 'engineer:sapper', 'engineer:tinkerer',
   ]);
+  const TEST_SPECS = new Set();
   function isTestSpec(classId, specId) {
     return TEST_SPECS.has(classId + ':' + specId);
   }
   function isSpecPatched(classId, specId) {
-    const key = classId + ':' + specId;
-    return PATCHED_SPECS.has(key) || TEST_SPECS.has(key);
+    return PATCHED_SPECS.has(classId + ':' + specId);
   }
   function isClassPatched(classId) {
     for (const key of PATCHED_SPECS) {
-      if (key.startsWith(classId + ':')) return true;
-    }
-    for (const key of TEST_SPECS) {
       if (key.startsWith(classId + ':')) return true;
     }
     return false;
@@ -175,7 +163,8 @@
       ? (run?.route?.nodes?.[nodeOrId] || null)
       : (nodeOrId || currentRouteNode());
     const id = node?.id || (typeof nodeOrId === 'string' ? nodeOrId : null);
-    const loc = (node && node.loc)
+    const loc = (typeof combat !== 'undefined' && combat && combat.battleLoc)
+      || (node && node.loc)
       || (id && NODE_LOC[id])
       || (node && TYPE_LOC[node.type])
       || 'entrance';

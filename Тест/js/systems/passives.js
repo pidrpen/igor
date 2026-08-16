@@ -3,23 +3,25 @@
     const list = [];
     const r = role || (classId && specId && (WOW_MOP.getSpec(classId, specId) || {}).role) || null;
     // Все ДК: как работают руны
-    if (classId === 'deathknight') {
+    if (classId === 'deathknight' && specId === 'frost') {
+      list.push({
+        id: 'frozen_throne',
+        name: 'Преданность ледяному трону',
+        icon: '❄️',
+        short: '3 льда + 3 нечестивости',
+        detail: 'Руны: 3 льда и 3 нечестивости, крови нет. Потраченные руны восстанавливаются через 3 хода (тик в начале вашего хода). Сила рун растёт от рунных ударов и пассивно (+5 за ход).',
+      });
+    } else if (classId === 'deathknight') {
       list.push({
         id: 'rune_cycle',
         name: 'Рунный цикл',
         icon: '🔷',
-        short: 'руны 2х',
-        detail: 'У вас 6 рун: 2 крови, 2 льда, 2 нечестивости. Потраченные руны сами восстанавливаются через 2 хода. Наведение на скилл подсвечивает, какие руны он тратит. Сила рун (💙) растёт от рунных ударов и пассивно (+5 за ход) — её тратят «Лик смерти» и подобные навыки. На портрете под HP — полоска силы рун; кружки — сами руны.',
+        short: 'руны 3х',
+        detail: 'У вас 6 рун: 2 крови, 2 льда, 2 нечестивости. Потраченные руны восстанавливаются через 3 хода (тик в начале вашего хода). Сила рун растёт от рунных ударов и пассивно (+5 за ход).',
       });
     }
-    // Танки: «Щит с озона» (+15% блок)
-    // Исключения: хмелевар (уклон), паладин Защита, ДК Кровь — свои пассивки
-    if (
-      r === 'tank'
-      && !(classId === 'monk' && specId === 'brewmaster')
-      && !(classId === 'paladin' && specId === 'protection')
-      && !(classId === 'deathknight' && specId === 'blood')
-    ) {
+    // R1: «Щит с озона» только у воина Защиты. Стражу свою пассивку ещё не придумали.
+    if (classId === 'warrior' && specId === 'protection') {
       list.push({
         id: 'ozone_shield',
         name: 'Щит с озона',
@@ -53,6 +55,83 @@
         short: 'стаки',
         detail: 'Каждый пропущенный прямой удар делает следующий уклон вероятнее. После успешного уклонения эффект сбрасывается. Стаки видны на портрете.',
       });
+      list.push({
+        id: 'brew_gift',
+        name: 'Дар хмелевара',
+        icon: '🍵',
+        short: 'крит-хил → хот',
+        detail: 'Когда вас лечат, есть шанс (равный шансу критического удара лечащего) повесить «Дар хмелевара»: 75% этого хила размазываются на 5 раундов. Повторный прок обновляет хот. Это не кнопка — только эффект на портрете.',
+      });
+    }
+    if (classId === 'priest' && specId === 'discipline') {
+      list.push({
+        id: 'atonement_passive',
+        name: 'Искупление',
+        icon: '✝️',
+        short: 'урон → хил',
+        detail: 'Щит, Молитва исцеления и урон Кары / Священного огня / Исповеди во врага / пета оставляют или кормят «Искупление»: доля урона лечит носителей.',
+      });
+    }
+    if (classId === 'monk' && specId === 'mistweaver') {
+      list.push({
+        id: 'renewing_echo',
+        name: 'Носители тумана',
+        icon: '✨',
+        short: '70% урона в хил',
+        detail: 'Союзники с «Заживляющим туманом» получают хил, равный 70% урона, который наносит ткач.',
+      });
+      list.push({
+        id: 'jade_tick',
+        name: 'Нефритовая змея',
+        icon: '🐍',
+        short: 'тик после хода',
+        detail: 'Пока жива змея, после хода каждого героя и моба она лечит выбранного «Успокаивающим туманом» на 3т и бьёт последнюю цель хозяина на 3т. Сама змея в очереди не стоит.',
+      });
+    }
+    if (classId === 'druid' && specId === 'balance') {
+      list.push({
+        id: 'eclipse_passive',
+        name: 'Затмение',
+        icon: '🌓',
+        short: 'полная шкала',
+        detail: 'Когда шкала затмения заполняется, вы получаете +20% атаки на 3 хода, шкала сбрасывается.',
+      });
+    }
+    if (classId === 'druid' && specId === 'feral') {
+      list.push({
+        id: 'combo_curve',
+        name: 'Серия приёмов',
+        icon: '🃏',
+        short: '0.22…1.55',
+        detail: 'Финишер ест всю серию. Цифра на кнопке — при 5 очках. Множители: 1 → 0.22, 2 → 0.42, 3 → 0.68, 4 → 1.05, 5 → 1.55. «Дикий рёв» серию не ест.',
+      });
+    }
+    if (classId === 'rogue') {
+      list.push({
+        id: 'combo_curve',
+        name: 'Серия приёмов',
+        icon: '🃏',
+        short: '0.22…1.55',
+        detail: 'Финишер ест всю серию. Цифра на кнопке — при 5 очках. Множители: 1 → 0.22, 2 → 0.42, 3 → 0.68, 4 → 1.05, 5 → 1.55.',
+      });
+    }
+    if (classId === 'mage' && specId === 'fire') {
+      list.push({
+        id: 'pyro_hot_passive',
+        name: 'Раскалённая глыба',
+        icon: '☄️',
+        short: 'крит шара',
+        detail: 'Крит «Огненного шара» вешает «Раскалённую глыбу»: следующая «Огненная глыба» стоит 10 маны и бьёт 90т. «Огненный столб» с 33% вешает «Раскалённый столб» — следующий шар критует.',
+      });
+    }
+    if (classId === 'mage' && specId === 'frost') {
+      list.push({
+        id: 'lance_aoe_passive',
+        name: 'Копьё — область',
+        icon: '🗡️',
+        short: '20% со стрелы',
+        detail: 'С «Ледяной стрелы» 20% шанс повесить «Копьё — область»: следующее «Ледяное копьё» бьёт всех врагов. Окно снимается после копья.',
+      });
     }
     // Шаман исцеление
     if (classId === 'shaman' && specId === 'restoration') {
@@ -72,6 +151,16 @@
         icon: '😈',
         short: 'урон петов',
         detail: 'Искусность усиливает урон всех питомцев и демонов. Собственные заклинания не затрагиваются.',
+      });
+    }
+    // Механист
+    if (classId === 'engineer' && specId === 'mechanist') {
+      list.push({
+        id: 'bot_share',
+        name: 'Делит удар',
+        icon: '🤖',
+        short: '50% в бота',
+        detail: 'Боевой бот принимает 50% урона, который проходит в хозяина. Только удар по самому механисту.',
       });
     }
     // Изобретатель
@@ -204,7 +293,7 @@
         name: 'Кровотечение',
         icon: '🩸',
         short: '4 хода',
-        detail: '«Удар колосса», «Смертельный удар» и «Героический удар» накладывают «Кровотечение» на цель на 4 хода (периодический урон каждый раунд).',
+        detail: '«Удар колосса», «Смертельный удар» и «Героический удар» накладывают «Кровотечение»: 5т за раунд, 4 раунда. Свой экземпляр на каждого наложившего. Наведите на «Кровотечение» в подсказке способности, чтобы прочитать эффект.',
       });
       list.push({
         id: 'strikes_of_opportunity',
@@ -330,6 +419,63 @@
     document.querySelectorAll('.passive-chip.active-tip').forEach(c => c.classList.remove('active-tip'));
   }
 
+  function bindTipRefs(detailEl, extraEl) {
+    if (!detailEl || !extraEl) return;
+    detailEl.querySelectorAll('.tip-ref').forEach((sp) => {
+      const show = () => {
+        extraEl.classList.remove('hidden');
+        extraEl.replaceChildren();
+        const hn = document.createElement('div');
+        hn.className = 'pt-gloss-name';
+        hn.textContent = sp.dataset.glossName || '';
+        const hd = document.createElement('div');
+        hd.textContent = sp.dataset.gloss || '';
+        extraEl.appendChild(hn);
+        extraEl.appendChild(hd);
+      };
+      const hide = () => extraEl.classList.add('hidden');
+      sp.addEventListener('mouseenter', show);
+      sp.addEventListener('mouseleave', hide);
+      sp.addEventListener('focus', show);
+      sp.addEventListener('blur', hide);
+      sp.tabIndex = 0;
+    });
+  }
+
+  /** «Кавычки» → жёлтая строка; наведение раскрывает словарь эффекта. */
+  function fillQuotedText(targetEl, text) {
+    if (!targetEl) return;
+    targetEl.replaceChildren();
+    const src = String(text || '');
+    const re = /«([^»]+)»/g;
+    let last = 0;
+    let m;
+    while ((m = re.exec(src))) {
+      if (m.index > last) targetEl.appendChild(document.createTextNode(src.slice(last, m.index)));
+      const gloss = typeof effectGlossaryText === 'function' ? effectGlossaryText(m[1]) : '';
+      if (gloss) {
+        const sp = document.createElement('span');
+        sp.className = 'tip-ref';
+        sp.textContent = '«' + m[1] + '»';
+        sp.dataset.gloss = gloss;
+        sp.dataset.glossName = m[1];
+        targetEl.appendChild(sp);
+      } else {
+        targetEl.appendChild(document.createTextNode(m[0]));
+      }
+      last = m.index + m[0].length;
+    }
+    if (last < src.length) targetEl.appendChild(document.createTextNode(src.slice(last)));
+    if (!targetEl.childNodes.length) targetEl.textContent = src;
+  }
+
+  function makeGlossBox() {
+    const extra = document.createElement('div');
+    extra.className = 'pt-gloss hidden';
+    extra.setAttribute('aria-live', 'polite');
+    return extra;
+  }
+
   /** Описание пассивки в кармане — только нижняя панель, без fixed-окон. */
   function showPassivePocketTip(name, detail) {
     const panel = document.getElementById('passive-pocket-tip');
@@ -343,9 +489,12 @@
     n.textContent = name || 'Пассивка';
     const d = document.createElement('div');
     d.className = 'pt-detail';
-    d.textContent = detail || 'Нет описания.';
+    fillQuotedText(d, detail || 'Нет описания.');
+    const extra = makeGlossBox();
     panel.appendChild(n);
     panel.appendChild(d);
+    panel.appendChild(extra);
+    bindTipRefs(d, extra);
     panel.classList.remove('hidden');
   }
 
@@ -364,16 +513,25 @@
     n.textContent = name || 'Пассивка';
     const d = document.createElement('div');
     d.className = 'pt-detail';
-    d.textContent = detail || '';
+    fillQuotedText(d, detail || '');
+    const extra = makeGlossBox();
     tip.appendChild(n);
     tip.appendChild(d);
+    tip.appendChild(extra);
+    bindTipRefs(d, extra);
     tip.classList.remove('hidden');
     positionUiTipFloat(tip, chip, null);
   }
 
+  let abilityTipHideTimer = null;
   function hideAbilityTipFloat() {
-    const el = document.getElementById('ability-tip-float');
-    if (el) el.classList.add('hidden');
+    clearTimeout(abilityTipHideTimer);
+    abilityTipHideTimer = setTimeout(() => {
+      const el = document.getElementById('ability-tip-float');
+      if (!el) return;
+      if (el.matches(':hover') || el.querySelector(':focus')) return;
+      el.classList.add('hidden');
+    }, 180);
   }
 
   function showAbilityTipFloat(anchor, name, detail) {
@@ -386,11 +544,16 @@
     const n = document.createElement('div');
     n.className = 'pt-name';
     n.textContent = name || 'Способность';
+    tip.appendChild(n);
     const d = document.createElement('div');
     d.className = 'pt-detail';
-    d.textContent = detail;
-    tip.appendChild(n);
+    fillQuotedText(d, detail || '');
     tip.appendChild(d);
+    const extra = makeGlossBox();
+    tip.appendChild(extra);
+    bindTipRefs(d, extra);
+    tip.onmouseenter = () => clearTimeout(abilityTipHideTimer);
+    tip.onmouseleave = () => hideAbilityTipFloat();
     tip.classList.remove('hidden');
     positionUiTipFloat(tip, anchor);
   }
@@ -562,6 +725,10 @@
       });
       floatText(actor.uid, 'ярость ×' + stacks, 'buff');
     } else {
+      const kick = typeof isKickAbility === 'function'
+        ? isKickAbility(ability)
+        : (ability && (ability.type === 'interrupt' || ability.id === 'pummel' || ability.id === 'kick'));
+      if (kick) return;
       const had = actor.buffs.some(b => b && b.id === 'fury_mastery');
       if (had) {
         actor.buffs = actor.buffs.filter(b => !b || b.id !== 'fury_mastery');

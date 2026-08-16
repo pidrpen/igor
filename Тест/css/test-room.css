@@ -396,6 +396,433 @@
   margin: .35rem 0 0;
 }
 
+.ink-stage {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+.ink-stage img {
+  max-width: min(720px, 94vw);
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 12px;
+}
+.plans-body {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.plans-body h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
+.plans-body p { margin: 0 0 .4rem; line-height: 1.45; opacity: .88; }
+.plans-path { font-size: .78rem; opacity: .7; }
+.plans-links { margin: .35rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .45rem; }
+.plans-links li { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.brew-styles { display: flex; flex-wrap: wrap; gap: .4rem; }
+.brew-style {
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(12,14,18,.7);
+  color: inherit;
+  font: inherit;
+  border-radius: 8px;
+  padding: .35rem .65rem;
+  cursor: pointer;
+}
+.brew-style.on { border-color: #8fd9a4; }
+.brew-stage .cmp-actor { left: 6%; right: auto; }
+.brew-stage .cmp-dummy { left: auto; right: 4%; }
+.brew-keg,
+.brew-keg-shard {
+  position: absolute;
+  display: none;
+  transform: translate(-50%, -50%);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  z-index: 5;
+}
+.brew-keg { width: 52px; height: auto; }
+.brew-keg-shard { width: 34px; height: auto; }
+#cmp-stage-aoe .brew-keg,
+#cmp-stage-aoe .brew-keg-shard {
+  z-index: 6;
+  background: transparent;
+}
+#cmp-keg-shard-pool {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* ── Рисовка персонажа ── */
+#test-style {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 1rem 1.15rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+}
+.style-specs { display: flex; flex-wrap: wrap; gap: .4rem; }
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: .7rem;
+}
+.style-card {
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(10,12,16,.7);
+  color: inherit;
+  font: inherit;
+  border-radius: 14px;
+  padding: .55rem .55rem .7rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+.style-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #0a0c10;
+}
+.style-card b { font-size: .92rem; }
+.style-card span { font-size: .74rem; line-height: 1.35; opacity: .75; }
+.style-card:hover { border-color: #9ad48a; }
+.style-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(4,6,8,.82);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  padding: 1.5rem;
+}
+.style-lightbox.hidden { display: none; }
+.style-lightbox img {
+  max-width: min(720px, 92vw);
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 12px;
+}
+.style-lightbox-x { align-self: flex-end; }
+#style-lightbox-cap { max-width: 40rem; text-align: center; opacity: .85; }
+
+/* ── Хаб комнаты ── */
+#test-hub {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 1.25rem 1.5rem 2rem;
+}
+.test-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  max-width: 1100px;
+  margin: 1.5rem auto 0;
+}
+.test-hub-card {
+  text-align: left;
+  cursor: pointer;
+  border-radius: 16px;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border: 1px solid rgba(255,255,255,.1);
+  background: color-mix(in srgb, var(--panel, #16161e) 92%, #000);
+  color: inherit;
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+.test-hub-card:hover {
+  transform: translateY(-3px);
+  border-color: #7ad4ff;
+  box-shadow: 0 12px 28px rgba(0,0,0,.4);
+}
+.test-hub-card .hub-kicker {
+  font-size: .68rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .55;
+  font-weight: 700;
+}
+.test-hub-card .hub-title {
+  font-family: Cinzel, serif;
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+.test-hub-card .hub-desc {
+  font-size: .84rem;
+  line-height: 1.45;
+  opacity: .82;
+}
+
+/* ── Сравнение Ледяной стрелы ── */
+#test-compare {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 1rem 1rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+}
+.cmp-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.cmp-top h2 {
+  margin: 0;
+  font-family: Cinzel, serif;
+  font-size: 1.2rem;
+}
+.cmp-top .meta { font-size: .78rem; opacity: .7; }
+.cmp-top-actions { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.cmp-n-toggle { display: flex; gap: .3rem; }
+.cmp-room {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: .7rem;
+  min-height: 0;
+  flex: 1;
+}
+@media (max-width: 860px) {
+  .cmp-room { grid-template-columns: 1fr; }
+}
+.cmp-rail {
+  overflow: auto;
+  max-height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: column;
+  gap: .28rem;
+  padding-right: .15rem;
+}
+.cmp-spec {
+  text-align: left;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(12,14,20,.7);
+  color: inherit;
+  font: inherit;
+  border-radius: 8px;
+  padding: .35rem .45rem;
+  cursor: pointer;
+}
+.cmp-spec b { display: block; font-size: .8rem; }
+.cmp-spec span { display: block; font-size: .68rem; opacity: .65; }
+.cmp-spec.on {
+  border-color: #7ad4ff;
+  box-shadow: 0 0 0 1px rgba(122,212,255,.35);
+}
+.cmp-main { min-width: 0; display: flex; flex-direction: column; gap: .45rem; }
+.cmp-allies {
+  position: absolute;
+  left: 26%;
+  top: 8%;
+  display: flex;
+  gap: .35rem;
+  z-index: 2;
+}
+.cmp-ally {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #8fd9a4;
+  box-shadow: 0 0 0 2px rgba(10,20,12,.6);
+}
+.cmp-ally img { width: 100%; height: 100%; object-fit: cover; }
+.cmp-dummy.is-focus {
+  filter: drop-shadow(0 6px 0 rgba(0,0,0,.45)) drop-shadow(0 0 8px rgba(255,210,90,.75));
+}
+.cmp-ref {
+  margin-top: .4rem;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: .45rem .7rem .65rem;
+  background: rgba(8,10,16,.4);
+}
+.cmp-ref summary { cursor: pointer; font-weight: 650; }
+.cmp-ref .cmp-lanes { margin-top: .55rem; }
+.cmp-actor.hidden,
+.cmp-portrait.hidden { display: none; }
+.cmp-stage-wide .cmp-portrait {
+  left: 3%;
+  top: auto;
+  bottom: 14%;
+  transform: none;
+}
+.cmp-lanes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+  flex: 1;
+}
+@media (max-width: 980px) {
+  .cmp-lanes { grid-template-columns: 1fr; }
+}
+.cmp-lane {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  padding: .65rem .65rem .7rem;
+  background: rgba(8,10,16,.55);
+}
+.cmp-lane header h3 {
+  margin: 0 0 .2rem;
+  font-size: .95rem;
+}
+.cmp-lane header p {
+  margin: 0;
+  font-size: .74rem;
+  line-height: 1.4;
+  opacity: .78;
+}
+.cmp-stage {
+  position: relative;
+  height: 220px;
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(40,80,120,.28), transparent 70%),
+    linear-gradient(180deg, #121820 0%, #080a10 100%);
+  border: 1px solid rgba(255,255,255,.06);
+}
+.cmp-actor,
+.cmp-dummy {
+  position: absolute;
+  bottom: 8%;
+  height: 78%;
+  width: auto;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 0 rgba(0,0,0,.45));
+}
+.cmp-actor { left: 4%; }
+.cmp-dummy { right: 4%; }
+.cmp-actor-baked { left: 0; height: 86%; }
+.cmp-bolt {
+  position: absolute;
+  width: 56px;
+  height: auto;
+  display: none;
+  transform: translate(-20%, -50%);
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 4;
+  filter: drop-shadow(0 0 6px rgba(140,220,255,.7));
+}
+.cmp-portrait {
+  position: absolute;
+  left: 8%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #7ad4ff;
+  box-shadow: 0 0 0 4px rgba(20,40,60,.7);
+  z-index: 2;
+}
+.cmp-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cmp-portrait.cmp-casting {
+  box-shadow: 0 0 0 4px rgba(20,40,60,.7), 0 0 22px rgba(140,220,255,.85);
+}
+.cmp-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+.cmp-dummy.cmp-hit {
+  animation: test-hit .35s ease;
+  filter: drop-shadow(0 6px 0 rgba(0,0,0,.45)) brightness(1.45) saturate(1.3);
+}
+#cmp-status { margin-top: .15rem; }
+
+.cmp-aoe {
+  margin-top: .35rem;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  padding: .7rem .75rem .8rem;
+  background: rgba(8,10,16,.55);
+}
+.cmp-aoe header h3 { margin: 0 0 .2rem; font-size: 1rem; }
+.cmp-aoe header p {
+  margin: 0 0 .55rem;
+  font-size: .78rem;
+  line-height: 1.4;
+  opacity: .78;
+}
+.cmp-aoe-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-bottom: .55rem;
+}
+.cmp-stage-wide { height: 268px; }
+.cmp-stage-wide .cmp-actor {
+  left: 2%;
+  height: 82%;
+  z-index: 2;
+}
+.cmp-stage-wide .cmp-actor.cmp-brew {
+  height: 90%;
+  left: 1%;
+}
+.cmp-pack {
+  position: absolute;
+  left: 30%;
+  right: 3%;
+  top: 10%;
+  bottom: 8%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  z-index: 2;
+  pointer-events: auto;
+}
+.cmp-pack .cmp-dummy { pointer-events: auto; cursor: pointer; }
+.cmp-pack .cmp-dummy {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  height: 58%;
+  width: auto;
+}
+.cmp-pack .cmp-dummy:nth-child(2),
+.cmp-pack .cmp-dummy:nth-child(4) {
+  height: 70%;
+  margin-bottom: 10px;
+}
+.cmp-pack .cmp-dummy:nth-child(3) {
+  height: 64%;
+  margin-bottom: 4px;
+}
+
 /* без постоянного bob на аренах со спрайтами */
 .test-fighter.anim-idle .test-sprite-wrap {
   animation: none;
@@ -820,6 +1247,92 @@ body.raid-lobby .raid-affix-block {
   display: none;
 }
 
+.lobby-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.lobby-fx.on {
+  pointer-events: auto;
+  opacity: 1;
+  visibility: visible;
+}
+.lobby-fx canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+body.lobby-fx-playing #lobby.screen::before {
+  opacity: 0;
+}
+body.lobby-fx-playing #lobby .lobby-hero,
+body.lobby-fx-playing #lobby .subtitle,
+body.lobby-fx-playing #lobby .lobby-wrap,
+body.lobby-fx-playing #lobby .src-note {
+  opacity: 0;
+  pointer-events: none;
+}
+body.lobby-fx-playing #btn-lobby-chrome {
+  opacity: 0;
+  pointer-events: none;
+}
+body.lobby-fx-playing .mode-toggle .btn {
+  pointer-events: none;
+}
+
+body.raid-lobby #lobby.screen {
+  position: relative;
+  isolation: isolate;
+  background-color: #07090c;
+  background-image: url('../assets/backgrounds/lobby-leishen.jpg');
+  background-size: cover;
+  background-position: center 42%;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+}
+body.raid-lobby #lobby.screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(6, 10, 12, .58) 0%, rgba(8, 12, 14, .36) 42%, rgba(6, 8, 10, .62) 100%);
+  opacity: 1;
+  transition: opacity 1.1s ease;
+}
+body.raid-lobby #lobby .lobby-hero,
+body.raid-lobby #lobby .subtitle,
+body.raid-lobby #lobby .lobby-wrap,
+body.raid-lobby #lobby .src-note {
+  position: relative;
+  z-index: 1;
+  transition: opacity .55s ease;
+}
+#btn-lobby-chrome {
+  display: none;
+  position: fixed;
+  top: .65rem;
+  left: .65rem;
+  z-index: 50;
+  min-height: 32px;
+}
+body:has(#lobby.screen:not(.hidden)) #btn-lobby-chrome {
+  display: inline-flex;
+}
+body.lobby-chrome-hidden #lobby.screen::before {
+  opacity: 0;
+}
+body.lobby-chrome-hidden #lobby .lobby-hero,
+body.lobby-chrome-hidden #lobby .subtitle,
+body.lobby-chrome-hidden #lobby .lobby-wrap,
+body.lobby-chrome-hidden #lobby .src-note {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .unit.raid-focus {
   outline: 2px solid #7ad0ff;
   box-shadow: 0 0 0 3px rgba(122, 208, 255, .28), 0 0 18px rgba(80, 170, 230, .35);
@@ -840,12 +1353,47 @@ body.raid-lobby .raid-affix-block {
 }
 
 /* Raid combat: packed roster, fitted portraits, skills stay on screen */
+body.raid-run #run-screen {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+body.raid-run .run-top {
+  flex: 0 0 auto;
+  gap: .28rem .45rem;
+  padding: .22rem .55rem;
+}
+body.raid-run .run-top .stat-pill {
+  font-size: .74rem;
+  padding: .12rem .4rem;
+}
+body.raid-run .run-top .btn-sm {
+  min-height: 28px;
+  padding: .18rem .5rem;
+  font-size: .74rem;
+}
+body.raid-run #hud-forces,
+body.raid-run .forces-bar {
+  display: none !important;
+}
+body.raid-run .timer-bar {
+  flex: 0 0 auto;
+  height: 3px;
+}
 body.raid-run .run-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
   overflow: hidden;
 }
 body.raid-run #battle-area.battle-area {
   overflow: hidden;
   justify-content: flex-start;
+  gap: .4rem;
+  padding: .2rem .45rem .28rem;
   background-image:
     linear-gradient(180deg, rgba(10, 16, 12, .38), rgba(8, 12, 10, .52)),
     var(--battle-bg, none);
@@ -856,30 +1404,52 @@ body.raid-run #battle-area.battle-area {
 body.raid-run #battle-area.theme-jade {
   --theme-glow: rgba(60, 140, 80, .18);
 }
-body.raid-run #boss-frame,
 body.raid-run .phase-banner,
-body.raid-run .phase-sub {
+body.raid-run .phase-sub,
+body.raid-run #battle-area > div > .section-title {
+  display: none !important;
+}
+body.raid-run #boss-frame {
   flex: 0 0 auto;
+  padding: .12rem .45rem .14rem;
+  margin: 0 auto .08rem;
+}
+body.raid-run #boss-frame .bf-name {
+  font-size: .78rem;
+  margin-bottom: .08rem;
+}
+body.raid-run #boss-frame .bf-bar {
+  height: 14px;
+}
+body.raid-run #boss-frame .bf-text {
+  font-size: .68rem;
+}
+body.raid-run #boss-frame .bf-phases {
+  margin-top: .08rem;
 }
 body.raid-run #enemy-row.unit-row {
   justify-content: center;
   flex-wrap: wrap;
   overflow: visible;
+  padding-top: 4px;
+  padding-bottom: 8px;
 }
 body.raid-run #enemy-row .unit {
-  width: 132px;
-  flex: 0 0 132px;
+  width: 118px;
+  flex: 0 0 118px;
 }
-body.raid-run #boss-frame {
-  padding: .28rem .5rem .3rem;
+body.raid-run #battle-area > div:has(#enemy-row) {
+  flex: 0 0 auto;
+  margin-bottom: .35rem;
 }
-body.raid-run .phase-banner {
-  margin: .1rem 0 0;
-  font-size: .92rem;
-}
-body.raid-run .phase-sub {
-  font-size: .72rem;
-  margin-bottom: .15rem;
+body.raid-run #battle-area > div:has(#ally-row) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin-top: .55rem;
+  padding-top: .35rem;
+  padding-bottom: 12px;
 }
 body.raid-run #ally-row.unit-row {
   display: flex !important;
@@ -887,27 +1457,24 @@ body.raid-run #ally-row.unit-row {
   justify-content: center;
   align-items: flex-start;
   align-content: flex-start;
-  gap: .22rem .28rem;
-  overflow: hidden;
-  padding-bottom: 6px !important;
-  max-width: 610px;
+  row-gap: .55rem;
+  column-gap: .4rem;
+  overflow: visible;
+  padding-bottom: 0 !important;
+  max-width: 720px;
   margin: 0 auto;
   width: 100%;
 }
 body.raid-run #ally-row .unit-stack {
-  width: 112px;
-  min-width: 112px;
-  max-width: 112px;
-  flex: 0 0 112px;
-  position: relative;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  flex: 0 0 auto;
 }
-body.raid-run #ally-row .unit-stack .pet-row {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 2px;
-  z-index: 2;
-  pointer-events: auto;
+body.raid-run #enemy-row .unit-stack {
+  width: auto;
+  min-width: 0;
+  flex: 0 0 auto;
 }
 body.raid-run #ally-row .unit-stack .pet-row[aria-hidden="true"] {
   display: none;
@@ -956,28 +1523,161 @@ body.raid-run #ally-row .slot-sec,
 body.raid-run #ally-row .slot-runes {
   margin-top: .08rem;
 }
-body.raid-run #ally-row .buffs {
-  max-height: 1.15rem;
+#run-screen #ally-row {
+  padding-bottom: 8px;
+}
+#run-screen .unit .buffs,
+#run-screen .mark-chip {
+  display: none !important;
+}
+#run-screen .unit-stack {
+  --aura-ico: 22px;
+  --aura-gap: 2px;
+  --aura-pad: 5px;
+  --aura-w: calc(var(--aura-ico) * 2 + var(--aura-gap) + var(--aura-pad) * 2);
+  display: grid;
+  grid-template-columns: var(--aura-w) max-content;
+  grid-template-rows: auto auto;
+  align-items: stretch;
+  width: max-content;
+  min-width: 0;
+  max-width: none;
+  flex: 0 0 auto;
+  position: relative;
+  overflow: visible;
+}
+@media (min-width: 1200px) {
+  #run-screen .unit-stack { --aura-ico: 24px; }
+}
+@media (max-width: 900px) {
+  #run-screen .unit-stack { --aura-ico: 20px; }
+}
+body.raid-run #run-screen #ally-row .unit-stack { --aura-ico: 18px; }
+body.raid-run #run-screen #enemy-row .unit-stack { --aura-ico: 20px; }
+#run-screen .unit-stack:not(.has-auras) {
+  grid-template-columns: max-content;
+}
+#run-screen .unit-stack:not(.has-auras) > .unit {
+  grid-column: 1;
+}
+#run-screen .unit-stack:not(.has-auras) .pet-row {
+  grid-column: 1;
+}
+#run-screen .unit-aura {
+  display: none;
+}
+#run-screen .unit-stack.has-auras > .unit-aura,
+#run-screen .unit-aura.is-on {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: stretch;
+  width: var(--aura-w);
+  min-width: var(--aura-w);
+  height: auto;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: var(--aura-pad);
+  box-sizing: border-box;
+  pointer-events: auto;
+  z-index: 4;
+  margin-right: -8px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 12px;
+  box-shadow: inset -8px 0 10px -8px rgba(0, 0, 0, 0.35);
+}
+#run-screen .unit-stack > .unit {
+  grid-column: 2;
+  grid-row: 1;
+  cursor: pointer;
+  position: relative;
+  z-index: 6;
+}
+body.need-target #run-screen .unit.selected-target {
+  border-color: #ff6b6b !important;
+  box-shadow: 0 0 14px rgba(255, 100, 100, .55);
+  cursor: pointer;
+}
+body.need-target #run-screen .unit-stack {
+  cursor: pointer;
+}
+#run-screen .unit-stack .pet-row {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  margin: 4px auto 0;
+  width: max-content;
+  max-width: 100%;
+  height: auto;
+  z-index: 3;
+}
+#run-screen .unit-stack .pet-row[aria-hidden="true"] {
+  display: none;
+}
+#run-screen .aura-rail {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  align-content: flex-start;
+  gap: var(--aura-gap, 2px);
+  width: calc(var(--aura-ico, 22px) * 2 + var(--aura-gap, 2px));
+  max-height: calc(var(--aura-ico, 22px) * 6 + var(--aura-gap, 2px) * 5);
   overflow: hidden;
-  margin-top: .08rem;
+}
+#run-screen .aura-rail-good {
+  margin-bottom: 2px;
+}
+#run-screen .aura-rail-bad {
+  margin-top: auto;
+  align-content: flex-end;
+}
+#run-screen .aura-rail:empty {
+  display: none;
+}
+#run-screen .aura-ico {
+  width: var(--aura-ico, 22px);
+  height: var(--aura-ico, 22px);
+  min-width: var(--aura-ico, 22px);
+  min-height: var(--aura-ico, 22px);
+  padding: 0;
+  font-size: .82rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  overflow: hidden;
+  flex: 0 0 var(--aura-ico, 22px);
+  position: relative;
+  border-radius: 4px;
+}
+#run-screen .aura-ico .buff-n {
+  position: absolute;
+  right: -1px;
+  bottom: -2px;
+  font-size: .48rem;
+  padding: 0 1px;
+  min-width: 7px;
+  line-height: 1;
+  background: rgba(0, 0, 0, .7);
+}
+#run-screen .aura-ico.is-linked {
+  box-shadow: 0 0 6px #f0c14b;
+  border-color: #f0c14b;
+}
+.ability-tip-float .pt-detail.pt-dmg {
+  color: #f0c8a0;
+  font-weight: 700;
 }
 body.raid-run .ability-zone {
-  flex: 0 0 auto !important;
+  flex: 0 0 auto;
   margin-top: auto;
-  position: sticky;
-  bottom: 0;
   z-index: 6;
-  background: linear-gradient(180deg, transparent, rgba(8, 12, 10, .82) 28%);
-  padding-top: .2rem;
-}
-body.raid-run .ability-bar {
-  max-height: 128px !important;
-  min-height: 72px;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-}
-body.raid-run .ability {
-  min-height: 44px;
-  padding: .28rem .36rem;
 }
 body.raid-run .combat-actions {
   flex: 0 0 auto;
@@ -1019,3 +1719,115 @@ body.raid-run .combat-actions {
     grid-template-columns: 1fr;
   }
 }
+
+body.raid-run .raid-phase-hud {
+  text-align: center;
+  margin: 0 0 .08rem;
+  flex: 0 0 auto;
+}
+body.raid-run .raid-phase-name {
+  display: none;
+}
+body.raid-run .raid-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .16rem;
+  justify-content: center;
+  margin-top: 0;
+}
+body.raid-run .raid-alert {
+  font-size: .62rem;
+  padding: .06rem .32rem;
+  border-radius: 999px;
+  background: rgba(20, 28, 22, .72);
+  border: 1px solid rgba(180, 200, 160, .25);
+}
+body.raid-run .raid-alert.warn { border-color: #c9a227; color: #f0d78c; }
+body.raid-run .raid-alert.danger { border-color: #c44; color: #f8a0a0; }
+body.raid-run .raid-alert.soak { border-color: #4ac; color: #9de; }
+
+.raid-cast-dock {
+  position: absolute;
+  top: .45rem;
+  left: .45rem;
+  z-index: 8;
+  display: flex;
+  gap: .45rem;
+  align-items: center;
+  padding: .35rem .5rem;
+  background: rgba(8, 12, 10, .82);
+  border: 1px solid rgba(120, 180, 100, .35);
+  border-radius: 10px;
+  max-width: 240px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
+.raid-cast-dock.hidden { display: none; }
+.raid-cast-dock img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #6a8;
+}
+.raid-cast-meta { flex: 1; min-width: 0; }
+#raid-cast-title { font-size: .72rem; color: #cde; }
+#raid-cast-spell { font-size: .68rem; color: #9c6; margin: .1rem 0 .2rem; }
+.raid-cast-bar {
+  height: 7px;
+  background: #1a2018;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.raid-cast-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #2a6a3a, #d4e05a);
+  transition: width .25s ease;
+}
+
+.raid-fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+}
+.raid-fx-layer.hidden { display: none; }
+.raid-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, #fff 0%, #c8f0a0 30%, transparent 70%);
+  animation: raidFlash .45s ease-out forwards;
+}
+@keyframes raidFlash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.raid-shatter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+}
+.raid-shatter i {
+  background-repeat: no-repeat;
+  animation: raidTile .85s ease-in forwards;
+}
+@keyframes raidTile {
+  to {
+    transform: translate(var(--dx, 40px), var(--dy, 80px)) rotate(var(--rot, 15deg));
+    opacity: 0;
+  }
+}
+.raid-boss-fall {
+  position: fixed;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid #8c8;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+  transition: left .75s ease, top .75s cubic-bezier(.4, 0, .2, 1.3), width .75s ease, height .75s ease, transform .75s ease;
+  z-index: 81;
+}
+
+#battle-area { position: relative; }

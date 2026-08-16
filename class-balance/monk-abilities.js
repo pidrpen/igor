@@ -37,7 +37,7 @@ function A(o) {
       'flat','freeAction','maxCharges','applyDot','applyHot','dmgReduce','blockChanceAdd','blockValueAdd',
       'armorMod','armorStacksMax','critBonus','critMod','atkMod','lifesteal','vuln','hits','cleaveFlat',
       'school','maxHpPct','buffTurns','aoeBounce','shieldFromDmg','enemyDmgMod','grantBlock','holyShock',
-      'purifyPct','healAmp','nextHealCharges','abilityCharges','staggerBonus','chainDecay','summonOnCast', 'petAtkMod', 'chainPrimary'];
+      'purifyPct','healAmp','nextHealCharges','abilityCharges','staggerBonus','chainDecay','summonOnCast', 'petAtkMod', 'chainPrimary','healFromDealt'];
     for (const k of keys) if (o[k] !== undefined) ab[k] = o[k];
     if (o.fl != null) ab.flat = o.fl;
     if (o.fa) ab.freeAction = true;
@@ -111,7 +111,7 @@ function A(o) {
       spec: 'brewmaster',
       abilityId: 'keg_smash',
       summary: 'Keg Smash MUST genSec:2 (gs:2), cost 40 energy, type aoe.',
-      fields: { cost: 40, genSec: 2, cd: 1, type: 'aoe' },
+      fields: { cost: 40, genSec: 2, cd: 2, type: 'aoe' },
     },
     {
       id: 'shuffle_bok',
@@ -173,30 +173,33 @@ function A(o) {
         role: 'tank',
         icon: '🍺',
         stats: { hp: 168, atk: 12, def: 11, speed: 10 },
-        resourceOverride: { type: 'energy', name: 'Энергия', icon: '⚡', max: 100, start: 100, regen: 35 },
+        resourceOverride: { type: 'energy', name: 'Энергия', icon: '⚡', max: 100, start: 100, regen: 25 },
         abilities: [
           A({
             id: 'jab', n: 'Джаб', en: 'Jab', i: '👊',
-            c: 20, gs: 1, t: 'damage', fl: 20, school: 'physical', d: '', sid: 100780,
+            c: 20, gs: 1, t: 'damage', fl: 20, school: 'physical', d: '20т · +1 ци', sid: 100780,
           }),
           A({
             id: 'keg_smash', n: 'Удар бочонком', en: 'Keg Smash', i: '🍺',
-            c: 40, gs: 2, cd: 1, t: 'aoe', fl: 40, school: 'physical', d: '', sid: 121253,
+            c: 40, gs: 2, cd: 3, t: 'aoe', fl: 40, school: 'physical',
+            healFromDealt: 0.05,
+            d: '40т область · КД 3 · хил 5% от нанесённого', sid: 121253,
           }),
           A({
             id: 'blackout', n: 'Удар чёрного лотоса', en: 'Blackout Kick', i: '🦶',
-            cs: 0, cd: 1, t: 'damage', fl: 45, school: 'physical', d: '', sid: 100784,
+            cs: 0, cd: 3, t: 'damage', fl: 45, school: 'physical', d: '45т · КД 3', sid: 100784,
           }),
           A({
             id: 'breath', n: 'Дыхание огня', en: 'Breath of Fire', i: '🔥',
-            cs: 1, t: 'aoe', fl: 17, school: 'fire',
+            cs: 1, cd: 4, t: 'aoe', fl: 17, school: 'fire',
             enemyDmgMod: 0.1, bt: 5,
             applyDot: { flat: 3, turns: 5, name: 'Дыхание огня', school: 'fire' },
-            d: '', sid: 115181,
+            d: '17т область · КД 4', sid: 115181,
           }),
           A({
-            id: 'guard', n: 'Защита', en: 'Guard', i: '🛡️',
-            cs: 2, cd: 0, t: 'shield', p: 0.45, d: '', sid: 115295,
+            id: 'sck', n: 'Танцующий журавль', en: 'Spinning Crane Kick', i: '🌪️',
+            c: 40, t: 'aoe', fl: 15, school: 'physical',
+            d: '15т область · 40 энергии', sid: 101546,
           }),
           A({
             id: 'purifying', n: 'Очищающий отвар', en: 'Purifying Brew', i: '🍵',
@@ -214,13 +217,19 @@ function A(o) {
             id: 'fort_brew', n: 'Отвар железной шкуры', en: 'Fortifying Brew', i: '🏋️',
             cd: 6, t: 'buff', fa: 1, staggerBonus: 0.5, dr: 0.3, bt: 3, d: '', sid: 115203,
           }),
+          A({
+            id: 'niuzao', n: 'Призыв Нюцзао', en: 'Invoke Niuzao', i: '🐂',
+            cd: 10, t: 'summon', fa: 1, school: 'none',
+            d: 'Бык 3 раунда · КД 10 · без хода · 25% шата · топ 10т + 50% очистки', sid: 132578,
+          }),
 ],
       },
 
       // ═════════════════════════════════════
-      // MISTWEAVER — healer · Mana + Chi
+      // MISTWEAVER (testBuild) — healer · Mana + Chi
       // Chi heals: Renewing/Surging/Jab → Enveloping / Uplift
       // RU: Surging = Бурлящий; Enveloping = Окутывающий
+      // atk 15 = FLAT_REF (как Holy/Resto)
       // ═════════════════════════════════════
       {
         id: 'mistweaver',
@@ -228,61 +237,48 @@ function A(o) {
         nameEn: 'Mistweaver',
         role: 'healer',
         icon: '🌫️',
-        stats: { hp: 95, atk: 8, def: 4, speed: 11 },
+        testBuild: true,
+        stats: { hp: 95, atk: 15, def: 4, speed: 11 },
         resourceOverride: { type: 'mana', name: 'Мана', icon: '💧', max: 100, start: 100, regen: 7 },
+        secondaryOverride: null,
         abilities: [
-          A({
-            id: 'renewing', n: 'Заживляющий туман', en: 'Renewing Mist', i: '✨',
-            c: 10, cd: 1, gs: 1, t: 'heal', p: 0.32,
-            d: 'HoT + 1 ци. Мана 10.', sid: 115151,
-          }),
-          A({
-            id: 'surging', n: 'Бурлящий туман', en: 'Surging Mist', i: '💚',
-            c: 12, gs: 1, t: 'heal', p: 0.42,
-            d: 'Быстрое лечение + 1 ци. Мана 12.', sid: 116694,
-          }),
-          A({
-            id: 'enveloping', n: 'Окутывающий туман', en: 'Enveloping Mist', i: '🌿',
-            cs: 3, t: 'heal', p: 0.52,
-            d: 'Расход 3 ци — hit + сильный HoT.', sid: 124682,
-          }),
-          A({
-            id: 'uft', n: 'Духовный подъём', en: 'Uplift', i: '🙌',
-            cs: 2, t: 'heal_aoe', p: 0.3,
-            d: 'Расход 2 ци — хил по отряду.', sid: 116670,
-          }),
-          A({
-            id: 'soothing', n: 'Успокаивающий туман', en: 'Soothing Mist', i: '🍃',
-            c: 9, t: 'heal', p: 0.38,
-            d: 'Канал-хил (мана, без ци).', sid: 115175,
-          }),
-          A({
-            id: 'spinning', n: 'Танцующий журавль', en: 'Spinning Crane Kick', i: '🌪️',
-            c: 12, t: 'aoe', p: 0.65,
-            d: 'AoE урон (мана).', sid: 101546,
-          }),
-          A({
-            id: 'jab', n: 'Джаб', en: 'Jab', i: '👊',
-            c: 8, gs: 1, t: 'damage', p: 0.85,
-            d: 'Генератор: +1 ци (мана 8).', sid: 100780,
-          }),
-          A({
-            id: 'thunder_focus', n: 'Громовой чай', en: 'Thunder Focus Tea', i: '☕',
-            cd: 3, t: 'buff', p: 0.2,
-            d: 'Усиление следующего исцеления (упрощ. +атака).', sid: 116680,
-          }),
-          A({
-            id: 'revival', n: 'Восстановление сил', en: 'Revival', i: '🌈',
-            c: 18, cd: 5, t: 'heal_aoe', p: 0.36,
-            d: 'Большой хил по отряду (рейд-КД).', sid: 115310,
-          }),
+          A({ id: 'renewing', n: 'Заживляющий туман', en: 'Renewing Mist', i: '✨',
+            c: 8, cd: 2, t: 'heal', fl: 18, school: 'nature',
+            applyHot: { flat: 4, turns: 10, name: 'Заживляющий туман', id: 'renewing' },
+            d: '18т + хот 10р · носители едят 70% урона монаха', sid: 115151 }),
+          A({ id: 'surging', n: 'Бурлящий туман', en: 'Surging Mist', i: '💚',
+            c: 10, t: 'heal', fl: 26, school: 'nature',
+            d: '26т · быстрый хил', sid: 116694 }),
+          A({ id: 'enveloping', n: 'Окутывающий туман', en: 'Enveloping Mist', i: '🌿',
+            c: 20, cd: 3, t: 'heal', fl: 36, school: 'nature',
+            applyHot: { flat: 8, turns: 4, name: 'Окутывающий туман' },
+            d: '36т + 8т×4 · 20 маны · КД 3', sid: 124682 }),
+          A({ id: 'uft', n: 'Духовный подъём', en: 'Uplift', i: '🙌',
+            c: 12, cd: 2, t: 'heal_aoe', fl: 28, school: 'nature',
+            d: '28т область · 12 маны · КД 2', sid: 116670 }),
+          A({ id: 'jade_serpent', n: 'Призыв нефритовой змеи', en: 'Jade Serpent', i: '🐍',
+            cd: 7, t: 'summon', fa: 1, school: 'nature',
+            d: 'Змея 3 раунда · КД 7 · без хода · 3т союзнику и врагу после каждого хода', sid: 115313 }),
+          A({ id: 'soothing', n: 'Успокаивающий туман', en: 'Soothing Mist', i: '🍃',
+            c: 5, t: 'heal', fl: 3, school: 'nature',
+            d: '5 маны · 3т. Со змеёй без хода выбирает цель: змея хилит и бьёт после каждого хода союзника и врага', sid: 115175 }),
+          A({ id: 'jade_lotus', n: 'Удар нефритового лотоса', en: 'Jade Lotus Strike', i: '🌸',
+            c: 0, t: 'damage', fl: 30, school: 'nature',
+            d: '30т · бесплатно', sid: 100780 }),
+          A({ id: 'thunder_focus', n: 'Громовой чай', en: 'Thunder Focus Tea', i: '☕',
+            cd: 7, t: 'buff', fa: 1, school: 'none',
+            d: 'След. 2 хила 0 маны · без хода · КД 7', sid: 116680 }),
+          A({ id: 'revival', n: 'Восстановление сил', en: 'Revival', i: '🌈',
+            c: 16, cd: 5, t: 'heal_aoe', fl: 34, school: 'nature',
+            d: '34т область · КД 5', sid: 115310 }),
         ],
       },
 
       // ═════════════════════════════════════
-      // WINDWALKER — dps · Energy + Chi
+      // WINDWALKER (testBuild) — dps · Energy + Chi
       // Jab → RSK / BoK / FoF; ToD execute ≤35%
       // Order: strong spenders before Tiger Palm (AI first-usable)
+      // atk 15 = FLAT_REF
       // ═════════════════════════════════════
       {
         id: 'windwalker',
@@ -290,54 +286,31 @@ function A(o) {
         nameEn: 'Windwalker',
         role: 'dps',
         icon: '🌪️',
-        stats: { hp: 100, atk: 17, def: 3, speed: 14 },
+        testBuild: true,
+        stats: { hp: 100, atk: 15, def: 3, speed: 14 },
         resourceOverride: { type: 'energy', name: 'Энергия', icon: '⚡', max: 100, start: 100, regen: 18 },
         abilities: [
-          A({
-            id: 'jab', n: 'Джаб', en: 'Jab', i: '👊',
-            c: 40, gs: 1, t: 'damage', p: 0.95,
-            d: 'Генератор: 40 энергии, +1 ци.', sid: 100780,
-          }),
-          A({
-            id: 'rsk', n: 'Удар восходящего солнца', en: 'Rising Sun Kick', i: '🌅',
-            cs: 2, cd: 1, t: 'damage', p: 1.5,
-            d: 'Расход 2 ци — сильный удар (приоритет).', sid: 107428,
-          }),
-          A({
-            id: 'bok', n: 'Удар чёрного лотоса', en: 'Blackout Kick', i: '🦶',
-            cs: 2, t: 'damage', p: 1.4,
-            d: 'Расход 2 ци — основной spender.', sid: 100784,
-          }),
-          A({
-            id: 'fists', n: 'Ярость Сюэня', en: 'Fists of Fury', i: '👊',
-            cs: 3, cd: 3, t: 'aoe', p: 1.1,
-            d: 'Расход 3 ци — канал AoE.', sid: 113656,
-          }),
-          A({
-            id: 'touch_death', n: 'Касание смерти', en: 'Touch of Death', i: '💀',
-            cs: 3, cd: 4, t: 'damage', p: 1.85,
-            d: 'Расход 3 ци. Добивание: только ≤35% HP цели.', sid: 115080,
-          }),
-          A({
-            id: 'tiger_palm', n: 'Лапа тигра', en: 'Tiger Palm', i: '🐯',
-            cs: 1, t: 'damage', p: 1.2,
-            d: 'Расход 1 ци — filler.', sid: 100787,
-          }),
-          A({
-            id: 'sck', n: 'Танцующий журавль', en: 'Spinning Crane Kick', i: '🌪️',
-            c: 40, t: 'aoe', p: 0.8,
-            d: '40 энергии — AoE без ци.', sid: 101546,
-          }),
-          A({
-            id: 'energizing', n: 'Отвар жизненной энергии', en: 'Energizing Brew', i: '⚡',
-            cd: 4, t: 'buff', p: 0.15, g: 30,
-            d: '+30 энергии и лёгкий бафф.', sid: 115288,
-          }),
-          A({
-            id: 'tigereye', n: 'Пиво тигриного глаза', en: 'Tigereye Brew', i: '🍺',
-            cd: 2, t: 'buff', p: 0.28,
-            d: '+атака (burst).', sid: 116740,
-          }),
+          A({ id: 'jab', n: 'Лапа тигра', en: 'Tiger Palm', i: '🐯',
+            c: 40, gs: 2, t: 'damage', fl: 16, school: 'physical',
+            d: '16т · 40 энергии · +2 ци', sid: 100787 }),
+          A({ id: 'rsk', n: 'Удар восходящего солнца', en: 'Rising Sun Kick', i: '🌅',
+            cs: 2, cd: 2, t: 'damage', fl: 55, school: 'physical',
+            d: '55т · 2 ци · КД 2', sid: 107428 }),
+          A({ id: 'touch_death', n: 'Касание смерти', en: 'Touch of Death', i: '💀',
+            c: 0, cd: 20, t: 'damage', school: 'physical',
+            d: 'Бесплатно · КД 20 · HP цели < своего · урон = своё HP', sid: 115080 }),
+          A({ id: 'sck', n: 'Танцующий журавль', en: 'Spinning Crane Kick', i: '🌪️',
+            c: 40, t: 'aoe', fl: 14, school: 'physical',
+            d: '14т область · 40 энергии', sid: 101546 }),
+          A({ id: 'xuen', n: 'Призыв Сюэня', en: 'Invoke Xuen', i: '🐯',
+            cd: 8, t: 'summon', school: 'physical',
+            d: 'Тигр 3 раунда · КД 8 · топ 10т · реген энергии ×2', sid: 123904 }),
+          A({ id: 'energizing', n: 'Отвар жизненной энергии', en: 'Energizing Brew', i: '⚡',
+            cd: 8, t: 'buff', fa: 1, g: 30, school: 'none',
+            d: '+30 энергии · без хода · КД 8', sid: 115288 }),
+          A({ id: 'tigereye', n: 'Пиво тигриного глаза', en: 'Tigereye Brew', i: '🍺',
+            cd: 3, t: 'buff', fa: 1, atkMod: 0.25, bt: 3, school: 'none',
+            d: '+25% атаки · 3 хода · без хода', sid: 116740 }),
         ],
       },
     ],
@@ -359,25 +332,19 @@ function A(o) {
     const checks = {
       'engineNeeds includes stagger required':
         engineNeeds.some((e) => e.id === 'stagger' && e.required === true),
-      'keg_smash gs:2': byId(brew, 'keg_smash').genSec === 2,
-      'guard shield cs:2': byId(brew, 'guard').type === 'shield' && byId(brew, 'guard').costSec === 2,
-      'purifying cleanse not heal': byId(brew, 'purifying').type === 'cleanse' && byId(brew, 'purifying').type !== 'heal',
-      'purifying cs:1': byId(brew, 'purifying').costSec === 1,
-      'elusive not buff-ATK (shield interim)': byId(brew, 'elusive').type === 'shield',
-      'surging RU Бурлящий': byId(mw, 'surging').name === 'Бурлящий туман',
-      'enveloping RU Окутывающий': byId(mw, 'enveloping').name === 'Окутывающий туман',
-      'mw chi heal builders': byId(mw, 'surging').genSec === 1 && byId(mw, 'renewing').genSec === 1,
-      'mw chi heal spenders': byId(mw, 'enveloping').costSec === 3 && byId(mw, 'uft').costSec === 2,
-      'ww jab gs:1': byId(ww, 'jab').genSec === 1 && byId(ww, 'jab').cost === 40,
-      'ww rsk/bok/fists/tod':
-        byId(ww, 'rsk').costSec === 2 &&
-        byId(ww, 'bok').costSec === 2 &&
-        byId(ww, 'fists').costSec === 3 &&
-        byId(ww, 'touch_death').costSec === 3 &&
-        byId(ww, 'touch_death').power === 1.85,
-      'ww rsk before tiger_palm':
-        ww.abilities.findIndex((a) => a.id === 'rsk') <
-        ww.abilities.findIndex((a) => a.id === 'tiger_palm'),
+      'keg_smash gs:2 cd3': byId(brew, 'keg_smash').genSec === 2 && byId(brew, 'keg_smash').cd === 3,
+      'no guard': !byId(brew, 'guard'),
+      'niuzao fa': !!byId(brew, 'niuzao') && byId(brew, 'niuzao').freeAction === true,
+      'purifying cleanse not heal': byId(brew, 'purifying').type === 'cleanse',
+      'elusive shield': byId(brew, 'elusive').type === 'shield',
+      'mw no chi': mw.secondaryOverride === null,
+      'enveloping mana': byId(mw, 'enveloping').cost === 20 && byId(mw, 'enveloping').cd === 3,
+      'ww jab +2 chi': byId(ww, 'jab').genSec === 2 && byId(ww, 'jab').name === 'Лапа тигра',
+      'ww rsk 55': byId(ww, 'rsk').flat === 55,
+      'ww no bok/fists': !byId(ww, 'bok') && !byId(ww, 'fists'),
+      'ww tod free': byId(ww, 'touch_death').cd === 20 && !byId(ww, 'touch_death').costSec,
+      'mw jade_serpent fa': byId(mw, 'jade_serpent').freeAction === true,
+      'mw soothing 3': byId(mw, 'soothing').flat === 3 && byId(mw, 'soothing').cost === 5,
     };
     const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([k]) => k);
     return { ok: failed.length === 0, checks, failed };
@@ -386,7 +353,7 @@ function A(o) {
   const api = {
     A,
     classId: 'monk',
-    version: 'MoP 5.4.8 lite',
+    version: '5.4.8-monk-s29-fa',
     cls: MONK,
     class: MONK,
     specs: MONK.specs,

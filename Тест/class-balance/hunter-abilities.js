@@ -72,7 +72,7 @@
   const BASELINE = {
     resource: { type: 'focus', max: 100, start: 100, regen: 14 },
     beast_mastery: {
-      kill_cmd: { c: 40, g: 0, cd: 1, p: 1.5 },
+      kill_cmd: { c: 40, g: 0, cd: 2, p: 1.5 },
       cobra: { c: 0, g: 14, cd: 0, p: 0.85 },
       arcane_shot: { c: 30, g: 0, cd: 0, p: 1.2 },
       multi: { c: 40, g: 0, cd: 0, p: 0.7 },
@@ -90,7 +90,7 @@
       kill_shot: { c: 15, g: 0, cd: 2, p: 1.8 },
     },
     survival: {
-      explosive: { c: 25, g: 0, cd: 1, p: 1.4 },
+      explosive: { c: 25, g: 0, cd: 2, p: 1.4 },
       black_arrow: { c: 35, g: 0, cd: 3, p: 0.7 },
       cobra: { c: 0, g: 14, cd: 0, p: 0.85 },
       arcane: { c: 30, g: 0, cd: 0, p: 1.2 },
@@ -130,8 +130,8 @@
         abilities: [
           A({
             id: 'kill_cmd', n: 'Команда «Взять!»', en: 'Kill Command', i: '🐾',
-            c: 35, cd: 1, t: 'damage', fl: 26, school: 'physical',
-            d: 'Сигнатура · 26т · 35 конц. · питомец бьёт · КД 1', sid: 34026,
+            c: 35, cd: 2, t: 'damage', fl: 26, school: 'physical',
+            d: 'Сигнатура · 26т · 35 конц. · питомец бьёт · КД 2', sid: 34026,
           }),
           A({
             id: 'cobra', n: 'Выстрел кобры', en: 'Cobra Shot', i: '🐍',
@@ -254,7 +254,7 @@
         abilities: [
           A({
             id: 'explosive', n: 'Разрывной выстрел', en: 'Explosive Shot', i: '💣',
-            c: 25, cd: 1, t: 'damage', fl: 24, school: 'fire',
+            c: 25, cd: 2, t: 'damage', fl: 24, school: 'fire',
             applyDot: { flat: 4, turns: 3, name: 'Разрывной заряд', icon: '💥', id: 'explosive', school: 'fire' },
             d: 'Сигнатура · 24т + 4т×3 · 25 конц. · КД 1', sid: 53301,
           }),
@@ -387,7 +387,7 @@
           { id: 'dire', gen: 12, flat: 16, cost: 0, cd: 2 },
         ],
         spenders: [
-          { id: 'kill_cmd', cost: 35, flat: 26, cd: 1, signature: true },
+          { id: 'kill_cmd', cost: 35, flat: 26, cd: 2, signature: true },
           { id: 'arcane_shot', cost: 25, flat: 20 },
           { id: 'multi', cost: 35, flat: 14, aoe: true },
           { id: 'serpent', cost: 20, flat: 8, applyDot: '5×4', type: 'damage+dot' },
@@ -416,7 +416,7 @@
       survival: {
         generators: [{ id: 'cobra', gen: 18, flat: 12 }],
         spenders: [
-          { id: 'explosive', cost: 25, flat: 24, cd: 1, applyDot: '4×3', signature: true },
+          { id: 'explosive', cost: 25, flat: 24, cd: 2, applyDot: '4×3', signature: true },
           { id: 'black_arrow', cost: 30, flat: 14, cd: 3, applyDot: '6×4', signature: true },
           { id: 'arcane', cost: 25, flat: 20 },
           { id: 'multi', cost: 35, flat: 15, aoe: true },

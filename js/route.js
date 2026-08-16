@@ -16,20 +16,26 @@
 
   const DUNGEONS = [
     { id: 'crypts', name: 'Склеп Эха', theme: 'crypt', timerBase: 28 * 60,
-      pathLabels: { a: 'Левый коридор', b: 'Правый склеп', c: 'Галерея', d: 'Алтарь' } },
+      midName: 'Хранитель склепа', finalName: 'Повелитель Склепа',
+      pathLabels: { a: 'Галерея костей', b: 'Могильный чемпион', c: 'Костяной двор', d: 'Хранитель урн' } },
     { id: 'forge', name: 'Пепельная Кузня', theme: 'forge', timerBase: 27 * 60,
-      pathLabels: { a: 'Штрек', b: 'Горн', c: 'Молоты', d: 'Отсек' } },
+      midName: 'Мастер горна', finalName: 'Пепельная Королева',
+      pathLabels: { a: 'Искровой штрек', b: 'Шлаковый исполин', c: 'Зал молотов', d: 'Кователь' } },
     { id: 'tide', name: 'Затопленный Приливник', theme: 'tide', timerBase: 30 * 60,
-      pathLabels: { a: 'Кораллы', b: 'Шлюз', c: 'Коридор', d: 'Лагуна' } },
+      midName: 'Жрец прилива', finalName: 'Ужас Прилива',
+      pathLabels: { a: 'Коралловый ход', b: 'Утопленный страж', c: 'Шлюз', d: 'Жрец лагуны' } },
     { id: 'jade', name: 'Нефритовый Монастырь', theme: 'jade', timerBase: 29 * 60,
-      pathLabels: { a: 'Двор', b: 'Ученики', c: 'Галерея', d: 'Сад' } },
+      midName: 'Ученик ша', finalName: 'Ша Сомнения',
+      pathLabels: { a: 'Двор фонарей', b: 'Каменный ученик', c: 'Галерея', d: 'Тень ша' } },
     { id: 'rift', name: 'Разлом Хаоса', theme: 'rift', timerBase: 28 * 60, randomEnemies: true,
-      pathLabels: { a: 'Трещина', b: 'Вихрь', c: 'Пустота', d: 'Ядро' } },
+      midName: 'Разломный Страж', finalName: 'Пожиратель Разлома',
+      pathLabels: { a: 'Трещина', b: 'Пустотный сталкер', c: 'Вихрь', d: 'Осколок ядра' } },
     { id: 'ember', name: 'Угольные Чертоги', theme: 'ember', timerBase: 29 * 60, randomEnemies: true,
-      pathLabels: { a: 'Зольный проход', b: 'Угольная шахта', c: 'Пепельный зал', d: 'Жаркий очаг' } },
+      midName: 'Пепельный Надсмотрщик', finalName: 'Угольный Титан',
+      pathLabels: { a: 'Зольный проход', b: 'Угольный колосс', c: 'Пепельный зал', d: 'Жаркий очаг' } },
   ];
   const ROOM_META = {
-    trash: { name: 'Треш', icon: '👾' }, elite: { name: 'Элита', icon: '💀' },
+    trash: { name: 'Пак', icon: '👾' }, elite: { name: 'Элита', icon: '💀' },
     boss: { name: 'Босс', icon: '🗿' }, final: { name: 'Финал', icon: '👑' }, rest: { name: 'Привал', icon: '🏕️' },
   };
   /** Target enemy forces % for key clear (M+ style). Map has more than 100% via side routes. */
@@ -41,64 +47,33 @@
    * Main path has forks; mopup nodes unlock after final if forces < 100%.
    */
   function generateRoute(dungeon) {
-    const L = dungeon.pathLabels || { a: 'Путь А', b: 'Путь Б', c: 'Путь В', d: 'Путь Г' };
-    // Randomize which branch is the elite high-forces path
-    const fork1EliteOnB = Math.random() < 0.55;
-    const fork2EliteOnB = Math.random() < 0.55;
-    const f1aType = fork1EliteOnB ? 'trash' : 'elite';
-    const f1bType = fork1EliteOnB ? 'elite' : 'trash';
-    const f2aType = fork2EliteOnB ? 'trash' : 'elite';
-    const f2bType = fork2EliteOnB ? 'elite' : 'trash';
-    const eliteW = 1.75 + Math.random() * 0.35;
-    const trashW = 0.9 + Math.random() * 0.3;
-    // Optional risk room between mid and second rest (high forces)
-    const hasRisk = Math.random() < 0.62;
-    const hasSide = Math.random() < 0.45;
-
+    const L = dungeon.pathLabels || { a: 'Пак', b: 'Чемпион', c: 'Зал', d: 'Страж' };
+    const midName = dungeon.midName || 'Страж';
+    const finalName = dungeon.finalName || 'Трон';
+    // Спуск: врата → коридор → пак/СТ → мид → спуск → пак/СТ → обязательный СТ → трон.
+    // Привалов нет. % абсолютные: AoE-путь ~74%, оба СТ ~107%. Ключ только с 100%.
     const nodes = {
-      start:   { id: 'start', type: 'trash', name: 'Вход', next: ['fork1a', 'fork1b'], forceW: trashW },
-      fork1a:  { id: 'fork1a', type: f1aType, name: L.a + (f1aType === 'elite' ? ' (элита)' : ''), next: ['rest1'], forceW: f1aType === 'elite' ? eliteW : trashW, branch: 'A' },
-      fork1b:  { id: 'fork1b', type: f1bType, name: L.b + (f1bType === 'elite' ? ' (элита)' : ''), next: ['rest1'], forceW: f1bType === 'elite' ? eliteW : trashW, branch: 'B' },
-      rest1:   { id: 'rest1', type: 'rest', name: 'Привал', next: ['mid'] },
-      mid:     { id: 'mid', type: 'boss', name: 'Страж', next: hasRisk ? ['risk', 'fork2a', 'fork2b'] : ['fork2a', 'fork2b'] },
-      fork2a:  { id: 'fork2a', type: f2aType, name: L.c + (f2aType === 'elite' ? ' (элита)' : ''), next: ['rest2'], forceW: f2aType === 'elite' ? eliteW * 1.05 : trashW * 1.1, branch: 'C' },
-      fork2b:  { id: 'fork2b', type: f2bType, name: L.d + (f2bType === 'elite' ? ' (элита)' : ''), next: ['rest2'], forceW: f2bType === 'elite' ? eliteW * 1.05 : trashW * 1.1, branch: 'D' },
-      rest2:   { id: 'rest2', type: 'rest', name: 'Родник', next: ['final'] },
-      final:   { id: 'final', type: 'final', name: 'Трон', next: [] },
-      mop1:    { id: 'mop1', type: 'trash', name: 'Добор: двор', next: ['mop2'], forceW: 1.15, mopup: true },
-      mop2:    { id: 'mop2', type: 'elite', name: 'Добор: элита', next: ['mop3'], forceW: 1.7, mopup: true },
-      mop3:    { id: 'mop3', type: 'trash', name: 'Добор: коридор', next: [], forceW: 1.1, mopup: true },
+      start:    { id: 'start',    type: 'trash', pack: 'aoe',   name: 'Врата',               loc: 'entrance', next: ['hall'], forceBudget: 10 },
+      hall:     { id: 'hall',     type: 'trash', pack: 'aoe',   name: 'Коридор',             loc: 'corridor', next: ['fork1a', 'fork1b'], forceBudget: 11 },
+      fork1a:   { id: 'fork1a',   type: 'trash', pack: 'aoe',   name: L.a,                   loc: 'gallery',  next: ['mid'], forceBudget: 10, branch: 'A' },
+      fork1b:   { id: 'fork1b',   type: 'elite', pack: 'st',    name: L.b + ' · СТ',         loc: 'elite',    next: ['mid'], forceBudget: 26, branch: 'B' },
+      mid:      { id: 'mid',      type: 'boss',                 name: midName,               loc: 'mid',      next: ['descent'], forceBudget: 0 },
+      descent:  { id: 'descent',  type: 'trash', pack: 'mixed', name: 'Спуск',               loc: 'depths',   next: ['fork2a', 'fork2b'], forceBudget: 12 },
+      fork2a:   { id: 'fork2a',   type: 'trash', pack: 'aoe',   name: L.c,                   loc: 'inner',    next: ['approach'], forceBudget: 11, branch: 'C' },
+      fork2b:   { id: 'fork2b',   type: 'elite', pack: 'st',    name: L.d + ' · СТ',         loc: 'sanctum',   next: ['approach'], forceBudget: 28, branch: 'D' },
+      approach: { id: 'approach', type: 'elite', pack: 'st',    name: 'Преддверие · СТ',     loc: 'approach', next: ['final'], forceBudget: 20 },
+      final:    { id: 'final',    type: 'final',                name: finalName,             loc: 'throne',   next: [], forceBudget: 0 },
+      mop1:     { id: 'mop1',     type: 'trash', pack: 'aoe',   name: 'Добор: двор',         loc: 'mopup',    next: ['mop2'], forceBudget: 12, mopup: true },
+      mop2:     { id: 'mop2',     type: 'elite', pack: 'st',    name: 'Добор: чемпион · СТ', loc: 'annex',    next: ['mop3'], forceBudget: 18, mopup: true },
+      mop3:     { id: 'mop3',     type: 'trash', pack: 'mixed', name: 'Добор: склеп',        loc: 'gallery',  next: ['mop1'], forceBudget: 12, mopup: true },
     };
-    if (hasRisk) {
-      nodes.risk = {
-        id: 'risk', type: 'elite', name: 'Риск: тайный зал', next: ['rest2'],
-        forceW: eliteW * 1.25, branch: 'R', optional: true,
-      };
-    }
-    if (hasSide) {
-      // Side trash off rest1 — optional forces before mid
-      nodes.side1 = {
-        id: 'side1', type: Math.random() < 0.4 ? 'elite' : 'trash',
-        name: 'Обходной ход' + (Math.random() < 0.4 ? ' (элита)' : ''),
-        next: ['mid'], forceW: trashW * 1.2, branch: 'S', optional: true,
-      };
-      nodes.rest1.next = ['side1', 'mid'];
-    }
-    // Normalize forceBudget so all combat nodes (main+mopup) sum to FORCES_MAP_BUDGET
-    const combat = Object.values(nodes).filter(n => n.type === 'trash' || n.type === 'elite');
-    const wSum = combat.reduce((s, n) => s + (n.forceW || 1), 0);
-    combat.forEach(n => {
-      n.forceBudget = Math.round((FORCES_MAP_BUDGET * (n.forceW || 1) / wSum) * 10) / 10;
-    });
-    Object.values(nodes).filter(n => n.type === 'boss' || n.type === 'final' || n.type === 'rest')
-      .forEach(n => { n.forceBudget = 0; });
     return {
       nodes,
       currentId: 'start',
       visited: [],
       finalCleared: false,
       mopupMode: false,
-      seedMeta: { fork1EliteOnB, fork2EliteOnB, hasRisk, hasSide },
+      seedMeta: { layout: 'descent-v2' },
     };
   }
   function routeNode(id) {
@@ -116,7 +91,7 @@
       nextIds = ['mop1'];
     }
     return nextIds.map(id => routeNode(id)).filter(Boolean)
-      .filter(n => !run.route.visited.includes(n.id) || n.type === 'rest');
+      .filter(n => !run.route.visited.includes(n.id) || n.mopup);
   }
   const PARTY_SIZE = 5; // 1 tank · 1 healer · 3 DPS
   const PRESETS = {
@@ -142,9 +117,9 @@
       { classId: 'warrior', specId: 'arms' },
     ],
   };
-  const EXECUTE_IDS = new Set(['execute', 'kill_shot', 'soul_reaper', 'shadowburn', 'hot_w', 'dispatch', 'swd', 'touch_death']);
+  const EXECUTE_IDS = new Set(['execute', 'kill_shot', 'soul_reaper', 'shadowburn', 'hot_w', 'swd']);
   // Finisher scale only meaningful for combo-point spenders (see castAbility). Shard/HP/chi use flat power.
-  const FINISHER_IDS = new Set(['envenom', 'eviscerate', 'rupture', 'slice', 'templar', 'divine_storm', 'word_glory', 'light_dawn', 'sot_r', 'blackout', 'bok', 'rsk', 'fists', 'enveloping', 'uft', 'touch_death', 'ferocious', 'rip', 'savage_roar']);
+  const FINISHER_IDS = new Set(['dispatch', 'eviscerate', 'rupture', 'templar', 'divine_storm', 'word_glory', 'light_dawn', 'sot_r', 'blackout', 'bok', 'rsk', 'fists', 'enveloping', 'uft', 'touch_death', 'ferocious', 'rip']);
 
   /**
    * Targeting rules (design-notes/03):
@@ -166,6 +141,8 @@
     'savage_def', 'barkskin', 'survival', 'frenzied',
     // other self
     'dispersion', 'ember_tap',
+    // engineer mechanist
+    'plasma_cutter', 'bot_overdrive', 'call_siege_walker', 'emergency_repair',
   ]);
   /** Healer external shields/saves — can target allies */
   const TARGET_ALLY_ANY = new Set([

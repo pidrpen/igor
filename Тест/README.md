@@ -26,6 +26,8 @@ python -m http.server 8080
 В тестовой комнате — скиллы спека из `WOW_MOP` (клавиши 1–9); per-skill анимации через `skills` / `skill_<id>`.  
 Остальные спеки — без 2D-пака.
 
+Карта файлов: `../../.grok/skills/mythic-key/references/карта.md`. Договор: `../../.grok/skills/mythic-key/SKILL.md`.
+
 ## Структура
 
 ```

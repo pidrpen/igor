@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Прокачка — паладин 1–40</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/proto.css" />
+</head>
+<body>
+  <div id="create" class="screen screen-center">
+    <div class="lobby-hero">
+      <h1>Таверна прокачки</h1>
+      <div class="badge-row">
+        <span class="week-badge">Песочница · основа не тронута</span>
+        <span class="week-badge">Паладин · 1–40</span>
+      </div>
+    </div>
+    <p class="subtitle">Один герой. Спек выбираешь здесь. Дальше — поиск инста, рандомные ИИ, опыт и дерево талантов. Ключ в эту папку не входит.</p>
+    <div class="card" style="width:min(880px,100%)">
+      <div class="section-title">Специализация</div>
+      <div class="spec-grid" id="spec-grid"></div>
+      <div class="name-row">
+        <input id="hero-name" maxlength="18" placeholder="Имя паладина" />
+        <button class="btn btn-primary" id="btn-create" type="button" disabled>Создать героя</button>
+      </div>
+    </div>
+    <p class="src-note">Концепт: <a class="link" href="КОНЦЕПТ.md">прокачка/КОНЦЕПТ.md</a>. Цифры кнопок — из кита паладина основы.</p>
+  </div>
+
+  <div id="hub" class="screen screen-center hidden">
+    <div class="lobby-hero">
+      <h1>Таверна</h1>
+      <div class="badge-row">
+        <span class="week-badge" id="hub-spec-badge">Паладин</span>
+        <span class="week-badge" id="hub-level-badge">ур. 1</span>
+      </div>
+    </div>
+    <div class="hub-wrap">
+      <div class="card" id="sheet-card">
+        <div class="section-title">Герой</div>
+        <div id="sheet"></div>
+        <div class="debug">
+          <div class="section-title">Отладка песочницы</div>
+          <div class="debug-row">
+            <button class="btn btn-sm" type="button" id="dbg-lvl">+1 уровень</button>
+            <button class="btn btn-sm" type="button" id="dbg-xp">+400 опыта</button>
+            <button class="btn btn-sm" type="button" id="dbg-40">Сразу 40</button>
+            <button class="btn btn-sm btn-danger" type="button" id="dbg-reset">Сброс героя</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">Дерево талантов · один из трёх на ярус</div>
+        <div id="talent-tree"></div>
+        <div style="margin-top:.55rem">
+          <button class="btn btn-sm" type="button" id="btn-respec">Сбросить таланты</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">Поиск подземелья</div>
+        <p class="hint" style="margin:0 0 .45rem">Случайный инст по уровню. Четыре ИИ добьют роли. После захода состав новый.</p>
+        <div class="queue-dungeons" id="dungeon-list"></div>
+        <button class="btn btn-primary" id="btn-queue" style="width:100%">Встать в очередь</button>
+        <p class="hint" id="ready-note" style="margin-top:.6rem"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="queue-overlay" class="overlay hidden">
+    <div class="card">
+      <div class="section-title">Поиск группы</div>
+      <h2 id="q-dungeon" style="font-family:var(--font-display);font-size:1.25rem;margin-bottom:.6rem">Инст</h2>
+      <div id="q-lines"></div>
+      <p class="hint" id="q-status" style="margin-top:.7rem">Ищем подходящих…</p>
+    </div>
+  </div>
+
+  <div id="brief-overlay" class="overlay hidden">
+    <div class="card" style="max-width:560px">
+      <div class="section-title">Группа собрана</div>
+      <h2 id="brief-title" style="font-family:var(--font-display);font-size:1.25rem;margin-bottom:.55rem">Инст</h2>
+      <div class="party-preview" id="brief-party"></div>
+      <div style="display:flex;gap:.45rem;margin-top:.85rem">
+        <button class="btn btn-primary" type="button" id="btn-enter" style="flex:1">Войти</button>
+        <button class="btn" type="button" id="btn-requeue">Другой состав</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="run-screen" class="hidden">
+    <div class="run-top">
+      <span class="stat-pill" id="hud-dun">Инст</span>
+      <span class="stat-pill" id="hud-room">Комната</span>
+      <span class="stat-pill" id="hud-lvl">ур. 1</span>
+      <span class="stat-pill" id="hud-xp">опыт</span>
+      <div class="spacer"></div>
+      <button class="btn btn-sm" type="button" id="btn-speed">Скорость 1×</button>
+      <button class="btn btn-sm btn-danger" type="button" id="btn-leave">Сдаться</button>
+    </div>
+    <div class="run-body">
+      <aside class="path-panel">
+        <div class="section-title">Маршрут</div>
+        <div id="path-list"></div>
+        <div class="section-title" style="margin-top:.8rem">Отряд</div>
+        <div id="side-party" style="font-size:.78rem;color:var(--muted)"></div>
+      </aside>
+      <main class="battle-area" id="battle-area">
+        <div class="turn-banner" id="turn-banner">Ход</div>
+        <div>
+          <div class="section-title" style="text-align:center">Враги</div>
+          <div class="unit-row" id="enemy-row"></div>
+        </div>
+        <div>
+          <div class="section-title" style="text-align:center">Отряд</div>
+          <div class="unit-row" id="ally-row"></div>
+        </div>
+        <div class="ability-zone">
+          <div class="ability-bar" id="ability-bar"></div>
+        </div>
+        <div class="combat-actions" id="combat-actions"></div>
+      </main>
+      <aside class="log-panel">
+        <div class="section-title">Журнал</div>
+        <div id="log"></div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="rest-modal" class="modal-back hidden">
+    <div class="modal" style="text-align:center">
+      <h2>Привал</h2>
+      <p class="hint">Врагов нет. Можно перевести дух перед финалом.</p>
+      <div style="display:flex;gap:.45rem;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-ok" type="button" id="rest-heal">Отдых (часть HP и маны)</button>
+        <button class="btn btn-primary" type="button" id="rest-go">Дальше</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="talent-modal" class="modal-back hidden">
+    <div class="modal">
+      <h2 id="tm-title">Новый ярус</h2>
+      <p class="hint" id="tm-hint">Выбери один талант.</p>
+      <div id="tm-picks" style="display:flex;flex-direction:column;gap:.4rem"></div>
+    </div>
+  </div>
+
+  <div id="end-modal" class="modal-back hidden">
+    <div class="modal" style="text-align:center">
+      <h2 id="end-title">Итог</h2>
+      <p id="end-msg" class="hint"></p>
+      <button class="btn btn-primary" type="button" id="btn-hub">В таверну</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/engine.js"></script>
+</body>
+</html>

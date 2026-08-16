@@ -1,34 +1,130 @@
 /* ui/balance-panel: patch log + lobby balance UI */
-  const BALANCE_BASE = '5.4.8';
+  const BALANCE_BASE = '5.4.9';
   const BALANCE_HISTORY = [
     {
-      version: '5.4.8.29',
-      date: '2026-08-06',
-      title: 'ДК: руны с таймером · Вспышка болезни AoE',
+      version: '5.4.9',
+      date: '2026-08-16',
+      title: 'Сводка с 5.4.8.29: ключ, движок, классы, интерфейс',
+      beta: false,
       changes: [
         {
-          classId: 'deathknight',
-          className: 'Рыцарь смерти',
-          text: 'Руны: потраченные не «чёрные», а приглушённый цвет типа; в каждом кружке — ходы до восстановления.',
+          classId: 'system',
+          className: 'Система',
+          specId: 'route',
+          specName: 'Ключ',
+          text: 'Маршрут без привала: врата → коридор → пак/СТ → мид → спуск → пак/СТ → преддверие → трон. Между комнатами силу не предлагают. Тест и основа совпадают. Старый сейв с привалами — новый ключ.',
         },
         {
-          classId: 'deathknight',
-          className: 'Рыцарь смерти',
-          specId: 'unholy',
-          specName: 'Нечестивость',
-          text: '«Вспышка болезни»: на всех врагов (AoE + DoT), КД 2 → 8.',
+          classId: 'system',
+          className: 'Система',
+          specId: 'engine',
+          specName: 'Движок',
+          text: 'Серия 0.22/0.42/0.68/1.05/1.55. Длительность дота из данных. Заряды точками. Броня процентом. Кик / стан / очищение по жёлтому. Нефритовая змея тикает после хода каждого героя и моба. Нюцзао без хода.',
+        },
+        {
+          classId: 'system',
+          className: 'Система',
+          specId: 'ui',
+          specName: 'Интерфейс',
+          text: 'Подсказка способности только с иконки: пишет что даёт и сколько, «Кавычки» раскрываются. Мёртвый враг пропадает. Баффы слева 2×6, углы как у карточки. В «Баланс классов» системные записи — чип Система, не воин. На вкладке 5 ключей можно скрыть интерфейс, как в рейде 10. Фон пятёрки — две охотницы на демонов у зелёных врат.',
+        },
+        {
+          classId: 'paladin',
+          className: 'Паладин',
+          specId: 'retribution',
+          specName: 'Воздаяние',
+          text: 'Божественная буря: 3 Энергии Света, 32т область (как Вердикт по цене). Слово славы 80 / 3 ES. Молот гнева без хода, один раз за ход.',
         },
         {
           classId: 'warrior',
           className: 'Воин',
-          specId: 'arms',
-          specName: 'Оружие',
-          text: '«Широкий размах» (после Вихря): след. Героический удар дублирует на остальных не только 40% прямого урона, но и 40% кровотечения.',
+          specId: 'all',
+          specName: 'Все спеки',
+          text: 'Оружие: Смертельный копит и вешает кровотечение 5т×4, Мощный тратит. Вихрь даёт Широкий размах. Неистовство: Жажда КД 3 / +20 ярости; Выпад 2 заряда, 23т×2. Защита: гром без хода, блок зарядами, Реванш только с парира, Одной левой +7%.',
+        },
+        {
+          classId: 'rogue',
+          className: 'Разбойник',
+          specId: 'all',
+          specName: 'Все спеки',
+          text: 'Пинок и Оглушение сняты. Серия крутая. Ликвидация бесплатно КД 3. Пассивка «Серия приёмов» в кармане.',
+        },
+        {
+          classId: 'druid',
+          className: 'Друид',
+          specId: 'all',
+          specName: 'Все спеки',
+          text: 'Баланс: Лунный/Солнечный 8т×5, Затмение в пассивках. Сила зверя: та же серия, Дикий рёв серию не ест. Страж: Неистовое 19% HP. Исцеление: без Целительного прикосновения.',
+        },
+        {
+          classId: 'monk',
+          className: 'Монах',
+          specId: 'all',
+          specName: 'Все спеки',
+          text: 'Хмелевар: Дар хмелевара в пассивках, Нюцзао без хода. Ткач: змея без хода, тик после каждого хода. Ветер: Лапа +2 ци, Восходящее 55т.',
+        },
+        {
+          classId: 'priest',
+          className: 'Жрец',
+          specId: 'all',
+          specName: 'Все спеки',
+          text: 'Послушание: Искупление в пассивках, Исповедь во врага. Тьма: длины дотов 4/5/3.',
+        },
+        {
+          classId: 'deathknight',
+          className: 'Рыцарь смерти',
+          specId: 'all',
+          specName: 'Все спеки',
+          text: 'Руны откат 3, таймер в кружке. Удар смерти у всех за 40 силы рун. Нечесть: Вспышка болезни областью.',
+        },
+        {
+          classId: 'shaman',
+          className: 'Шаман',
+          specId: 'all',
+          specName: 'Все спеки',
+          text: 'Стихии: шок 5т×5, Выброс лавы критует по шоку. Исцеление: Цепь 35т.',
+        },
+        {
+          classId: 'mage',
+          className: 'Маг',
+          specId: 'all',
+          specName: 'Все спеки',
+          text: 'Тайная: вспышка 24т, обстрел 20+6×стак. Огонь: Раскалённая глыба в пассивках. Лёд: 20% копьё областью.',
+        },
+        {
+          classId: 'warlock',
+          className: 'Чернокнижник',
+          specId: 'all',
+          specName: 'Все спеки',
+          text: 'Колдовство: доты 5×6 / 5×5 / 6×5. Разрушение: Жертвенный 10т×4. Демонология не крутили.',
+        },
+        {
+          classId: 'hunter',
+          className: 'Охотник',
+          specId: 'beast_mastery',
+          specName: 'Повелитель зверей',
+          text: 'Команда «Взять!» перезарядка 2. Стрельба и Выживание по книге.',
+        },
+        {
+          classId: 'engineer',
+          className: 'Гном-инженер',
+          specId: 'mechanist',
+          specName: 'Механист',
+          text: 'Боевой бот 25т, делит удар 50%. Сапёр не крутили. Изобретатель не трогали.',
+        },
+        {
+          classId: 'demonhunter',
+          className: 'Охотник на демонов',
+          specId: null,
+          specName: null,
+          text: 'Серая карточка. Месть и Истребление без правок, в бой не пускает. Черновик кнопок лежит в Тесте: class-balance/demonhunter-abilities.js.',
         },
         {
           classId: 'system',
-          className: 'Интерфейс',
-          text: 'Описание способности по наведению на иконку работает и когда скилл на КД / недоступен.',
+          className: 'Система',
+          specId: 'diff',
+          specName: 'Только Тест',
+          text: 'Комната анимаций, магазин, читер — только в Тесте. Стили рейда на основе в css/raid.css.',
         },
       ],
     },
@@ -911,6 +1007,7 @@
       warrior: 'Воин', paladin: 'Паладин', hunter: 'Охотник', rogue: 'Разбойник',
       priest: 'Жрец', deathknight: 'Рыцарь смерти', shaman: 'Шаман', mage: 'Маг',
       warlock: 'Чернокнижник', monk: 'Монах', druid: 'Друид', engineer: 'Гном-инженер',
+      demonhunter: 'Охотник на демонов',
     };
     return map[classId] || classId;
   }
@@ -955,8 +1052,14 @@
     if (!hist) return;
 
     if (badge) badge.textContent = BALANCE_VERSION;
-    if (sub) sub.textContent = 'текущий · база ' + BALANCE_BASE;
-    if (lobbyBadge) lobbyBadge.textContent = 'патч ' + BALANCE_VERSION;
+    if (sub) {
+      const isBeta = !!(BALANCE_HISTORY[0] && BALANCE_HISTORY[0].beta);
+      sub.textContent = (isBeta ? 'β бета · ' : 'текущий · ') + 'база ' + BALANCE_BASE;
+    }
+    if (lobbyBadge) {
+      const isBeta = !!(BALANCE_HISTORY[0] && BALANCE_HISTORY[0].beta);
+      lobbyBadge.textContent = (isBeta ? 'β ' : 'патч ') + BALANCE_VERSION;
+    }
 
     // Если класс сброшен — спек тоже
     if (balanceFilterClass === 'all') balanceFilterSpec = 'all';
@@ -969,7 +1072,8 @@
       }
     }
     const chips = [{ id: 'all', label: 'Все' }];
-    for (const id of ['warrior', 'paladin', 'shaman', 'warlock', 'monk', 'engineer', 'hunter', 'rogue', 'priest', 'deathknight', 'mage', 'druid']) {
+    chips.push({ id: 'system', label: 'Система' });
+    for (const id of ['warrior', 'paladin', 'shaman', 'warlock', 'monk', 'engineer', 'hunter', 'rogue', 'priest', 'deathknight', 'mage', 'druid', 'demonhunter']) {
       if (classIds.has(id)) chips.push({ id, label: balanceClassLabel(id) });
     }
     if (filterEl) {
@@ -995,8 +1099,9 @@
         specFilterEl.classList.add('hidden');
         specFilterEl.innerHTML = '';
       } else {
-        const specChips = [{ id: 'all', label: 'Все спеки' }];
+        const specChips = [{ id: 'all', label: clsId === 'system' ? 'Все системные' : 'Все спеки' }];
         const seen = new Set();
+        const fakeSpec = new Set(['route', 'desc', 'engine', 'diff', 'key', 'ui', 'all']);
         // спеки класса из данных
         try {
           const cls = WOW_MOP && WOW_MOP.getClass ? WOW_MOP.getClass(clsId) : null;
@@ -1006,10 +1111,11 @@
             specChips.push({ id: s.id, label: s.name || s.id });
           }
         } catch (_) {}
-        // + спеки, которые есть только в истории
+        // + спеки / системные темы, которые есть только в истории
         for (const p of BALANCE_HISTORY) {
           for (const ch of (p.changes || [])) {
             if (ch.classId !== clsId || !ch.specId || seen.has(ch.specId)) continue;
+            if (clsId !== 'system' && fakeSpec.has(ch.specId)) continue;
             seen.add(ch.specId);
             specChips.push({ id: ch.specId, label: ch.specName || ch.specId });
           }
@@ -1060,9 +1166,11 @@
           ${lines}
         </li>`;
       }).join('');
-      return `<article class="patch-card${idx === 0 ? ' current' : ''}">
+      const betaCls = p.beta ? ' beta' : '';
+      const betaMark = p.beta ? '<span class="pv-beta">β</span>' : '';
+      return `<article class="patch-card${idx === 0 ? ' current' : ''}${betaCls}">
         <div class="patch-head">
-          <span class="pv">${p.version}</span>
+          <span class="pv">${p.version}${betaMark}</span>
           <span class="pd">${p.date || ''}</span>
         </div>
         <div class="patch-title">${p.title || ''}</div>
@@ -1075,7 +1183,7 @@
   function nextBalanceVersion(from) {
     const v = String(from || BALANCE_VERSION || BALANCE_BASE);
     if (v === BALANCE_BASE) return BALANCE_BASE + '.01';
-    const m = v.match(/^(5\.4\.8)\.(\d+)$/);
+    const m = v.match(/^(5\.4\.\d+)\.(\d+)$/);
     if (m) {
       const n = parseInt(m[2], 10) + 1;
       return m[1] + '.' + String(n).padStart(2, '0');

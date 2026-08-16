@@ -24,6 +24,42 @@
     return list.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
   }
 
+  function actorHasJadeSerpent(owner) {
+    return !!(owner && combat && combat.pets && combat.pets.some(p =>
+      p.alive && p.ownerUid === owner.uid && p.petKey === 'jade_serpent'));
+  }
+
+  function tickJadeSerpent(serpent) {
+    if (!serpent || !serpent.alive || serpent.petKey !== 'jade_serpent') return;
+    const owner = run?.party?.find(p => p.uid === serpent.ownerUid);
+    if (!owner) return;
+    const allies = living('ally').filter(u => !u.isPet && u.alive);
+    const ally = allies.find(a => a.uid === owner._sootheUid)
+      || lowest(allies.filter(a => a.hp < a.maxHp))
+      || lowest(allies);
+    if (ally) {
+      const h = healUnit(ally, abilityDamageRaw(owner, { flat: 3 }), serpent, {
+        abilityName: 'Успокаивающий туман',
+      });
+      if (h) log(`${serpent.name}: туман → ${ally.name} (+${fmt(h)})`, 'heal');
+    }
+    const foesNow = living('enemy').filter(e => e.alive && !e.vaultAway);
+    let foe = owner.lastAttackUid ? foesNow.find(e => e.uid === owner.lastAttackUid) : null;
+    foe = foe || lowest(foesNow) || pick(foesNow);
+    if (foe) {
+      const d = dealDmg(foe, abilityDamageRaw(owner, { flat: 3 }), serpent, {
+        type: 'damage', isPet: true, abilityId: 'serpent_spit', abilityName: 'Туман змеи',
+      });
+      if (d) log(`${serpent.name}: → ${foe.name} (−${fmt(d)})`, 'player');
+    }
+  }
+
+  function tickJadeSerpentsAfterTurn(actor) {
+    if (!combat || !actor || actor.isPet) return;
+    const list = (combat.pets || []).filter(p => p.alive && p.petKey === 'jade_serpent');
+    for (const s of list) tickJadeSerpent(s);
+  }
+
   function aiAct(actor) {
     if (!actor.alive) return;
     if (isStunned(actor)) {
@@ -36,10 +72,69 @@
       return;
     }
 
-    const foes = actor.side === 'ally' ? living('enemy') : livingHeroes();
+    if (actor.vaultAway) return;
+    const foes = actor.side === 'ally' ? living('enemy').filter(e => !e.vaultAway) : livingHeroes();
     const friends = actor.side === 'ally' ? livingHeroes() : living('enemy');
     // Pets: simple auto-attack (режим attackMode: st|aoe — «Отладка»)
     if (actor.isPet) {
+      if (actor.petKey === 'niuzao') {
+        const owner = run?.party?.find(p => p.uid === actor.ownerUid);
+        const extra = Math.round(((owner && owner.purifyCleared) || 0) * 0.5);
+        const base = owner ? abilityDamageRaw(owner, { flat: 10 }) : 10000;
+        let total = 0;
+        for (const e of foes.slice()) {
+          if (!e.alive) continue;
+          total += dealDmg(e, base + extra, actor, {
+            type: 'aoe', isAoe: true, isPet: true, abilityId: 'niuzao_stomp', abilityName: 'Топ Нюцзао',
+          });
+        }
+        if (owner) owner.purifyCleared = 0;
+        log(`${actor.name}: топ (−${fmt(total)}${extra ? ', +очистка' : ''})`, 'player');
+        return;
+      }
+      if (actor.petKey === 'xuen') {
+        const owner = run?.party?.find(p => p.uid === actor.ownerUid);
+        const raw = owner ? abilityDamageRaw(owner, { flat: 10 }) : 10000;
+        let total = 0;
+        for (const e of foes.slice()) {
+          if (!e.alive) continue;
+          total += dealDmg(e, raw, actor, {
+            type: 'aoe', isAoe: true, isPet: true, abilityId: 'xuen_slam', abilityName: 'Лапа Сюэня',
+          });
+        }
+        log(`${actor.name}: область (−${fmt(total)})`, 'player');
+        return;
+      }
+      if (actor.petKey === 'jade_serpent') {
+        // Тик не на своём ходе: после каждого героя и моба (tickJadeSerpentsAfterTurn).
+        return;
+      }
+      if (actor.petKey === 'combat_bot') {
+        const siege = (actor.buffs || []).some(b => b && b.id === 'call_siege_walker'
+          && (b.turns == null || Number(b.turns) > 0));
+        const raw = abilityDamageRaw(actor, { flat: 25 });
+        if ((siege || actor.attackMode === 'aoe') && foes.length) {
+          let total = 0;
+          for (const e of foes.slice()) {
+            if (!e.alive) continue;
+            total += dealDmg(e, raw, actor, {
+              type: 'aoe', isAoe: true, isPet: true, abilityId: 'bot_hit', abilityName: 'Гидравлика',
+            });
+          }
+          log(`${actor.name}: область (−${fmt(total)})`, 'player');
+        } else {
+          const owner = run?.party?.find(p => p.uid === actor.ownerUid);
+          let tt = owner?.lastAttackUid ? foes.find(e => e.uid === owner.lastAttackUid) : null;
+          tt = tt || lowest(foes) || pick(foes);
+          if (tt) {
+            const d = dealDmg(tt, raw, actor, {
+              type: 'damage', isPet: true, abilityId: 'bot_hit', abilityName: 'Гидравлика',
+            });
+            if (d) log(`${actor.name}: → ${tt.name} (−${fmt(d)})`, 'player');
+          }
+        }
+        return;
+      }
       if (actor.attackMode === 'aoe' && foes.length) {
         const raw = Math.max(1, Math.round(getEff(actor).atk * 0.95));
         let total = 0;
@@ -70,11 +165,14 @@
         return;
       }
       let tt = null;
-      if (actor.petKey === 'scrap_bot' && actor.ownerUid) {
+      if (actor.ownerUid) {
         const owner = run?.party?.find(p => p.uid === actor.ownerUid);
-        if (owner?.lastAttackUid) tt = living('enemy').find(e => e.uid === owner.lastAttackUid) || null;
+        if (owner?.lastAttackUid && (actor.petKey === 'scrap_bot' || actor.petKey === 'hellfiend' || actor.petKey === 'frost_ghoul' || actor.petKey === 'water_ele')) {
+          tt = living('enemy').find(e => e.uid === owner.lastAttackUid) || null;
+        }
       }
-      tt = tt || lowest(foes) || pick(foes);
+      if (actor.petKey === 'hellfiend' || actor.petKey === 'frost_ghoul' || actor.petKey === 'water_ele') tt = tt || pick(foes);
+      else tt = tt || lowest(foes) || pick(foes);
       if (!tt) return;
       castAbility(actor, ab, tt);
       maybeDemoPetShard(actor);
@@ -86,7 +184,7 @@
     // interrupt casters / stun casters
     if (actor.side === 'ally') {
       const casting = foes.find(e => e.casting);
-      const kick = usable.find(a => a.type === 'interrupt' || INTERRUPT_IDS.has(a.id));
+      const kick = usable.find(a => typeof isKickAbility === 'function' ? isKickAbility(a) : (a.type === 'interrupt' || INTERRUPT_IDS.has(a.id)));
       if (casting && kick && Math.random() < 0.8) {
         castAbility(actor, kick, casting);
         return;
@@ -176,6 +274,11 @@
       }
     } else {
       // Ally DPS: only used by pets/edge paths — keep simple pick, no auto-DoT spam
+      const tod = usable.find(a => a.id === 'touch_death');
+      if (tod) {
+        const weak = foes.find(e => e.hp < actor.hp);
+        if (weak) { castAbility(actor, tod, weak); return; }
+      }
       const exec = usable.find(a => EXECUTE_IDS.has(a.id));
       const low = foes.find(e => e.hp / e.maxHp <= 0.35);
       if (exec && low) { castAbility(actor, exec, low); return; }

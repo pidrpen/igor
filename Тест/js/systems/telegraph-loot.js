@@ -9,7 +9,7 @@
   function hasMajorDef(u) {
     if (!u) return false;
     if ((u.shield || 0) > u.maxHp * 0.12) return true;
-    return u.buffs?.some(b => b.defMod > 0.1 || ['elusive', 'shield_wall', 'icebound', 'fort_brew', 'survival', 'barkskin', 'divine_prot', 'ardent'].includes(b.id));
+    return u.buffs?.some(b => b.defMod > 0.1 || ['elusive', 'shield_wall', 'icebound', 'dr_icebound', 'fort_brew', 'survival', 'barkskin', 'divine_prot', 'ardent'].includes(b.id));
   }
   function makeTelegraph(kind, opts = {}) {
     return {
@@ -203,7 +203,10 @@
     if (id === 'hunter_mark') {
       const t = living('enemy').find(e => e.isBoss) || lowest(living('enemy'));
       if (!t) return false;
-      applyStatus(t, { id: 'hmark', name: 'Метка', icon: '🏹', turns: 2, defMod: -0.25, dispellable: true, school: 'magic' });
+      applyStatus(t, {
+        id: 'hmark', name: 'Метка', icon: '🏹', turns: 2, defMod: -0.25,
+        dispellable: true, school: 'magic', fromUid: actor && actor.uid,
+      });
       log(`Метка охотника на ${t.name}`, 'player');
       toast('Метка!');
       kp.usedThisCombat = true;
@@ -273,8 +276,11 @@
   }
   function injectUtilityAbilities(list, classId, role, specId) {
     list = list || [];
-    // Dispel for healers
-    if (role === 'healer' && !list.some(a => a.id === 'party_dispel')) {
+    // Dispel for healers — не Послушанию (жёлтое: Очищение → Щит небес)
+    if (role === 'healer' && !(classId === 'priest' && specId === 'discipline')
+        && !(classId === 'shaman' && specId === 'restoration')
+        && !(classId === 'monk' && specId === 'mistweaver')
+        && !list.some(a => a.id === 'party_dispel')) {
       list.push({
         id: 'party_dispel', name: 'Очищение', icon: '✨', cost: 8, gen: 0, costSec: 0, genSec: 0,
         costRunes: null, genRunic: 0, cd: 2, baseCd: 2, curCd: 0, type: 'dispel', power: 1,
@@ -282,8 +288,12 @@
         desc: 'Снимает 1 магический дебаф / стек Взрывного с союзника',
       });
     }
-    // Purge for shaman / priest / mage / hunter
-    if (['shaman', 'priest', 'mage', 'hunter'].includes(classId) && !list.some(a => a.id === 'party_purge')) {
+    // Purge for shaman / priest / mage / hunter — не Послушанию (жёлтое: Развеивание → Исчадие ада)
+    if (['shaman', 'priest', 'mage', 'hunter'].includes(classId)
+        && !(classId === 'priest' && specId === 'discipline')
+        && !(classId === 'shaman' && specId === 'restoration')
+        && !(classId === 'monk' && specId === 'mistweaver')
+        && !list.some(a => a.id === 'party_purge')) {
       list.push({
         id: 'party_purge', name: 'Развеивание', icon: '💨', cost: 6, gen: 0, costSec: 0, genSec: 0,
         costRunes: null, genRunic: 0, cd: 2, baseCd: 2, curCd: 0, type: 'purge', power: 1,
@@ -291,8 +301,8 @@
         desc: 'Снимает бафф / ярость с врага',
       });
     }
-    // Light stun (не у инженера и не у паладина)
-    if (['rogue', 'monk', 'warrior', 'deathknight'].includes(classId) && !list.some(a => a.id === 'party_stun')) {
+    // Light stun (не у инженера, паладина и разбойника)
+    if (['monk', 'warrior'].includes(classId) && !list.some(a => a.id === 'party_stun')) {
       list.push({
         id: 'party_stun', name: 'Оглушение', icon: '💫', cost: 15, gen: 0, costSec: 0, genSec: 0,
         costRunes: null, genRunic: 0, cd: 3, baseCd: 3, curCd: 0, type: 'cc', power: 1,
@@ -303,6 +313,34 @@
     // Паладин Свет / Защита — без «Прерывание»
     if (classId === 'paladin' && (specId === 'holy' || specId === 'protection')) {
       list = list.filter(a => a && a.id !== 'kick' && a.type !== 'interrupt' && !INTERRUPT_IDS.has(a.id));
+    }
+    // Жрец Свет — кик не давать (жёлтое S14)
+    if (classId === 'priest' && specId === 'holy') {
+      list = list.filter(a => a && a.id !== 'kick' && a.type !== 'interrupt' && !INTERRUPT_IDS.has(a.id));
+    }
+    // Послушание: не оставлять инжект Очищения / Развеивания
+    if (classId === 'priest' && specId === 'discipline') {
+      list = list.filter(a => a && a.id !== 'party_dispel' && a.id !== 'party_purge'
+        && a.id !== 'kick' && a.type !== 'interrupt' && a.type !== 'dispel' && a.type !== 'purge');
+    }
+    if (classId === 'monk' && specId === 'mistweaver') {
+      list = list.filter(a => a && a.id !== 'kick' && a.id !== 'party_stun' && a.id !== 'party_dispel'
+        && a.id !== 'party_purge' && a.type !== 'interrupt' && a.type !== 'cc'
+        && a.type !== 'dispel' && a.type !== 'purge' && !INTERRUPT_IDS.has(a.id));
+    }
+    if (classId === 'shaman' && specId === 'restoration') {
+      list = list.filter(a => a && a.id !== 'party_dispel' && a.id !== 'party_purge'
+        && a.type !== 'dispel' && a.type !== 'purge');
+    }
+    // Рыцарь смерти: без Прерывания и Оглушения
+    if (classId === 'deathknight') {
+      list = list.filter(a => a && a.id !== 'kick' && a.id !== 'party_stun' && a.id !== 'mind_freeze'
+        && a.type !== 'interrupt' && a.type !== 'cc');
+    }
+    // Разбойник: без Пинка и Оглушения
+    if (classId === 'rogue') {
+      list = list.filter(a => a && a.id !== 'kick' && a.id !== 'party_stun'
+        && a.type !== 'interrupt' && a.type !== 'cc' && !INTERRUPT_IDS.has(a.id));
     }
     // Воскрешение основного питомца (охотник / лок / дк / инженер с постоянным петом)
     const mainKey = mainPetKeyFor(classId, specId);
@@ -339,4 +377,9 @@
     return p;
   }
   const INTERRUPT_IDS = new Set(['kick', 'pummel', 'counterspell', 'wind_shear', 'mind_freeze', 'spear_hand', 'rebuke']);
+  function isKickAbility(a) {
+    if (!a) return false;
+    return a.type === 'interrupt' || INTERRUPT_IDS.has(a.id) || !!a.interruptPrimary || a.id === 'avengers'
+      || (a.id === 'mind_spike' && a.ccMode === 'silence');
+  }
   const SAVE_KEY = 'mythicKeySave_v5';

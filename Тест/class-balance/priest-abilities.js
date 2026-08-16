@@ -55,6 +55,8 @@
     if (o.bt != null) ab.buffTurns = o.bt;
     if (o.lifesteal != null) ab.lifesteal = o.lifesteal;
     if (o.abilityCharges != null) ab.abilityCharges = o.abilityCharges;
+    if (o.ccMode) ab.ccMode = o.ccMode;
+    if (o.partyShield || o.ps) ab.partyShield = true;
     return ab;
   }
 
@@ -89,9 +91,13 @@
       shadowfiend: 'PET_SUMMONS.shadowfiend',
     },
     atonement: {
-      status: 'simplified',
+      status: 'engine',
       note:
-        'Нет отдельного atonement-баффа. Disc Smite/Holy Fire = damage + lifesteal (хил кастера).',
+        'Бафф «Искупление». Слово силы: Щит — 5р. Щит небес — 5р всем. Молитва исцеления — 3р на поражённых. Кара / Священный огонь / Исповедь во врага / Исчадие ада лечат носителей 55%, не кастера.',
+    },
+    hellfiend: {
+      status: 'engine',
+      note: 'PET_SUMMONS.hellfiend · 5 ходов · 34т · последняя цель хозяина или случайная.',
     },
     skipped: [
       {
@@ -147,11 +153,11 @@
         resourceOverride: { type: 'mana', name: 'Мана', icon: '💧', max: 100, start: 100, regen: 7 },
         abilities: [
           A({ id: 'penance', n: 'Исповедь', en: 'Penance', i: '📿',
-            c: 10, cd: 1, t: 'heal', fl: 30, school: 'holy',
-            d: 'СТ · 30т · основная кнопка', sid: 47540 }),
+            c: 10, cd: 3, t: 'heal', fl: 30, school: 'holy',
+            d: 'Союзник или враг · 30т · КД 3 · кормит Искупление', sid: 47540 }),
           A({ id: 'shield', n: 'Слово силы: Щит', en: 'Power Word: Shield', i: '🛡️',
-            c: 9, cd: 1, t: 'shield', fl: 32, school: 'holy',
-            d: 'Щит 32т · КД 1', sid: 17 }),
+            c: 9, cd: 3, t: 'shield', fl: 50, school: 'holy',
+            d: 'Щит 50т · КД 3 · Искупление 5р', sid: 17 }),
           A({ id: 'flash', n: 'Быстрое исцеление', en: 'Flash Heal', i: '💚',
             c: 12, t: 'heal', fl: 28, school: 'holy',
             d: 'СТ · 28т · авария', sid: 2061 }),
@@ -160,18 +166,23 @@
             d: 'СТ · 38т · throughput', sid: 2060 }),
           A({ id: 'prayer', n: 'Молитва исцеления', en: 'Prayer of Healing', i: '🙏',
             c: 13, t: 'heal_aoe', fl: 18, school: 'holy',
-            d: 'АОЕ · 18т', sid: 596 }),
-          // Atonement lite: урон → хил кастера (lifesteal)
+            d: 'АОЕ · 18т · Искупление 3р на поражённых', sid: 596 }),
           A({ id: 'smite', n: 'Кара', en: 'Smite', i: '✨',
-            c: 5, t: 'damage', fl: 14, school: 'holy', lifesteal: 0.55,
-            d: '14т · искупление 55% → хил', sid: 585 }),
+            c: 5, t: 'damage', fl: 20, school: 'holy',
+            d: '20т · кормит Искупление 55% носителям', sid: 585 }),
           A({ id: 'holy_fire', n: 'Священный огонь', en: 'Holy Fire', i: '🔥',
-            c: 7, cd: 1, t: 'damage', fl: 12, school: 'holy', lifesteal: 0.4,
+            c: 7, cd: 2, t: 'damage', fl: 12, school: 'holy',
             applyDot: { flat: 4, turns: 4, name: 'Священный огонь', icon: '🔥', id: 'holy_fire', school: 'holy' },
-            d: '12т + DoT 4т×4 · искупление 40%', sid: 14914 }),
+            d: '12т + 4т×4 · кормит Искупление носителям', sid: 14914 }),
+          A({ id: 'hellfiend', n: 'Исчадие ада', en: 'Fiend of Hell', i: '👿',
+            c: 14, cd: 9, t: 'summon', fl: 34, fa: 1, school: 'shadow',
+            d: 'Пет 34т · 5 ходов · без хода · 14 маны · КД 9 · урон кормит Искупление', sid: 34433 }),
+          A({ id: 'heaven_shield', n: 'Щит небес', en: 'Heavenly Shield', i: '🌤️',
+            c: 30, cd: 10, t: 'shield', fl: 40, ps: 1, school: 'holy',
+            d: '30 маны · КД 10 · щит 40т всем + Искупление 5р', sid: 81781 }),
           A({ id: 'pain_supp', n: 'Подавление боли', en: 'Pain Suppression', i: '🩹',
             cd: 6, t: 'buff', fa: 1, dr: 0.4, bt: 2, school: 'none',
-            d: '−40% урон · 2 хода · без хода', sid: 33206 }),
+            d: 'Сейв по клику · −40% урон · 2 хода · без хода', sid: 33206 }),
           A({ id: 'archangel', n: 'Архангел', en: 'Archangel', i: '😇',
             cd: 4, t: 'buff', fa: 1, atkMod: 0.2, bt: 3, school: 'none',
             d: '+20% ATK · 3 хода · без хода', sid: 81700 }),
@@ -243,26 +254,29 @@
         },
         abilities: [
           A({ id: 'mind_blast', n: 'Взрыв разума', en: 'Mind Blast', i: '🧠',
-            c: 8, cd: 1, gs: 1, t: 'damage', fl: 26, school: 'shadow',
-            d: '26т · +1 сфера · КД 1', sid: 8092 }),
+            c: 8, cd: 2, gs: 1, t: 'damage', fl: 26, school: 'shadow',
+            d: '26т · +1 сфера · КД 2', sid: 8092 }),
           A({ id: 'swp', n: 'Слово Тьмы: Боль', en: 'Shadow Word: Pain', i: '😣',
-            c: 5, cd: 1, t: 'dot', fl: 5, school: 'shadow',
-            d: 'DoT ~5т/р · держать', sid: 589 }),
+            c: 5, cd: 2, t: 'dot', fl: 5, school: 'shadow',
+            applyDot: { turns: 4, name: 'Слово Тьмы: Боль', icon: '😣', id: 'swp', school: 'shadow' },
+            d: '5т/р · 4 раунда · держать', sid: 589 }),
           A({ id: 'vt', n: 'Прикосновение вампира', en: 'Vampiric Touch', i: '🦇',
-            c: 6, cd: 1, g: 2, t: 'dot', fl: 7, school: 'shadow',
-            d: 'DoT ~7т/р · +2 маны', sid: 34914 }),
+            c: 6, cd: 2, g: 2, t: 'dot', fl: 7, school: 'shadow',
+            applyDot: { turns: 5, name: 'Прикосновение вампира', icon: '🦇', id: 'vt', school: 'shadow' },
+            d: '7т/р · 5 раундов · +2 маны', sid: 34914 }),
           A({ id: 'mind_flay', n: 'Пытка разума', en: 'Mind Flay', i: '🌀',
             c: 5, t: 'damage', fl: 16, school: 'shadow',
             d: '16т · filler (≤ regen)', sid: 15407 }),
           A({ id: 'devouring', n: 'Всепожирающая чума', en: 'Devouring Plague', i: '🦠',
             c: 6, cd: 2, cs: 3, t: 'dot', fl: 10, school: 'shadow',
-            d: 'DoT ~10т/р · 3 сферы · КД 2', sid: 2944 }),
+            applyDot: { turns: 3, name: 'Всепожирающая чума', icon: '🦠', id: 'devouring', school: 'shadow' },
+            d: '10т/р · 3 раунда · 3 сферы · КД 2', sid: 2944 }),
           A({ id: 'swd', n: 'Слово Тьмы: Смерть', en: 'Shadow Word: Death', i: '💀',
             c: 7, cd: 2, gs: 1, t: 'damage', fl: 34, school: 'shadow',
             d: '34т · ≤35% HP · +1 сфера', sid: 32379 }),
           A({ id: 'mind_spike', n: 'Шип разума', en: 'Mind Spike', i: '📌',
-            c: 7, t: 'damage', fl: 18, school: 'shadow',
-            d: '18т · мгновенный', sid: 73510 }),
+            c: 7, cd: 3, t: 'cc', ccMode: 'silence', bt: 1, school: 'shadow',
+            d: 'Тишина · сбивает каст · КД 3', sid: 73510 }),
           A({ id: 'shadowfiend', n: 'Исчадие Тьмы', en: 'Shadowfiend', i: '👾',
             cd: 4, t: 'damage', fl: 18, school: 'shadow',
             d: '18т + исчадие 4р', sid: 34433 }),
@@ -310,7 +324,7 @@
   }
 
   const PRIEST_BALANCE = {
-    version: '5.4.8-priest-test',
+    version: '5.4.8-priest-s13',
     A,
     classId: 'priest',
     class: PRIEST_CLASS,

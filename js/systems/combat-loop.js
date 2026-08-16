@@ -2,17 +2,29 @@
 /* --- fight loop --- */
   function startCombat(type) {
     applyRoomBackground(currentRouteNode());
+    const tempHpSnap = {};
+    for (const p of (run.party || [])) {
+      const sum = (p.buffs || []).reduce((s, b) => s + (b && b.tempHp ? Number(b.tempHp) : 0), 0);
+      if (sum > 0 && p.maxHp > 0) tempHpSnap[p.uid] = { sum, ratio: p.hp / p.maxHp };
+    }
     applyTalentStats();
+    for (const p of (run.party || [])) {
+      const snap = tempHpSnap[p.uid];
+      if (!snap) continue;
+      p.maxHp += snap.sum;
+      p.hp = clamp(Math.round(p.maxHp * snap.ratio), p.alive === false ? 0 : 1, p.maxHp);
+    }
     resetKeyPowersForCombat();
     const enemies = spawnPack(type);
     for (const p of run.party) {
       if (p.hp <= 0) { p.alive = false; p.hp = 0; } else p.alive = true;
       p.shield = 0;
-      p.buffs = [];
+      p._debugUsedThisTurn = false;
+      p._oncePerTurnUsed = {};
+      // Баффы/дебаффы едут в следующий пулл и тикают как обычно. КД не сбрасываем.
       p.abilities.forEach(a => {
+        // Между пачками откаты НЕ сбрасываются (M+ feel): curCd и charges живут через весь ключ.
         if (a.maxCharges) {
-          // Заряды (Блок щитом): между пачками сохраняем charges и таймер восстановления.
-          // Старое «curCd = 0» обнуляло откат и оставляло 0/2 без тика → скилл «ломался» до конца ключа.
           if (a.charges == null) a.charges = a.maxCharges;
           a.charges = Math.max(0, Math.min(a.maxCharges, Number(a.charges) || 0));
           if (a.charges >= a.maxCharges) {
@@ -21,9 +33,10 @@
             // нет активного тика — запустить восстановление +1
             a.curCd = a.cd;
           }
-          // иначе оставляем текущий curCd (продолжается между пачками)
+          // иначе оставляем текущий curCd
         } else {
-          a.curCd = 0;
+          // обычные скиллы: не обнулять curCd при входе в новую пачку
+          if (a.curCd == null || a.curCd < 0) a.curCd = 0;
         }
       });
       // Between pulls (M+ feel): no full restore. Energy/focus partially regen; mana barely; rage carries over.
@@ -57,20 +70,11 @@
         }
       }
     }
-    const te = talentEffects();
-    if (te.bloodlust) {
-      for (const a of run.party.filter(x => x.alive)) {
-        a.buffs.push({ id: 'lust', name: 'Кровожадность', icon: '🐺', turns: 2, atkMod: te.bloodlust });
-      }
-    }
-    if (run.restBuffBattles > 0) {
-      for (const a of run.party.filter(x => x.alive)) {
-        a.buffs.push({ id: 'rb', name: 'Настрой', icon: '🔥', turns: 99, atkMod: 0.15 });
-      }
-      run.restBuffBattles--;
-    }
+    // Межпулловые «подарки» (привал +15% ATK / авто-lust) отключены — только боевые баффы от скиллов.
+    if (run.restBuffBattles) run.restBuffBattles = 0;
     combat = { type, enemies, pets: [], turnQueue: [], turnIndex: 0, round: 1, over: false, waitingPlayer: false, thunderTimer: 0 };
     spawnClassPets();
+    try { applyBossMechanics(); } catch (e) { console.error('[boss mech]', e); }
     buildTurnQueue();
     log('Бой: ' + ROOM_META[type].name, 'system');
     renderCombat();
@@ -84,23 +88,29 @@
     if (side === 'ally') {
       return [...run.party, ...((combat?.pets) || [])].filter(u => u.side === 'ally' && u.alive && u.hp > 0);
     }
-    return (combat?.enemies || []).filter(u => u.alive && u.hp > 0);
+    return (combat?.enemies || []).filter(u => u.alive && u.hp > 0 && !u.vaultAway);
   }
   function livingHeroes() {
     return run.party.filter(u => u.alive && u.hp > 0);
   }
-  function getEff(u) {
+  function getEff(u, viewer) {
     let atk = u.atk, def = u.def, speed = u.speed;
     for (const b of (u.buffs || [])) {
       if (!b) continue;
       if (b.atkMod) atk *= (1 + b.atkMod);
-      if (b.defMod) def *= (1 + b.defMod);
+      if (b.defMod) {
+        if (typeof statusIsPerCaster === 'function' && statusIsPerCaster(b) && b.fromUid
+            && typeof statusAffectsViewer === 'function' && !statusAffectsViewer(b, viewer)) {
+          continue;
+        }
+        def *= (1 + b.defMod);
+      }
     }
     if (u.enraged) atk *= 1.5;
     return { atk: Math.round(atk), def: Math.round(def), speed };
   }
   function buildTurnQueue() {
-    const units = allUnits().filter(u => u.alive && u.hp > 0);
+    const units = allUnits().filter(u => u.alive && u.hp > 0 && u.petKey !== 'jade_serpent');
     units.sort((a, b) => getEff(b).speed - getEff(a).speed);
     combat.turnQueue = units.map(u => u.uid);
     combat.turnIndex = 0;
@@ -130,6 +140,10 @@
 
   function processTurn() {
     if (!combat || combat.over || run.finished) return;
+    if (combat.vaultLock) {
+      scheduleProcessTurn(180);
+      return;
+    }
     // Сохраняем текущего актора, фильтруем мёртвых, чиним индекс (иначе endRound/скип → «зависание»)
     const prevId = combat.turnQueue[combat.turnIndex];
     combat.turnQueue = combat.turnQueue.filter(id => {
@@ -144,17 +158,21 @@
     }
     if (combat.turnIndex >= combat.turnQueue.length) { endRound(); return; }
     const actor = currentActor();
-    if (!actor?.alive) {
+    if (!actor?.alive || actor.vaultAway || actor.petKey === 'jade_serpent') {
       combat.turnIndex++;
       scheduleProcessTurn(0);
       return;
     }
     if (isStunned(actor)) {
       log((actor.fullName || actor.name) + ' оглушён — ход пропущен', 'system');
+      try {
+        if (typeof tickJadeSerpentsAfterTurn === 'function') tickJadeSerpentsAfterTurn(actor);
+      } catch (e) { console.error('[serpent tick]', e); }
       combat.turnIndex++;
       scheduleProcessTurn(Math.max(80, Math.round(200 / gameSpeed)));
       return;
     }
+    actor._oncePerTurnUsed = {};
     actor.abilities.forEach(a => {
       if (a.curCd > 0) {
         a.curCd--;
@@ -181,6 +199,30 @@
     if (paused) return;
     // Player only controls heroes; pets auto-act
     if (actor.side === 'ally' && !actor.isPet) {
+      if (typeof shouldRaidAuto === 'function' && shouldRaidAuto(actor)) {
+        combat.waitingPlayer = false;
+        document.getElementById('ability-bar').innerHTML = '';
+        try { hidePassivePocket(); } catch (_) {}
+        document.getElementById('combat-actions').innerHTML =
+          `<span style="color:var(--muted)">Авто-рейд · ${actor.fullName || actor.name}…</span>`;
+        clearTimeout(aiTimer);
+        aiTimer = setTimeout(() => {
+          try {
+            if (paused || !combat || combat.over) return;
+            if (typeof raidAllyAi === 'function') {
+              if (!raidAllyAi(actor)) aiAct(actor);
+            } else {
+              aiAct(actor);
+            }
+            afterAction();
+          } catch (err) {
+            console.error('[raidAi]', err);
+            if (combat) combat._keepPlayerTurn = false;
+            afterAction();
+          }
+        }, Math.max(40, Math.round(aiDelay() * 0.55)));
+        return;
+      }
       combat.waitingPlayer = true;
       combat._keepPlayerTurn = false;
       actor._debugUsedThisTurn = false;
@@ -240,10 +282,14 @@
       }
     }
     // Passive tank agro pulse — keeps mobs glued to tank without constant taunt
-    const tankPulse = run?.party?.find(p => p.role === 'tank' && p.alive);
-    if (tankPulse && combat) {
+    const tanksPulse = (run?.party || []).filter(p => p.role === 'tank' && p.alive);
+    if (tanksPulse.length && combat) {
       for (const e of living('enemy')) {
-        addThreat(e, tankPulse, e.isBoss ? 350 : (e.isElite ? 220 : 150));
+        const mt = typeof currentMainTank === 'function' ? currentMainTank(e) : tanksPulse[0];
+        for (const t of tanksPulse) {
+          const amt = e.isBoss ? 350 : (e.isElite ? 220 : 150);
+          addThreat(e, t, t.uid === mt?.uid ? amt : Math.round(amt * 0.55));
+        }
       }
     }
     for (const u of allUnits()) {
@@ -293,8 +339,15 @@
       }
       // Brewmaster stagger ticks (~25% of pool per round)
       if (u.stagger > 0 && u.side === 'ally') {
-        const tick = Math.max(1, Math.round(u.stagger * 0.25));
+        let tick = Math.max(1, Math.round(u.stagger * 0.25));
         u.stagger = Math.max(0, u.stagger - tick);
+        const ox = (combat.pets || []).find(p => p.alive && p.ownerUid === u.uid && p.petKey === 'niuzao');
+        if (ox && tick > 1) {
+          const share = Math.max(1, Math.round(tick * 0.25));
+          tick = Math.max(1, tick - share);
+          dealTrue(ox, share, u, 'dmg', { abilityName: 'Пошатывание', isDot: true });
+          log(`${ox.name}: принял шат −${fmt(share)}`, 'system');
+        }
         dealTrue(u, tick, null, 'dmg', { abilityName: 'Пошатывание', isDot: true });
         log(`${u.name}: Пошатывание −${fmt(tick)} (остаток ${fmt(u.stagger)})`, 'enemy');
       }
@@ -326,6 +379,16 @@
         if (!p.alive || p.petTurnsLeft == null) continue;
         p.petTurnsLeft--;
         if (p.petTurnsLeft <= 0) {
+          if (p.petKey === 'infernal' && p.ownerUid && combat.pets) {
+            for (const q of combat.pets) {
+              if (q.ownerUid === p.ownerUid && q._holstered && q.petKey === 'imp') {
+                q._holstered = false;
+                q.alive = true;
+                if (!(q.hp > 0)) q.hp = Math.max(1, Math.round((q.maxHp || 1) * 0.6));
+                log(`${q.name} возвращается`, 'system');
+              }
+            }
+          }
           p.alive = false; p.hp = 0;
           log(`${p.name} исчезает`, 'system');
         }
@@ -333,6 +396,7 @@
       // оставляем мёртвых основных питомцев (для «Воскрешение питомца»)
       combat.pets = combat.pets.filter(p => p.alive || p.isMainPet || p.petTurnsLeft == null);
     }
+    try { tickBossMechanics(); } catch (e) { console.error('[tickBoss]', e); }
     // Bursting stacks tick
     tickBurstStacks();
     // Thunder marks: mark 2 heroes, discharge or take extra on next storm

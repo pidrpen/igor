@@ -755,6 +755,17 @@
     const mt = (typeof currentMainTank === 'function' ? currentMainTank(boss) : tanks[0]) || heroes[0];
     const ratio = boss.hp / Math.max(1, boss.maxHp);
 
+    if (ratio <= 0.50 && !boss._vaultInter && typeof beginRaidVault === 'function') {
+      boss._vaultInter = true;
+      beginRaidVault(boss);
+      return;
+    }
+
+    if (combat.vault && !combat.vault.dropped) {
+      if (typeof tickRaidVaultCast === 'function') tickRaidVaultCast(boss);
+      return;
+    }
+
     // Tank swap: overload stacks on current MT
     if (mt && mt.alive) {
       let ov = (mt.buffs || []).find(b => b.id === 'overload');
@@ -804,6 +815,7 @@
         h.thunderMark = true;
         log(`${h.name} отмечен молнией`, 'enemy');
       }
+      if (typeof linkRaidStormMarks === 'function') linkRaidStormMarks();
     }
 
     // Conductors at 70% and 40%
@@ -816,6 +828,10 @@
           add.name = (m.addName || add.name) + ' · ' + (i + 1);
         }
       }
+      applyStatus(boss, {
+        id: 'cond_shield', name: 'Ток проводников', icon: '🔌', turns: 99,
+        dmgReduce: 0.35, tip: 'Пока проводники живы — босс −35% урона.',
+      });
       log('Проводники! Убейте СТ за 4 раунда, иначе рейд получит разряд.', 'enemy');
       toast('Проводники — бейте СТ');
     }
@@ -828,16 +844,12 @@
           add.name = (m.addName || add.name) + ' · ' + (i + 1);
         }
       }
-      // Soak orbs
-      const soaks = heroes.slice().sort(() => Math.random() - 0.5).slice(0, 3);
-      for (const h of soaks) {
-        applyStatus(h, {
-          id: 'soak_orb', name: 'Сфера молнии', icon: '💠', turns: 2,
-          tip: 'Сок: останьтесь выше 35% HP, иначе сфера рванёт рейд.',
-        });
-        log(`${h.name} должен сокнуть сферу (HP > 35%)`, 'enemy');
-      }
-      toast('Соки молний — держите HP');
+      applyStatus(boss, {
+        id: 'cond_shield', name: 'Ток проводников', icon: '🔌', turns: 99,
+        dmgReduce: 0.35, tip: 'Пока проводники живы — босс −35% урона.',
+      });
+      if (typeof startRaidSoakAssign === 'function') startRaidSoakAssign(3);
+      else toast('Соки молний — держите HP');
     }
 
     const conds = (combat.enemies || []).filter(x => x.alive && x.mechRole === 'conductor');
@@ -854,6 +866,10 @@
       } else {
         log(`Проводник взорвётся через ${add.mustKillTurns} р.`, 'enemy');
       }
+    }
+    if (!conds.length && (boss.buffs || []).some(b => b.id === 'cond_shield')) {
+      boss.buffs = boss.buffs.filter(b => b.id !== 'cond_shield');
+      log('Проводники пали — босс снова уязвим.', 'player');
     }
 
     // Soak resolve

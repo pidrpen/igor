@@ -7,9 +7,15 @@
   let testActor = null; // mock unit для costLabel / estimateAbility
 
   function hideAllMainScreens() {
-    ['lobby', 'run-screen', 'test-picker', 'test-arena'].forEach(id => {
+    ['lobby', 'run-screen', 'test-hub', 'test-compare', 'test-picker', 'test-arena', 'test-style', 'test-ink', 'test-brew', 'test-plans'].forEach(id => {
       document.getElementById(id)?.classList.add('hidden');
     });
+  }
+
+  function openTestHub() {
+    hideAllMainScreens();
+    document.getElementById('end-modal')?.classList.add('hidden');
+    document.getElementById('test-hub')?.classList.remove('hidden');
   }
 
   function openTestPicker() {
@@ -234,7 +240,10 @@
     actor.abilities.forEach((ab, idx) => {
       const btn = document.createElement('button');
       const can = (typeof canPay === 'function') ? canPay(actor, ab) : true;
-      btn.className = 'ability' + (!can ? ' is-disabled' : '');
+      const chSt = (typeof abilityChargeState === 'function') ? abilityChargeState(ab) : null;
+      btn.className = 'ability' + (!can ? ' is-disabled' : '')
+        + (chSt && chSt.cur > 0 ? ' has-charges' : '')
+        + (chSt && chSt.cur > 0 && chSt.cd > 0 ? ' charge-ticking' : '');
       btn.type = 'button';
       if (!can) btn.setAttribute('aria-disabled', 'true');
       btn.tabIndex = 0;
@@ -265,7 +274,10 @@
       };
       pushY(cost);
       if (ab.cd > 0) pushY('КД ' + ab.cd);
-      if (ab.curCd > 0) pushY('ещё ' + ab.curCd);
+      if (ab.curCd > 0) {
+        if (chSt && chSt.cur > 0) pushY('заряд через ' + ab.curCd);
+        else pushY('ещё ' + ab.curCd);
+      }
       pushY(est);
       if (tags) tags.split(' · ').forEach(pushY);
       // бейдж анимации
@@ -275,13 +287,16 @@
       else pushY('заглушка');
 
       const yellow = yellowParts.join(' · ');
-      const cdHtml = ab.curCd > 0 ? `<div class="cd-overlay">${ab.curCd}</div>` : '';
+      const cdHtml = (typeof abilityCdOverlayHtml === 'function')
+        ? abilityCdOverlayHtml(ab)
+        : (ab.curCd > 0 ? `<div class="cd-overlay">${ab.curCd}</div>` : '');
       const tipName = String(ab.name || '').replace(/"/g, '&quot;');
       const tipDetail = String(detail || '').replace(/"/g, '&quot;');
+      const pips = (chSt && typeof chargePipsHtml === 'function') ? chargePipsHtml(chSt) : '';
 
       btn.innerHTML =
         (keyHint !== '' ? `<span class="hk">${keyHint}</span>` : '') +
-        `<span class="a-ico" data-tip-name="${tipName}" data-tip-detail="${tipDetail}" tabindex="-1">${ab.icon || '✨'}</span>` +
+        `<span class="a-ico" data-tip-name="${tipName}" data-tip-detail="${tipDetail}" tabindex="-1">${ab.icon || '✨'}${pips}</span>` +
         `<span class="a-body">` +
           `<span class="a-name">${ab.name || ab.id}</span>` +
           (yellow ? `<span class="a-cost">${yellow}</span>` : '') +
@@ -300,10 +315,12 @@
       const hideTip = () => {
         if (typeof hideAbilityTipFloat === 'function') hideAbilityTipFloat();
       };
-      btn.addEventListener('mouseenter', showTip);
-      btn.addEventListener('mouseleave', hideTip);
-      btn.addEventListener('focus', showTip);
-      btn.addEventListener('blur', hideTip);
+      if (icoEl) {
+        icoEl.addEventListener('mouseenter', showTip);
+        icoEl.addEventListener('mouseleave', hideTip);
+        icoEl.addEventListener('focus', showTip);
+        icoEl.addEventListener('blur', hideTip);
+      }
 
       btn.addEventListener('click', () => {
         hideTip();
@@ -442,9 +459,26 @@
         lobbyParty.appendChild(btn);
       }
     }
-    btn?.addEventListener('click', openTestPicker);
+    btn?.addEventListener('click', openTestHub);
 
-    document.getElementById('btn-test-back-lobby')?.addEventListener('click', closeTestRoomToLobby);
+    document.getElementById('btn-hub-lobby')?.addEventListener('click', closeTestRoomToLobby);
+    document.getElementById('btn-hub-arena')?.addEventListener('click', openTestPicker);
+    document.getElementById('btn-hub-compare')?.addEventListener('click', () => {
+      if (typeof openTestCompare === 'function') openTestCompare();
+    });
+    document.getElementById('btn-hub-style')?.addEventListener('click', () => {
+      if (typeof openStyleLab === 'function') openStyleLab();
+    });
+    document.getElementById('btn-hub-ink')?.addEventListener('click', () => {
+      if (typeof openInkRoom === 'function') openInkRoom();
+    });
+    document.getElementById('btn-hub-brew')?.addEventListener('click', () => {
+      if (typeof openTestCompare === 'function') openTestCompare({ classId: 'monk', specId: 'brewmaster' });
+    });
+    document.getElementById('btn-hub-plans')?.addEventListener('click', () => {
+      if (typeof openPlansRoom === 'function') openPlansRoom();
+    });
+    document.getElementById('btn-test-back-lobby')?.addEventListener('click', openTestHub);
     document.getElementById('btn-test-arena-back')?.addEventListener('click', () => {
       destroyTestArena();
       openTestPicker();

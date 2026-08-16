@@ -3,23 +3,25 @@
     const list = [];
     const r = role || (classId && specId && (WOW_MOP.getSpec(classId, specId) || {}).role) || null;
     // Все ДК: как работают руны
-    if (classId === 'deathknight') {
+    if (classId === 'deathknight' && specId === 'frost') {
+      list.push({
+        id: 'frozen_throne',
+        name: 'Преданность ледяному трону',
+        icon: '❄️',
+        short: '3 льда + 3 нечестивости',
+        detail: 'Руны: 3 льда и 3 нечестивости, крови нет. Потраченные руны восстанавливаются через 3 хода (тик в начале вашего хода). Сила рун растёт от рунных ударов и пассивно (+5 за ход).',
+      });
+    } else if (classId === 'deathknight') {
       list.push({
         id: 'rune_cycle',
         name: 'Рунный цикл',
         icon: '🔷',
-        short: 'руны 2х',
-        detail: 'У вас 6 рун: 2 крови, 2 льда, 2 нечестивости. Потраченные руны сами восстанавливаются через 2 хода. Наведение на скилл подсвечивает, какие руны он тратит. Сила рун (💙) растёт от рунных ударов и пассивно (+5 за ход) — её тратят «Лик смерти» и подобные навыки. На портрете под HP — полоска силы рун; кружки — сами руны.',
+        short: 'руны 3х',
+        detail: 'У вас 6 рун: 2 крови, 2 льда, 2 нечестивости. Потраченные руны восстанавливаются через 3 хода (тик в начале вашего хода). Сила рун растёт от рунных ударов и пассивно (+5 за ход).',
       });
     }
-    // Танки: «Щит с озона» (+15% блок)
-    // Исключения: хмелевар (уклон), паладин Защита, ДК Кровь — свои пассивки
-    if (
-      r === 'tank'
-      && !(classId === 'monk' && specId === 'brewmaster')
-      && !(classId === 'paladin' && specId === 'protection')
-      && !(classId === 'deathknight' && specId === 'blood')
-    ) {
+    // R1: «Щит с озона» только у воина Защиты. Стражу свою пассивку ещё не придумали.
+    if (classId === 'warrior' && specId === 'protection') {
       list.push({
         id: 'ozone_shield',
         name: 'Щит с озона',
@@ -72,6 +74,16 @@
         icon: '😈',
         short: 'урон петов',
         detail: 'Искусность усиливает урон всех питомцев и демонов. Собственные заклинания не затрагиваются.',
+      });
+    }
+    // Механист
+    if (classId === 'engineer' && specId === 'mechanist') {
+      list.push({
+        id: 'bot_share',
+        name: 'Делит удар',
+        icon: '🤖',
+        short: '50% в бота',
+        detail: 'Боевой бот принимает 50% урона, который проходит в хозяина. Только удар по самому механисту.',
       });
     }
     // Изобретатель
@@ -562,6 +574,10 @@
       });
       floatText(actor.uid, 'ярость ×' + stacks, 'buff');
     } else {
+      const kick = typeof isKickAbility === 'function'
+        ? isKickAbility(ability)
+        : (ability && (ability.type === 'interrupt' || ability.id === 'pummel' || ability.id === 'kick'));
+      if (kick) return;
       const had = actor.buffs.some(b => b && b.id === 'fury_mastery');
       if (had) {
         actor.buffs = actor.buffs.filter(b => !b || b.id !== 'fury_mastery');

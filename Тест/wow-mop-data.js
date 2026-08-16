@@ -1,8 +1,7 @@
 /**
- * World of Warcraft — Mists of Pandaria (MoP Classic)
- * Классы, специализации, активные боевые способности и ресурсы.
- * Источник структуры: Wowhead MoP Classic class guides / spell database.
- * В бою — основные активные скиллы ротации + ключевые кд (не пассивы/глифы).
+ * Каркас WOW_MOP (getClass / getSpec / resolveResources + стартовый список классов).
+ * Боевые цифры и кнопки в тесте — НЕ отсюда.
+ * Правь class-balance/<класс>-abilities.js; apply-all.js подменяет класс целиком.
  */
 (function (global) {
   'use strict';
@@ -157,7 +156,7 @@
             A({ id: 'crusader', n: 'Удар воина Света', en: 'Crusader Strike', i: '⚔️', c: 5, gs: 1, t: 'damage', p: 1.1, school: 'holy', d: '+1 ES · 5 маны', sid: 35395 }),
             A({ id: 'judgment', n: 'Правосудие', en: 'Judgment', i: '⚖️', c: 6, gs: 1, cd: 1, t: 'damage', fl: 23, school: 'holy', d: '23т · +1 ES', sid: 20271 }),
             A({ id: 'templar', n: 'Вердикт храмовника', en: "Templar's Verdict", i: '⚖️', cs: 3, t: 'damage', fl: 38, school: 'holy', d: '38т · 3 ES', sid: 85256 }),
-            A({ id: 'divine_storm', n: 'Божественная буря', en: 'Divine Storm', i: '🌪️', cs: 4, t: 'aoe', fl: 40, school: 'holy', d: '40т AoE · 4 ES', sid: 53385 }),
+            A({ id: 'divine_storm', n: 'Божественная буря', en: 'Divine Storm', i: '🌪️', cs: 3, t: 'aoe', fl: 32, school: 'holy', d: '32т AoE · 3 ES', sid: 53385 }),
             A({ id: 'hot_w', n: 'Молот гнева', en: 'Hammer of Wrath', i: '⚡', c: 6, gs: 1, t: 'damage', p: 1.45, school: 'holy', fa: 1, d: '≤35% HP · не тратит ход · +1 ES', sid: 24275 }),
             A({ id: 'inquisition', n: 'Инквизиция', en: 'Inquisition', i: '📜', cd: 4, t: 'buff', fa: 1, atkMod: 0.15, bt: 2, d: '+15% ATK · 2 хода · без хода', sid: 84963 }),
             A({ id: 'avenging', n: 'Гнев карателя', en: 'Avenging Wrath', i: '😇', cd: 5, t: 'buff', fa: 1, cm: 0.3, bt: 3, d: '+30% крит · 3 хода · без хода', sid: 31884 }),
@@ -750,6 +749,28 @@
         },
       ],
     },
+
+    // ═══════════════════════════════════════
+    // DEMON HUNTER — Fury · серая карточка, кит не залит
+    // ═══════════════════════════════════════
+    {
+      id: 'demonhunter', name: 'Охотник на демонов', nameEn: 'Demon Hunter', icon: '😈', color: '#A330C9',
+      resource: { type: 'fury', name: 'Ярость скверны', icon: '🟢', max: 100, start: 20, regen: 8 },
+      secondary: { type: 'soul_fragments', name: 'Осколки души', icon: '💠', max: 5, start: 0 },
+      specs: [
+        {
+          id: 'vengeance', name: 'Месть', nameEn: 'Vengeance', role: 'tank', icon: '🛡️',
+          stats: { hp: 165, atk: 13, def: 11, speed: 9 },
+          abilities: [],
+        },
+        {
+          id: 'havoc', name: 'Истребление', nameEn: 'Havoc', role: 'dps', icon: '⚔️',
+          stats: { hp: 100, atk: 17, def: 4, speed: 13 },
+          secondaryOverride: null,
+          abilities: [],
+        },
+      ],
+    },
   ];
 
   function getClass(id) {
@@ -762,10 +783,11 @@
   }
 
   function resolveResources(cls, spec) {
-    const res = Object.assign({}, spec.resourceOverride || cls.resource);
-    const sec = spec.secondaryOverride !== undefined
+    const fallback = { type: 'mana', name: 'Мана', icon: '💧', max: 100, start: 100, regen: 5 };
+    const res = Object.assign({}, (spec && spec.resourceOverride) || (cls && cls.resource) || fallback);
+    const sec = spec && spec.secondaryOverride !== undefined
       ? (spec.secondaryOverride ? Object.assign({}, spec.secondaryOverride) : null)
-      : (cls.secondary ? Object.assign({}, cls.secondary) : null);
+      : (cls && cls.secondary ? Object.assign({}, cls.secondary) : null);
     return { primary: res, secondary: sec };
   }
 

@@ -1,4 +1,26 @@
 /* ui/combat-ui: ability bar, unit cards, battle render */
+  function abilityChargeState(ab) {
+    if (!ab || !ab.maxCharges) return null;
+    const max = Math.max(1, Number(ab.maxCharges) || 1);
+    const cur = ab.charges != null ? Number(ab.charges) : max;
+    return { max, cur: Math.max(0, Math.min(max, cur)), cd: Number(ab.curCd) || 0 };
+  }
+  function chargePipsHtml(st) {
+    if (!st) return '';
+    let html = '<span class="a-pips" aria-hidden="true">';
+    for (let i = 0; i < st.max; i++) html += '<i class="' + (i < st.cur ? 'on' : '') + '"></i>';
+    return html + '</span>';
+  }
+  function abilityCdOverlayHtml(ab) {
+    const st = abilityChargeState(ab);
+    if (st) {
+      if (st.cur <= 0 && st.cd > 0) return '<div class="cd-overlay">' + st.cd + '</div>';
+      if (st.cur > 0 && st.cd > 0) return '<div class="charge-recharge">+' + st.cd + '</div>';
+      return '';
+    }
+    if (ab && ab.curCd > 0) return '<div class="cd-overlay">' + ab.curCd + '</div>';
+    return '';
+  }
   function showAbilities(actor) {
     const bar = document.getElementById('ability-bar');
     const actions = document.getElementById('combat-actions');
@@ -13,9 +35,21 @@
       const btn = document.createElement('button');
       const can = canPay(actor, ab);
       const hasWideSweep = !!(actor.buffs || []).some(b => b && b.id === 'wide_sweep' && (Number(b.stacks) || 0) > 0);
+      const hasNextAoe = !!(actor.buffs || []).some(b => b && b.id === 'next_aoe' && (Number(b.stacks) || 0) > 0);
+      const isComboFin = !!(typeof FINISHER_IDS !== 'undefined' && FINISHER_IDS.has(ab.id)
+        && actor.res?.secondary?.type === 'combo' && (actor.res.secondary.current || 0) > 0);
+      const chSt = abilityChargeState(ab);
+      const hasReadyCharge = !!(chSt && chSt.cur > 0);
+      const onceUsed = !!(ab.oncePerTurn && actor._oncePerTurnUsed && actor._oncePerTurnUsed[ab.id]);
       btn.className = 'ability' + ((ab.id === 'elusive' && (actor.purifyCleared || 0) > 0) ? ' elusive-charged' : '')
         + ((ab.id === 'heroic' && hasWideSweep) ? ' wide-sweep-charged' : '')
+        + ((hasNextAoe && ab.id !== 'slice' && (ab.type === 'damage' || ab.type === 'dot')) ? ' next-aoe-charged' : '')
         + ((ab.id === 'debug_mode') ? ' debug-mode-ab' : '')
+        + (isComboFin ? ' finisher-combo' : '')
+        + (hasReadyCharge ? ' has-charges' : '')
+        + (chSt && chSt.cur > 0 && chSt.cd > 0 ? ' charge-ticking' : '')
+        + (ab.oncePerTurn && !onceUsed ? ' once-ready' : '')
+        + (onceUsed ? ' once-spent' : '')
         + (!can ? ' is-disabled' : '');
       // Не используем native disabled: на disabled-кнопках не приходят mouseenter → нет тултипа.
       // Блок каста: aria + canPay в click/hotkey.
@@ -46,11 +80,15 @@
       pushY(cost);
       const baseCd = Number(ab.baseCd != null ? ab.baseCd : ab.cd) || 0;
       if (baseCd > 0) pushY('КД ' + baseCd);
-      if (ab.curCd > 0) pushY('ещё ' + ab.curCd);
+      if (onceUsed) pushY('уже в этом ходу');
+      if (ab.curCd > 0) {
+        if (chSt && chSt.cur > 0) pushY('заряд через ' + ab.curCd);
+        else pushY('ещё ' + ab.curCd);
+      }
       pushY(est);
       if (tags) tags.split(' · ').forEach(pushY);
       const yellow = yellowParts.join(' · ');
-      const cdHtml = ab.curCd > 0 ? `<div class="cd-overlay">${ab.curCd}</div>` : '';
+      const cdHtml = abilityCdOverlayHtml(ab);
       if (!ab.school) stampAbilitySchool(ab, actor.classId, actor.specId);
       const schoolNote = abilitySchoolNote(ab, actor);
       const schoolCss = abilitySchoolCss(ab, actor);
@@ -62,6 +100,12 @@
         icoInner = mode;
       } else {
         icoInner = ab.icon || '✨';
+      }
+      if (chSt) icoInner += chargePipsHtml(chSt);
+      if (ab.oncePerTurn) {
+        icoInner += onceUsed
+          ? '<span class="a-once used">ход</span>'
+          : '<span class="a-once">1×</span>';
       }
       const tipAttrName = String(ab.name || '').replace(/"/g, '&quot;');
       const tipAttrDetail = String(detail || '').replace(/"/g, '&quot;');
@@ -87,11 +131,6 @@
         icoEl.addEventListener('focus', showTip);
         icoEl.addEventListener('blur', hideTip);
       }
-      // Тултип и на всей карточке (в т.ч. на КД / без ресурса)
-      btn.addEventListener('mouseenter', showTip);
-      btn.addEventListener('mouseleave', hideTip);
-      btn.addEventListener('focus', showTip);
-      btn.addEventListener('blur', hideTip);
       // ДК: подсветка нужных рун при наведении / фокусе на скилле
       if (ab.costRunes && actor.res?.runes) {
         const hlOn = () => highlightAbilityRunes(actor, ab.costRunes);
@@ -113,7 +152,6 @@
         sfx('click');
         if (btn.classList.contains('is-disabled') || !canPay(actor, ab)) return;
         if (needTarget) {
-          // Always pick target manually (heals, DoTs, damage, purge, kick…)
           pendingTarget = { actor, ability: ab };
           if (ab.costRunes) highlightAbilityRunes(actor, ab.costRunes, true);
           else clearRuneHighlight();
@@ -121,13 +159,12 @@
           if (EXECUTE_IDS.has(ab.id)) {
             toast(ab.name + ': цель с ≤35% HP (подсвечены)');
           } else {
-            toast(r === 'ally_any' ? 'Цель: союзник (клик по фрейму)'
+            toast(r === 'ally_any' ? 'Цель: союзник (клик по портрету)'
               : r === 'ally_or_enemy' ? 'Цель: союзник или враг'
-              : 'Цель: враг (клик по фрейму)');
+              : 'Цель: враг (клик по портрету)');
           }
           updateUnitSelectionOnly();
         } else {
-          // self_only / aoe / buff / cleanse / heal_aoe — без клика
           castWithRuneFlash(actor, ab, rule === 'self_only' ? actor : null);
         }
       });
@@ -221,7 +258,7 @@
     // Highlight: free kick reaction if enemy casting kickable
     if (activeCast?.casting && (activeCast.casting.kind === 'kick' || activeCast.casting.interruptible !== false)) {
       const kickAb = actor.abilities.find(a =>
-        (a.type === 'interrupt' || INTERRUPT_IDS.has(a.id)) && canPay(actor, a));
+        (typeof isKickAbility === 'function' ? isKickAbility(a) : (a.type === 'interrupt' || INTERRUPT_IDS.has(a.id))) && canPay(actor, a));
       if (kickAb) {
         const kb = document.createElement('button');
         kb.className = 'btn btn-sm react-btn kick-now';
@@ -234,17 +271,36 @@
       }
     }
 
-    const auto = document.createElement('button');
-    auto.className = 'btn btn-sm btn-ok';
-    auto.textContent = 'Автоход (A)';
-    auto.onclick = () => {
-      if (actor.role === 'dps' || actor.role === 'healer') {
-        toast('ДД/хил: выбери способность и цель сам');
-        return;
+    if (run?.raid && actor.role === 'tank') {
+      const ovTank = (run.party || []).find(h => h.alive && h.role === 'tank' && h.uid !== actor.uid
+        && (h.buffs || []).some(b => b.id === 'overload' && (b.stacks || 0) >= 2));
+      const taunt = actor.abilities.find(a => a.type === 'taunt' && (typeof canPay !== 'function' || canPay(actor, a)));
+      if (ovTank && taunt) {
+        const tb = document.createElement('button');
+        tb.className = 'btn btn-sm react-btn kick-now';
+        tb.textContent = '🛡 Смена танков: провокация';
+        tb.onclick = () => {
+          castAbility(actor, taunt, null);
+          onRaidTaunt(actor);
+          afterAction();
+        };
+        actions.prepend(tb);
       }
-      aiAct(actor); afterAction();
-    };
-    actions.appendChild(auto);
+    }
+    if (run?.raid && (actor.buffs || []).some(b => b.id === 'storm_mark')) {
+      const sb = document.createElement('button');
+      sb.className = 'btn btn-sm' + (actor.raidSpread ? ' on' : '');
+      sb.textContent = actor.raidSpread ? 'Разошлись' : 'Разойтись (метки)';
+      sb.onclick = () => {
+        actor.raidSpread = !actor.raidSpread;
+        toast(actor.raidSpread ? 'Отошли — метки не свяжутся' : 'Снова вместе');
+        refreshRaidAlerts();
+        renderCombat();
+        showAbilities(actor);
+      };
+      actions.appendChild(sb);
+    }
+
     const skip = document.createElement('button');
     skip.className = 'btn btn-sm';
     skip.textContent = 'Пропуск (Пробел)';
@@ -258,12 +314,46 @@
     actions.appendChild(skip);
   }
 
+  function defaultCombatTarget(actor, ability) {
+    if (!actor || !ability) return null;
+    const rule = abilityTargetRule(ability);
+    if (rule === 'self_only') return actor;
+    if (rule === 'enemy') {
+      const foes = living('enemy').filter(e => e && e.alive && !e.vaultAway);
+      if (!foes.length) return null;
+      if (EXECUTE_IDS.has(ability.id)) {
+        const exec = foes.find(e => e.hp / Math.max(1, e.maxHp) <= 0.35);
+        return exec || null;
+      }
+      if (ability.id === 'touch_death') {
+        return foes.find(e => e.hp < actor.hp) || null;
+      }
+      const kickOnly = ability.type === 'interrupt' || (typeof INTERRUPT_IDS !== 'undefined' && INTERRUPT_IDS.has(ability.id));
+      if (kickOnly) {
+        return foes.find(e => e.casting) || null;
+      }
+      const focus = combat && combat.focusEnemy;
+      if (focus && foes.some(e => e.uid === focus.uid)) return focus;
+      return (typeof lowest === 'function' ? lowest(foes) : null) || foes[0];
+    }
+    return null;
+  }
+
   function onUnitClick(unit) {
+    if (unit && unit.side === 'enemy' && unit.alive && combat) combat.focusEnemy = unit;
+    if (run?.raid && unit?.side === 'ally' && !unit.isPet && !pendingTarget
+        && typeof tryAssignRaidSoak === 'function' && tryAssignRaidSoak(unit)) {
+      return;
+    }
+    if (run?.raid && unit?.side === 'ally' && !unit.isPet && !pendingTarget) {
+      if (typeof setRaidFocus === 'function') setRaidFocus(unit);
+      return;
+    }
     if (!pendingTarget || !combat?.waitingPlayer) return;
     if (!unit?.alive) return toast('Мёртв');
     const { actor, ability } = pendingTarget;
     const rule = abilityTargetRule(ability);
-    const isKick = ability.type === 'interrupt' || INTERRUPT_IDS.has(ability.id);
+    const kickOnly = ability.type === 'interrupt' || (typeof INTERRUPT_IDS !== 'undefined' && INTERRUPT_IDS.has(ability.id));
     if (rule === 'self_only') {
       pendingTarget = null;
       castWithRuneFlash(actor, ability, actor);
@@ -279,22 +369,36 @@
     } else {
       return toast('Эта способность без цели');
     }
-    if (isKick && !unit.casting) return toast('Цель не кастует');
+    if (kickOnly && !unit.casting) return toast('Цель не кастует');
     if (EXECUTE_IDS.has(ability.id) && unit.hp / unit.maxHp > 0.35) return toast('Казнь только при ≤35% здоровья');
+    if (ability.id === 'touch_death' && unit.hp >= actor.hp) return toast('Здоровье цели должно быть меньше вашего');
     pendingTarget = null;
     castWithRuneFlash(actor, ability, unit);
   }
 
 
   function renderCombat() {
+    ensureCombatRowClicks();
     renderAllies();
     renderEnemies();
+    bindUnitCardClicks();
+    updateUnitSelectionOnly();
     updateBossFrame();
     updateVignette();
+    if (run?.raid && typeof refreshRaidAlerts === 'function') refreshRaidAlerts();
+  }
+
+  function bindUnitCardClicks() {
+    document.querySelectorAll('#enemy-row .unit, #ally-row .unit, #enemy-row .unit-stack, #ally-row .unit-stack').forEach(el => {
+      if (el.dataset.clickBound === '1') return;
+      el.dataset.clickBound = '1';
+      el.style.cursor = 'pointer';
+    });
   }
 
   /** Only toggles selection/active classes — no full DOM rebuild (no flicker). */
   function updateUnitSelectionOnly() {
+    document.body.classList.toggle('need-target', !!(pendingTarget && combat?.waitingPlayer));
     const actor = currentActor();
     document.querySelectorAll('.unit').forEach(el => {
       const id = el.dataset.uid;
@@ -351,50 +455,414 @@
     </div>`;
   }
 
+  function petRowHtml(hero, actor) {
+    const pets = petsOf(hero);
+    if (!pets.length) return '<div class="pet-row" aria-hidden="true"></div>';
+    return `<div class="pet-row">${pets.map(p => petPortraitHtml(p, actor)).join('')}</div>`;
+  }
+
+  function unitHasAuras(u) {
+    if (!u) return false;
+    if (u.thunderMark) return true;
+    return (u.buffs || []).some(b => b && (b.turns == null || Number(b.turns) > 0));
+  }
+
+  function stackHtml(u, actor, withPets) {
+    const extra = u.side === 'enemy' ? ' enemy-stack' : '';
+    const auraOn = unitHasAuras(u) ? ' has-auras' : '';
+    return `<div class="unit-stack${extra}${auraOn}" data-uid="${u.uid}">${auraRailHtml(u)}${unitCard(u, actor)}${withPets ? petRowHtml(u, actor) : ''}</div>`;
+  }
+
+  function ensureCombatRowClicks() {
+    const bind = (id, findUnit) => {
+      const row = document.getElementById(id);
+      if (!row || row.dataset.combatClick === '1') return;
+      row.dataset.combatClick = '1';
+      row.addEventListener('click', (e) => {
+        const petEl = e.target.closest('.pet-port');
+        if (petEl && row.contains(petEl)) {
+          e.stopPropagation();
+          const p = (combat?.pets || []).find(x => x.uid === petEl.dataset.uid);
+          if (!p) return;
+          toast(`${p.icon} ${p.name}: ${fmt(p.hp)}/${fmt(p.maxHp)}` +
+            (p.petTurnsLeft != null ? ` · ${p.petTurnsLeft} р.` : ''));
+          return;
+        }
+        const hold = e.target.closest('.unit, .unit-stack');
+        if (!hold || !row.contains(hold)) return;
+        const uid = hold.dataset.uid || hold.querySelector('.unit')?.dataset.uid;
+        const u = findUnit(uid);
+        if (u) onUnitClick(u);
+      });
+      row.addEventListener('mouseover', (e) => {
+        const ico = e.target.closest('.aura-ico');
+        if (!ico || !row.contains(ico)) return;
+        showAuraTip(ico, ico.dataset.tipName || '', ico.dataset.tipDetail || '');
+      });
+      row.addEventListener('mouseout', (e) => {
+        const from = e.target.closest('.aura-ico');
+        const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.aura-ico') : null;
+        if (from && from !== to) hideAbilityTipFloat();
+      });
+    };
+    bind('ally-row', (uid) => (run?.party || []).find(p => p.uid === uid));
+    bind('enemy-row', (uid) => (combat?.enemies || []).find(p => p.uid === uid));
+  }
+
+  function auraSig(u) {
+    const bits = (u.buffs || []).map(b => [b.id, b.fromUid || '', b.stacks || 0, b.turns || 0, b.dot || 0, b._linked ? 1 : 0].join(':'));
+    if (u.thunderMark) bits.push('tm');
+    return bits.join('|');
+  }
+
+  function unitStructSig(u) {
+    const isDk = !!(u.res?.runes && u.res.secondary?.type === 'runic_power');
+    return [
+      u.side,
+      u.casting ? 1 : 0,
+      (u.shield || u.stagger > 0) ? 1 : 0,
+      u.res?.runes ? 1 : 0,
+      (u.res?.secondary && !isDk) ? 1 : 0,
+      (u.burstStacks || 0) > 0 ? 1 : 0,
+      u.side === 'enemy' && topThreatUid(u) ? 1 : 0,
+    ].join('');
+  }
+
+  function patchUnitStack(stack, u, actor, withPets) {
+    const card = stack.querySelector(':scope > .unit');
+    if (!card || stack.dataset.struct !== unitStructSig(u)) {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = stackHtml(u, actor, withPets).trim();
+      const fresh = wrap.firstElementChild;
+      fresh.dataset.struct = unitStructSig(u);
+      fresh.dataset.aura = auraSig(u);
+      stack.replaceWith(fresh);
+      return fresh;
+    }
+    card.className = unitClassName(u, actor);
+    card.style.setProperty('--cc', unitAccent(u));
+    const hpPct = clamp(u.hp / Math.max(1, u.maxHp) * 100, 0, 100);
+    const hpI = card.querySelector('.bar.hp > i');
+    if (hpI) hpI.style.width = hpPct + '%';
+    const hpLab = card.querySelector('.bar.hp')?.parentElement?.querySelector('.bar-label');
+    if (hpLab) hpLab.textContent = fmt(u.hp) + '/' + fmt(u.maxHp);
+    const isDk = !!(u.res?.runes && u.res.secondary?.type === 'runic_power');
+    let resPct;
+    let resLabel;
+    if (isDk) {
+      const rp = u.res.secondary;
+      resPct = rp.max ? clamp(rp.current / rp.max * 100, 0, 100) : 0;
+      resLabel = (rp.icon || '💙') + ' ' + Math.floor(rp.current);
+    } else if (u.res?.primary) {
+      resPct = u.res.primary.max ? clamp(u.res.primary.current / u.res.primary.max * 100, 0, 100) : 0;
+      resLabel = (u.res.primary.icon || '') + ' ' + Math.floor(u.res.primary.current);
+    }
+    const resI = card.querySelector('.bar.res > i');
+    if (resI && resPct != null) resI.style.width = resPct + '%';
+    const resLab = card.querySelector('.bar.res')?.parentElement?.querySelector('.bar-label');
+    if (resLab && resLabel != null) resLab.textContent = resLabel;
+    const sec = card.querySelector('.slot-sec');
+    if (sec && u.res?.secondary && !isDk) {
+      sec.textContent = u.res.secondary.icon + ' ' + u.res.secondary.current + '/' + u.res.secondary.max;
+      sec.classList.toggle('combo-pts', u.res.secondary.type === 'combo' && (u.res.secondary.current || 0) > 0);
+    }
+    if (u.res?.runes) {
+      const fresh = document.createElement('div');
+      fresh.innerHTML = runesRowHtml(u);
+      const old = card.querySelector('.slot-runes');
+      if (old && fresh.firstElementChild && old.outerHTML !== fresh.firstElementChild.outerHTML) {
+        old.replaceWith(fresh.firstElementChild);
+      }
+    }
+    if (u.casting) {
+      const fill = card.querySelector('.slot-cast .cast-bar > i');
+      const name = card.querySelector('.slot-cast .cast-name');
+      const castTurns = Number(u.casting.turns || u.casting.resolveIn || 1);
+      const castMax = Number(u.casting.maxTurns || u.casting.resolveIn || castTurns) || 1;
+      const castPct = Math.max(18, Math.min(100, Math.round((castTurns / Math.max(1, castMax)) * 100)));
+      if (fill) fill.style.width = castPct + '%';
+      if (name) name.textContent = telegraphLabel(u.casting);
+    }
+    if (u.shield) {
+      const shI = card.querySelector('.slot-shield .bar.shield > i');
+      const shL = card.querySelector('.slot-shield .bar-label');
+      if (shI) shI.style.width = clamp(u.shield / u.maxHp * 100, 0, 100) + '%';
+      if (shL) shL.textContent = '🛡' + fmt(u.shield);
+    }
+    const nameEl = card.querySelector('.u-name');
+    if (nameEl) {
+      const nm = u.fullName || u.name;
+      nameEl.textContent = nm;
+      nameEl.title = nm;
+    }
+    stack.classList.toggle('has-auras', unitHasAuras(u));
+    const sig = auraSig(u);
+    if (stack.dataset.aura !== sig) {
+      stack.dataset.aura = sig;
+      const oldAura = stack.querySelector(':scope > .unit-aura');
+      const wrap = document.createElement('div');
+      wrap.innerHTML = auraRailHtml(u);
+      if (oldAura && wrap.firstElementChild) oldAura.replaceWith(wrap.firstElementChild);
+      else if (wrap.firstElementChild) stack.prepend(wrap.firstElementChild);
+      else if (oldAura) oldAura.remove();
+    }
+    if (withPets) {
+      const pets = petsOf(u);
+      const petSig = pets.map(p => p.uid + ':' + p.hp + ':' + (p.alive ? 1 : 0)).join('|');
+      if (stack.dataset.pets !== petSig) {
+        stack.dataset.pets = petSig;
+        const oldPet = stack.querySelector(':scope > .pet-row');
+        const wrap = document.createElement('div');
+        wrap.innerHTML = petRowHtml(u, actor);
+        if (oldPet && wrap.firstElementChild) oldPet.replaceWith(wrap.firstElementChild);
+        else if (wrap.firstElementChild) stack.appendChild(wrap.firstElementChild);
+      }
+    }
+    return stack;
+  }
+
+  function syncUnitRow(row, units, actor, withPets) {
+    if (!row) return;
+    const wanted = units.map(u => u.uid);
+    const map = new Map();
+    [...row.children].forEach(el => {
+      const uid = el.dataset.uid || el.querySelector('.unit')?.dataset.uid;
+      if (uid) map.set(uid, el);
+    });
+    [...row.children].forEach(el => {
+      const uid = el.dataset.uid || el.querySelector('.unit')?.dataset.uid;
+      if (!wanted.includes(uid)) el.remove();
+    });
+    let prev = null;
+    for (const u of units) {
+      let el = map.get(u.uid);
+      if (!el || !row.contains(el)) {
+        const wrap = document.createElement('div');
+        wrap.innerHTML = stackHtml(u, actor, withPets).trim();
+        el = wrap.firstElementChild;
+        el.dataset.struct = unitStructSig(u);
+        el.dataset.aura = auraSig(u);
+      } else {
+        el = patchUnitStack(el, u, actor, withPets);
+        if (el) el.dataset.struct = unitStructSig(u);
+      }
+      if (prev) {
+        if (prev.nextElementSibling !== el) prev.after(el);
+      } else if (row.firstElementChild !== el) {
+        row.prepend(el);
+      }
+      prev = el;
+    }
+  }
+
   function renderAllies() {
     const row = document.getElementById('ally-row');
-    const actor = currentActor();
-    // Heroes as full cards; pets as mini portraits under their owner
-    row.innerHTML = run.party.map(hero => {
-      const pets = petsOf(hero);
-      // Always same stack size; pet-row only when pets exist (absolute, outside card)
-      const petRow = pets.length
-        ? `<div class="pet-row">${pets.map(p => petPortraitHtml(p, actor)).join('')}</div>`
-        : `<div class="pet-row" aria-hidden="true"></div>`;
-      return `<div class="unit-stack">${unitCard(hero, actor)}${petRow}</div>`;
-    }).join('');
-    row.querySelectorAll('.unit').forEach(el => {
-      el.addEventListener('click', () => {
-        const u = run.party.find(p => p.uid === el.dataset.uid);
-        if (u) onUnitClick(u);
-      });
-    });
-    row.querySelectorAll('.pet-port').forEach(el => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const p = (combat?.pets || []).find(x => x.uid === el.dataset.uid);
-        if (!p) return;
-        toast(`${p.icon} ${p.name}: ${fmt(p.hp)}/${fmt(p.maxHp)}` +
-          (p.petTurnsLeft != null ? ` · ${p.petTurnsLeft} р.` : ''));
-      });
-    });
+    if (!row || !run) return;
+    syncUnitRow(row, run.party, currentActor(), true);
   }
+
   function renderEnemies() {
     const row = document.getElementById('enemy-row');
+    if (!row) return;
     if (!combat) { row.innerHTML = ''; return; }
-    const actor = currentActor();
-    row.innerHTML = combat.enemies.map(u => unitCard(u, actor)).join('');
-    row.querySelectorAll('.unit').forEach(el => {
-      el.addEventListener('click', () => {
-        const u = combat.enemies.find(p => p.uid === el.dataset.uid);
-        if (u) onUnitClick(u);
-      });
-    });
+    syncUnitRow(row, combat.enemies.filter(u => !u.vaultAway), currentActor(), false);
+  }
+
+  function unitAccent(u) {
+    if (u.side === 'ally' && typeof classAccentColor === 'function') return classAccentColor(u.classId, u.specId);
+    return CLASS_CSS[u.classId] || (u.side === 'enemy' ? '#a04040' : 'var(--gold)');
+  }
+
+  function unitClassName(u, actor) {
+    const active = actor && actor.uid === u.uid;
+    const targeting = pendingTarget && (() => {
+      const r = abilityTargetRule(pendingTarget.ability);
+      if (r === 'ally_any') return u.side === 'ally' && !u.isPet;
+      if (r === 'enemy') return u.side === 'enemy';
+      if (r === 'ally_or_enemy') return !u.isPet && (u.side === 'ally' || u.side === 'enemy');
+      return false;
+    })();
+    const castKind = u.casting?.kind || '';
+    const castingCls = u.casting
+      ? ' casting' + (castKind === 'buster' ? ' tg-buster' : castKind === 'aoe' ? ' tg-aoe' : ' tg-kick')
+      : '';
+    const low = u.alive && u.hp / u.maxHp < 0.3 ? ' low-hp' : '';
+    const kickPrio = u.casting && (u.casting.kind === 'kick' || (u.casting.castPrio || 0) >= 3) ? ' kick-prio' : '';
+    const focus = (typeof raidFocusClass === 'function') ? raidFocusClass(u) : '';
+    const auras = (u.buffs || []).some(b => b && (b.turns == null || b.turns > 0));
+    const auraCls = auras ? ' has-auras' : '';
+    return `unit ${u.side === 'ally' ? 'ally' : 'enemy'}${u.alive ? '' : ' dead'}${active ? ' active' : ''}${targeting ? ' selected-target' : ''}${castingCls}${low}${kickPrio}${focus}${auraCls}`;
+  }
+
+  function runesRowHtml(u) {
+    const r = u.res?.runes;
+    if (!r) return '';
+    const cdLeft = (type, idx) => {
+      let best = 0;
+      for (const c of (r.cd || [])) {
+        if (c && c.type === type && Number(c.idx) === idx && Number(c.turns) > 0) {
+          best = Math.max(best, Number(c.turns) || 0);
+        }
+      }
+      return best;
+    };
+    const mk = (cls, type, idx) => {
+      const on = !!(r[type] && r[type][idx]);
+      const cd = on ? 0 : cdLeft(type, idx);
+      const cdHtml = (!on && cd > 0) ? `<span class="rune-cd">${cd}</span>` : '';
+      return `<i class="rune ${cls}${on ? ' ready' : ' spent'}${cd > 0 ? ' on-cd' : ''}" data-ready="${on ? '1' : '0'}" data-cd="${cd}" title="${on ? 'Готова' : (cd > 0 ? 'Восстановление: ' + cd + ' х.' : 'На КД')}">${cdHtml}</i>`;
+    };
+    return '<div class="slot-runes runes-row">' +
+      (r.blood || []).map((_, i) => mk('b', 'blood', i)).join('') +
+      (r.frost || []).map((_, i) => mk('f', 'frost', i)).join('') +
+      (r.unholy || []).map((_, i) => mk('u', 'unholy', i)).join('') +
+      '</div>';
+  }
+
+  function auraKind(b) {
+    if (!b) return 'is-buff';
+    if (b.dot) return 'is-dot';
+    if (b.hot) return 'is-hot';
+    if (b.id === 'storm_mark' || b.id === 'overload' || b.id === 'soak_orb') return 'is-debuff';
+    if ((b.atkMod && b.atkMod < 0) || (b.defMod && b.defMod < 0) || b.ccMode) return 'is-debuff';
+    if (b.dmgTakenMod || b.enemyDmgMod) return 'is-debuff';
+    return 'is-buff';
+  }
+
+  function auraIsBad(kind) {
+    return kind === 'is-dot' || kind === 'is-debuff';
+  }
+
+  function auraDetailLines(b, u) {
+    const lines = [];
+    if (b.dot) {
+      lines.push('Урон: ' + fmt(b.dot) + ' за раунд' + (b._linked ? ' (метки связаны, тик удвоен)' : ''));
+    }
+    if (b.hot) lines.push('Лечение: ' + fmt(b.hot) + ' за раунд');
+    if (b.dmgTakenMod) {
+      lines.push('Получает +' + Math.round(Number(b.dmgTakenMod) * 100) + '% урона'
+        + (b.fromUid ? ' только от наложившего' : ''));
+    }
+    if (b.dmgReduce) lines.push('Урон по цели −' + Math.round(Number(b.dmgReduce) * 100) + '%');
+    if (b.enemyDmgMod) lines.push('Урон цели −' + Math.round(Number(b.enemyDmgMod) * 100) + '%');
+    if (b.atkMod) lines.push((b.atkMod > 0 ? '+' : '') + Math.round(b.atkMod * 100) + '% атаки');
+    if (b.defMod) lines.push((b.defMod > 0 ? '+' : '') + Math.round(b.defMod * 100) + '% защиты');
+    if (b.armorMod) lines.push((Number(b.armorMod) > 0 ? '+' : '') + Math.round(Number(b.armorMod) * 100) + '% брони');
+    if (b.abilityCharges != null) lines.push(b.abilityCharges + ' удар' + (b.abilityCharges === 1 ? '' : 'а'));
+    if (b.stacks) lines.push('Стаки: ×' + b.stacks);
+    if (b.turns != null && b.turns < 90) lines.push('Осталось: ' + b.turns + ' р.');
+    if (b.tip) lines.push(b.tip);
+    if (b.fromUid) {
+      let src = null;
+      try {
+        src = (typeof allUnits === 'function' ? allUnits() : []).find(x => x && x.uid === b.fromUid) || null;
+      } catch (_) { src = null; }
+      if (src && src.name) lines.push('Наложил: ' + src.name);
+    }
+    if (b.id === 'storm_mark') {
+      lines.push(u && u.raidSpread
+        ? 'Отошёл — связь меток разорвана'
+        : 'Если оба с меткой рядом — урон удваивается');
+    }
+    return lines;
+  }
+
+  function raidAuraEntries(u) {
+    const list = [];
+    const seen = new Set();
+    const push = (b) => {
+      if (!b || !b.id) return;
+      const key = String(b.id) + '@' + String(b.fromUid || '');
+      if (seen.has(key)) return;
+      seen.add(key);
+      list.push(b);
+    };
+    for (const b of (u.buffs || [])) push(b);
+    if (u.thunderMark && !list.some(b => b.id === 'storm_mark')) {
+      push({ id: 'storm_mark', name: 'Метка молнии', icon: '🌩️', tip: 'Отмечен молнией' });
+    }
+    return list.slice(0, 12);
+  }
+
+  function escAttr(s) {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;');
+  }
+
+  function auraIcoHtml(b, u) {
+    const kind = auraKind(b);
+    const showTurns = b.turns != null && b.turns < 90;
+    const n = b.stacks
+      ? `<i class="buff-n">${b.stacks}</i>`
+      : (showTurns ? `<i class="buff-n">${b.turns}</i>` : '');
+    const detail = auraDetailLines(b, u).join(' | ');
+    const linked = b.id === 'storm_mark' && b._linked ? ' is-linked' : '';
+    return `<span class="aura-ico buff ${kind}${linked}" data-tip-name="${escAttr(b.name || '')}" data-tip-detail="${escAttr(detail)}">${b.icon || '•'}${n}</span>`;
+  }
+
+  function auraRailHtml(u) {
+    if (u && u.side === 'enemy' && !u.alive) return '';
+    const items = raidAuraEntries(u);
+    const good = [];
+    const bad = [];
+    for (const b of items) {
+      if (auraIsBad(auraKind(b))) bad.push(b);
+      else good.push(b);
+    }
+    if (!good.length && !bad.length) return '';
+    let gShow = good;
+    let bShow = bad;
+    if (good.length && bad.length) {
+      gShow = good.slice(0, 6);
+      bShow = bad.slice(0, 6);
+    } else {
+      gShow = good.slice(0, 12);
+      bShow = bad.slice(0, 12);
+    }
+    const moreGood = good.length - gShow.length;
+    const moreBad = bad.length - bShow.length;
+    const col = (list, extra, cls, label) => {
+      if (!list.length && !extra) return '';
+      const more = extra > 0
+        ? `<span class="aura-ico aura-more" data-tip-name="Ещё эффекты" data-tip-detail="${escAttr((cls.indexOf('bad') >= 0 ? bad : good).slice(list.length).map(b => b.name || '').join(' | '))}">+${extra}</span>`
+        : '';
+      const shown = extra > 0 ? list.slice(0, Math.max(0, list.length - 1)) : list;
+      return `<div class="aura-rail ${cls}" aria-label="${label}">` +
+        shown.map(b => auraIcoHtml(b, u)).join('') + more +
+        '</div>';
+    };
+    return `<div class="unit-aura is-on">${col(gShow, moreGood, 'aura-rail-good', 'Усиления')}${col(bShow, moreBad, 'aura-rail-bad', 'Ослабления')}</div>`;
+  }
+
+  function showAuraTip(anchor, name, detail) {
+    const tip = getUiTipFloat('ability-tip-float', 'ability-tip-float');
+    tip.replaceChildren();
+    const n = document.createElement('div');
+    n.className = 'pt-name';
+    n.textContent = name || 'Эффект';
+    tip.appendChild(n);
+    const lines = String(detail || '').split(' | ').map(s => s.trim()).filter(Boolean);
+    if (!lines.length) {
+      const d = document.createElement('div');
+      d.className = 'pt-detail';
+      d.textContent = 'Нет описания';
+      tip.appendChild(d);
+    } else {
+      for (const line of lines) {
+        const d = document.createElement('div');
+        d.className = 'pt-detail' + (/^Урон:/.test(line) ? ' pt-dmg' : '');
+        d.textContent = line;
+        tip.appendChild(d);
+      }
+    }
+    tip.classList.remove('hidden');
+    positionUiTipFloat(tip, anchor);
   }
 
   function unitCard(u, actor) {
     const hpPct = clamp(u.hp / u.maxHp * 100, 0, 100);
-    // ДК: под HP показываем силу рун, а не счётчик 6 рун
     const isDkRunes = !!(u.res?.runes && u.res.secondary?.type === 'runic_power');
     let resPct;
     let resType;
@@ -409,100 +877,28 @@
       resType = u.res.primary.type;
       resLabel = (u.res.primary.icon || '') + ' ' + Math.floor(u.res.primary.current);
     }
-    const active = actor && actor.uid === u.uid;
-    const targeting = pendingTarget && (() => {
-      const r = abilityTargetRule(pendingTarget.ability);
-      if (r === 'ally_any') return u.side === 'ally' && !u.isPet;
-      if (r === 'enemy') return u.side === 'enemy';
-      if (r === 'ally_or_enemy') return !u.isPet && (u.side === 'ally' || u.side === 'enemy');
-      return false;
-    })();
     const castKind = u.casting?.kind || '';
     const teleHtml = u.casting
       ? `<div class="tele-badge ${castKind === 'buster' ? 'buster' : castKind === 'aoe' ? 'aoe' : 'kick'}">${telegraphLabel(u.casting)}</div>`
       : '';
     const topThreat = u.side === 'enemy' ? topThreatUid(u) : null;
-    const tankUid = run?.party?.find(p => p.role === 'tank')?.uid;
+    const tankUids = new Set((run?.party || []).filter(p => p.role === 'tank').map(p => p.uid));
     const threatHtml = (u.side === 'enemy' && topThreat)
-      ? `<div class="threat-chip${topThreat === tankUid ? ' tanking' : ''}">${topThreat === tankUid ? 'ТАНК' : 'ВТОР.'}</div>`
+      ? `<div class="threat-chip${tankUids.has(topThreat) ? ' tanking' : ''}">${tankUids.has(topThreat) ? 'ТАНК' : 'ВТОР.'}</div>`
       : '';
     const burstHtml = (u.burstStacks || 0) > 0
       ? `<div class="burst-chip">💥${u.burstStacks}</div>` : '';
-    const markHtml = u.thunderMark ? `<div class="mark-chip">⚡ метка</div>` : '';
-    // Only render rune/sec slots when present — empty slots collapse via CSS :empty
-    let runesHtml = '';
-    if (u.res.runes) {
-      const r = u.res.runes;
-      // turns left for a specific spent rune slot (from r.cd entries)
-      const cdLeft = (type, idx) => {
-        let best = 0;
-        for (const c of (r.cd || [])) {
-          if (c && c.type === type && Number(c.idx) === idx && Number(c.turns) > 0) {
-            best = Math.max(best, Number(c.turns) || 0);
-          }
-        }
-        return best;
-      };
-      // ready = ярко; spent = свой цвет, приглушённый + цифра ходов до восстановления
-      const mk = (cls, type, idx) => {
-        const on = !!(r[type] && r[type][idx]);
-        const cd = on ? 0 : cdLeft(type, idx);
-        const cdHtml = (!on && cd > 0) ? `<span class="rune-cd">${cd}</span>` : '';
-        return `<i class="rune ${cls}${on ? ' ready' : ' spent'}${cd > 0 ? ' on-cd' : ''}" data-ready="${on ? '1' : '0'}" data-cd="${cd}" title="${on ? 'Готова' : (cd > 0 ? 'Восстановление: ' + cd + ' х.' : 'На КД')}">${cdHtml}</i>`;
-      };
-      runesHtml = '<div class="slot-runes runes-row">' +
-        (r.blood || []).map((_, i) => mk('b', 'blood', i)).join('') +
-        (r.frost || []).map((_, i) => mk('f', 'frost', i)).join('') +
-        (r.unholy || []).map((_, i) => mk('u', 'unholy', i)).join('') +
-        '</div>';
-    }
-    // Вторичный ресурс текстом — кроме ДК (сила рун уже в полоске под HP)
+    const runesHtml = runesRowHtml(u);
+    const secCombo = u.res?.secondary?.type === 'combo' && (u.res.secondary.current || 0) > 0;
     const sec = (u.res.secondary && !isDkRunes)
-      ? `<div class="slot-sec res-text">${u.res.secondary.icon} ${u.res.secondary.current}/${u.res.secondary.max}</div>`
+      ? `<div class="slot-sec res-text${secCombo ? ' combo-pts' : ''}">${u.res.secondary.icon} ${u.res.secondary.current}/${u.res.secondary.max}</div>`
       : '';
-    // All buffs/debuffs/DoTs/HoTs with remaining rounds (same strip for everyone)
-    const buffs = (u.buffs || [])
-      .slice()
-      .sort((a, b) => {
-        const pa = (a.dot || a.hot) ? 2 : 1;
-        const pb = (b.dot || b.hot) ? 2 : 1;
-        return pb - pa;
-      })
-      .slice(0, 10)
-      .map(b => {
-        const bits = [b.name || ''];
-        if (b.atkMod) bits.push((b.atkMod > 0 ? '+' : '') + Math.round(b.atkMod * 100) + '% атаки');
-        if (b.defMod) bits.push((b.defMod > 0 ? '+' : '') + Math.round(b.defMod * 100) + '% DEF');
-        if (b.dmgTakenMod) {
-          bits.push('+' + Math.round(b.dmgTakenMod * 100) + '%' + (b.physOnly ? ' физ.' : '') + ' урон');
-        }
-        if (b.abilityCharges != null) bits.push(b.abilityCharges + ' удар' + (b.abilityCharges === 1 ? '' : 'а'));
-        if (b.stacks) bits.push('×' + b.stacks);
-        if (b.armorMod) bits.push('+' + Math.round(Number(b.armorMod) * 100) + '% брони');
-        if (b.tip) bits.push(b.tip);
-        if (b.dot) bits.push(fmt(b.dot) + '/р период.');
-        if (b.hot) bits.push(fmt(b.hot) + '/р леч.');
-        const showTurns = b.turns != null && b.turns < 90;
-        if (showTurns) bits.push(b.turns + 'р');
-        let kind = 'is-buff';
-        if (b.dot) kind = 'is-dot';
-        else if (b.hot) kind = 'is-hot';
-        else if ((b.atkMod && b.atkMod < 0) || (b.defMod && b.defMod < 0) || b.ccMode) kind = 'is-debuff';
-        // стаки (Ещё повезёт / ярость / Щит света) — число на иконке; иначе ходы
-        const n = (b.stacks)
-          ? `<i class="buff-n">${b.stacks}</i>`
-          : (showTurns ? `<i class="buff-n">${b.turns}</i>` : '');
-        return `<span class="buff ${kind}" title="${bits.filter(Boolean).join(' · ')}">${b.icon || '•'}${n}</span>`;
-      }).join('');
-    const castingCls = u.casting
-      ? ' casting' + (castKind === 'buster' ? ' tg-buster' : castKind === 'aoe' ? ' tg-aoe' : ' tg-kick')
-      : '';
-    const low = u.alive && u.hp / u.maxHp < 0.3 ? ' low-hp' : '';
-    const cc = (u.side === 'ally' && typeof classAccentColor === 'function')
-      ? classAccentColor(u.classId, u.specId)
-      : (CLASS_CSS[u.classId] || (u.side === 'enemy' ? '#a04040' : 'var(--gold)'));
+    const cc = unitAccent(u);
+    const castTurns = Number(u.casting?.turns || u.casting?.resolveIn || 1);
+    const castMax = Number(u.casting?.maxTurns || u.casting?.resolveIn || castTurns) || 1;
+    const castPct = Math.max(18, Math.min(100, Math.round((castTurns / Math.max(1, castMax)) * 100)));
     const castBar = u.casting
-      ? `<div class="slot-cast"><div class="cast-bar" title="${telegraphLabel(u.casting)}"><i></i></div><div class="cast-name">${telegraphLabel(u.casting)}</div></div>`
+      ? `<div class="slot-cast"><div class="cast-bar" title="${telegraphLabel(u.casting)}"><i style="width:${castPct}%;animation:none"></i></div><div class="cast-name">${telegraphLabel(u.casting)}</div></div>`
       : '';
     const shieldHtml = u.shield
       ? `<div class="slot-shield bar-wrap"><div class="bar shield"><i style="width:${clamp(u.shield / u.maxHp * 100, 0, 100)}%"></i></div><span class="bar-label">🛡${fmt(u.shield)}</span></div>`
@@ -515,12 +911,11 @@
     const portraitHtml = pSrc
       ? artHtml(pSrc, ico, 'portrait')
       : `<div class="portrait"><span>${ico}</span></div>`;
-    const kickPrio = u.casting && (u.casting.kind === 'kick' || (u.casting.castPrio || 0) >= 3) ? ' kick-prio' : '';
     const resBarTitle = isDkRunes
       ? `title="Сила рун ${Math.floor(u.res.secondary.current)}/${u.res.secondary.max}"`
       : '';
-    return `<div class="unit ${u.side === 'ally' ? 'ally' : 'enemy'}${u.alive ? '' : ' dead'}${active ? ' active' : ''}${targeting ? ' selected-target' : ''}${castingCls}${low}${kickPrio}" data-uid="${u.uid}" style="--cc:${cc}">
-      ${threatHtml}${teleHtml}${burstHtml}${markHtml}
+    return `<div class="${unitClassName(u, actor)}" data-uid="${u.uid}" style="--cc:${cc}">
+      ${threatHtml}${teleHtml}${burstHtml}
       ${portraitHtml}
       <div class="u-name" title="${u.fullName || u.name}">${u.fullName || u.name}</div>
       <div class="u-role ${ROLE_CLASS[u.role] || ''}">${roleLabel}</div>
@@ -534,6 +929,5 @@
         <span class="bar-label">${resLabel}</span>
       </div>
       ${sec}${runesHtml}${castBar}
-      <div class="buffs">${buffs}</div>
     </div>`;
   }

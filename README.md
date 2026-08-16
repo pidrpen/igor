@@ -11,6 +11,8 @@ python -m http.server 8080
 # → http://localhost:8080/
 ```
 
+Карта файлов и договор работы (Тест / основа / перелив): см. `../.grok/skills/mythic-key/SKILL.md` и `../.grok/skills/mythic-key/references/карта.md`. Ниже — краткий скелет основы.
+
 ## Структура
 
 ```

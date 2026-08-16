@@ -7,10 +7,17 @@
     imp_boss:   { name: 'Главарь бесов', icon: '👑', hp: 70, atk: 18, def: 3, speed: 12, role: 'dps' },
     voidwalker: { name: 'Демон Бездны', icon: '👤', hp: 150, atk: 12, def: 9, speed: 8, role: 'tank' },
     ghoul:      { name: 'Вурдалак', icon: '🧟', hp: 105, atk: 16, def: 5, speed: 12, role: 'dps' },
+    frost_ghoul:{ name: 'Вурдалак', icon: '🧟', hp: 80, atk: 15, def: 3, speed: 13, role: 'dps' },
     shadowfiend:{ name: 'Исчадие Тьмы', icon: '👾', hp: 75, atk: 18, def: 2, speed: 15, role: 'dps' },
+    hellfiend:  { name: 'Исчадие ада', icon: '👿', hp: 70, atk: 15, def: 2, speed: 15, role: 'dps' },
     dire:       { name: 'Зверь', icon: '🐻', hp: 85, atk: 17, def: 4, speed: 13, role: 'dps' },
     wolf:       { name: 'Дух волка', icon: '🐺', hp: 70, atk: 15, def: 3, speed: 14, role: 'dps' },
     fire_ele:   { name: 'Элементаль огня', icon: '🔥', hp: 95, atk: 19, def: 3, speed: 12, role: 'dps' },
+    infernal:   { name: 'Инфернал', icon: '😈', hp: 110, atk: 15, def: 6, speed: 10, role: 'dps' },
+    niuzao:     { name: 'Нюцзао', icon: '🐂', hp: 140, atk: 14, def: 8, speed: 8, role: 'tank' },
+    xuen:       { name: 'Сюэнь', icon: '🐯', hp: 100, atk: 18, def: 4, speed: 14, role: 'dps' },
+    jade_serpent:{ name: 'Нефритовая змея', icon: '🐍', hp: 70, atk: 12, def: 3, speed: 12, role: 'healer' },
+    water_ele:  { name: 'Элементаль воды', icon: '💧', hp: 90, atk: 15, def: 4, speed: 12, role: 'dps' },
     gargoyle:   { name: 'Горгулья', icon: '🦇', hp: 90, atk: 18, def: 4, speed: 13, role: 'dps' },
     mirror:     { name: 'Зеркальная копия', icon: '🪞', hp: 45, atk: 13, def: 1, speed: 13, role: 'dps' },
     // Engineer mechanisms
@@ -51,14 +58,19 @@
   const PET_SUMMONS = {
     hand_guldan:  [{ def: 'imp', n: 2, turns: 3 }],
     shadowfiend:  [{ def: 'shadowfiend', n: 1, turns: 4 }],
+    hellfiend:    [{ def: 'hellfiend', n: 1, turns: 5 }],
     dire:         [{ def: 'dire', n: 1, turns: 3 }],
     feral_spirit: [{ def: 'wolf', n: 2, turns: 3 }],
     fire_ele:     [{ def: 'fire_ele', n: 1, turns: 4 }],
+    summon_water: [{ def: 'water_ele', n: 1, turns: 3 }],
+    niuzao:       [{ def: 'niuzao', n: 1, turns: 3 }],
+    xuen:         [{ def: 'xuen', n: 1, turns: 3 }],
+    jade_serpent: [{ def: 'jade_serpent', n: 1, turns: 3 }],
     summon_garg:  [{ def: 'gargoyle', n: 1, turns: 4 }],
+    raise_ghoul:  [{ def: 'frost_ghoul', n: 1, turns: 2 }],
     mirror:       [{ def: 'mirror', n: 2, turns: 3 }],
     // Engineer
     deploy_turret:      [{ def: 'turret', n: 1, turns: 4 }],
-    call_siege_walker:  [{ def: 'siege_walker', n: 1, turns: 4 }],
     deploy_bomb_drone:  [{ def: 'bomb_drone', n: 2, turns: 3 }],
     rocket_chicken:     [{ def: 'rocket_chicken', n: 2, turns: 3 }],
     world_destroyer:    [{ def: 'world_destroyer', n: 1, turns: 2 }],
@@ -213,6 +225,82 @@
     let power = Number(ab && ab.power);
     if (!Number.isFinite(power) || power <= 0) power = 1;
     return Math.max(1, Math.round(eff.atk * power * mult));
+  }
+
+  /**
+   * Финишер серии: вес в данных × множитель.
+   * Старая прямая 0.65+очки×0.18 давала 1 очко = 83% голых т — выгоднее сбрасывать сразу.
+   * 5 очков = 1.55 (жёлтые 50 / 60 / 53 / 14). 1–4 слабее, пять единиц < одной пятёрки.
+   */
+  function comboFinisherMult(points) {
+    const n = Math.max(0, Math.round(Number(points) || 0));
+    if (n <= 0) return 1;
+    if (n === 1) return 0.22;
+    if (n === 2) return 0.42;
+    if (n === 3) return 0.68;
+    if (n === 4) return 1.05;
+    return 1.55;
+  }
+
+  function comboPointsForEstimate(actor) {
+    if (!actor || actor.res?.secondary?.type !== 'combo') return 0;
+    return Math.max(0, Number(actor.res.secondary.current) || 0);
+  }
+
+  function isComboFinisherActor(actor, ability) {
+    return !!(ability && actor
+      && typeof FINISHER_IDS !== 'undefined' && FINISHER_IDS.has(ability.id)
+      && actor.res?.secondary?.type === 'combo');
+  }
+
+  function comboPointsForFinisher(actor) {
+    if (!actor || actor.res?.secondary?.type !== 'combo') return 0;
+    if (actor._spentSec > 0) return Number(actor._spentSec);
+    return comboPointsForEstimate(actor);
+  }
+
+  function scaleByComboIfFinisher(actor, ability, raw) {
+    if (!isComboFinisherActor(actor, ability)) return raw;
+    const pts = comboPointsForFinisher(actor);
+    if (!(pts > 0)) return raw;
+    return Math.max(1, Math.round(Number(raw) * comboFinisherMult(pts)));
+  }
+
+  /** Тик финишера: плоский вес в данных = тик при 5 очках. 1–4 — доля от пятёрки. */
+  function scaleDotByComboIfFinisher(actor, ability, raw) {
+    if (!isComboFinisherActor(actor, ability)) return raw;
+    const pts = comboPointsForFinisher(actor);
+    if (!(pts > 0)) return raw;
+    const at5 = comboFinisherMult(5);
+    if (!(at5 > 0)) return raw;
+    return Math.max(1, Math.round(Number(raw) * comboFinisherMult(pts) / at5));
+  }
+
+  /** Длина дота: applyDot.turns, иначе общие 3 раунда. */
+  function resolveDotTurns(ability) {
+    const t = ability && ability.applyDot && Number(ability.applyDot.turns);
+    if (t > 0) return Math.max(1, t);
+    return PERIODIC_ROUNDS;
+  }
+
+  function unitHasFlameShock(unit, caster) {
+    if (!unit) return false;
+    return (unit.buffs || []).some(b => {
+      if (!b || (b.turns != null && !(Number(b.turns) > 0))) return false;
+      const id = String(b.id || '');
+      const nm = String(b.name || '');
+      if (!(id === 'dot_flame_shock' || id.indexOf('flame_shock') >= 0 || nm.indexOf('Огненный шок') >= 0)) return false;
+      if (caster && b.fromUid && typeof statusAffectsViewer === 'function' && !statusAffectsViewer(b, caster)) return false;
+      return true;
+    });
+  }
+
+  function resolveDotTickFlat(ability) {
+    if (ability && ability.applyDot && ability.applyDot.flat != null) {
+      return Number(ability.applyDot.flat);
+    }
+    if (ability && ability.flat != null) return Number(ability.flat);
+    return null;
   }
 
   /**
@@ -416,7 +504,9 @@
     const bits = [];
     // Только метки UI, не цифры урона/баффов (они в estimateAbility)
     if (ab.maxCharges) bits.push((ab.charges != null ? ab.charges : ab.maxCharges) + '/' + ab.maxCharges + ' зар.');
+    if (ab.oncePerTurn) bits.push('1× за ход');
     if (ab.freeAction) bits.push('Не тратит ход');
+    if (ab.id === 'penance') bits.push('союзник/враг');
     if (ab.holyShock) bits.push('союзник/враг');
     if (ab.chainPrimary) bits.push('сначала выбранная цель');
     if (ab.holyShock === false && ab.targetFlex) bits.push(String(ab.targetFlex));
@@ -430,8 +520,15 @@
     if (ab.id === 'wrench_heal') {
       return 'хил за счет питомца';
     }
+    if (ab.id === 'emergency_repair') return '20% HP пета';
+    if (ab.id === 'plasma_cutter') return '+50% урона пета · 4х';
+    if (ab.id === 'bot_overdrive') return 'пар пета ×4 (5→20) · 4х';
+    if (ab.id === 'call_siege_walker') return 'область +70% урона пета · 4х';
     // Только цифры урона/хила — метки механики идут в abilityMetaLine (строка ниже)
     if (ab.type === 'heal' || ab.type === 'heal_aoe') {
+      if (ab.id === 'soothing' && typeof actorHasJadeSerpent === 'function' && actorHasJadeSerpent(actor)) {
+        return 'цель змеи · 3т после каждого хода';
+      }
       const mult = (ab.type === 'heal_aoe' ? 0.9 : 1);
       let base = abilityHealRaw(actor, ab, actor, mult);
       const scope = ab.type === 'heal_aoe' ? 'АОЕ' : 'СТ';
@@ -439,6 +536,11 @@
       const h = hotConfig(ab.id);
       if (h && flatW == null && !ab.applyHot) {
         return `${scope} · ~${fmt(Math.round(base * h.direct))} + ${fmt(Math.round(base * h.tick))}/р · ${PERIODIC_ROUNDS}р`;
+      }
+      if (ab.applyHot && ab.applyHot.hpPct != null) {
+        const pct = Math.round(Number(ab.applyHot.hpPct) * 100);
+        const turns = Number(ab.applyHot.turns) || 2;
+        return `${scope} · ${pct}% HP/р · ${turns}р`;
       }
       // Только вес «Nт» из баланса (без старых ~чисел в скобках)
       let s = flatW != null
@@ -450,23 +552,71 @@
       }
       return s;
     }
+    if (ab.id === 'touch_death') return 'урон = своё HP · цель слабее вас';
+    if (ab.id === 'jade_serpent') return '3р · 3т союзнику и врагу после каждого хода';
+    if (ab.id === 'niuzao') return 'бык 3р · без хода · 25% шата · топ 10т + 50% очистки';
+    if (ab.id === 'xuen') return 'тигр 3р · топ 10т · реген ×2';
+    if (ab.id === 'haunt') return '32т · +15% за свой дот на цели';
+    if (ab.id === 'malefic') return '20т · +10% за свой дот на цели';
+    if (ab.id === 'dark_soul' && actor && actor.specId === 'destruction') {
+      return 'инфернал 20т область · 2 хода';
+    }
+    if (ab.id === 'ab' && actor && actor.specId === 'arcane') {
+      const st = Math.min(3, Math.max(0, Number(actor._arcaneStacks) || 0));
+      return '24т · ' + (10 + st * 4) + ' маны · стак ' + st;
+    }
+    if (ab.id === 'abarr' && actor && actor.specId === 'arcane') {
+      const st = Math.min(3, Math.max(0, Number(actor._arcaneStacks) || 0));
+      return (20 + 6 * st) + 'т · сброс ' + st + ' стак.';
+    }
+    if (ab.id === 'pyroblast') {
+      if (typeof hasPyroHot === 'function' ? hasPyroHot(actor) : (actor && (actor.buffs || []).some(b => b && b.id === 'pyro_hot'))) {
+        return '90т · 10 маны (бафф шара)';
+      }
+      return '36т · 50 маны';
+    }
+    if (ab.id === 'lv') {
+      return '32т · крит если на цели Огненный шок';
+    }
+    if (ab.id === 'fire_nova') {
+      return '16т область · нужен Огненный шок на цели';
+    }
+    if (ab.id === 'unleash' && actor && actor.specId === 'enhancement') {
+      return '+15% на следующие 2 удара';
+    }
+    if (ab.id === 'death_strike') {
+      const blood = actor && actor.specId === 'blood';
+      return (blood ? '35т · хил 15% запаса' : '10т · хил 10% запаса') + ' + 25% полученного за 2 хода';
+    }
+    if (ab.id === 'bone_shield') {
+      return '15т цели · щит 40т себе';
+    }
+    if (ab.id === 'outbreak' && actor && actor.specId === 'unholy') {
+      if (Number(ab.curCd) > 0) return 'сброс чумы · 60 силы рун · КД не сбрасывается';
+      return '15т область + 6т/р×4 · в КД: 60 силы — весь дот сразу';
+    }
     if (ab.type === 'damage' || ab.type === 'aoe') {
       const hits = Math.max(1, Number(ab.hits) || 1);
       let d = abilityDamageRaw(actor, ab);
-      if (FINISHER_IDS.has(ab.id) && actor.res?.secondary?.type === 'combo') {
-        const stacks = Math.max(1, actor.res.secondary.current || 1);
-        d = Math.round(d * (0.7 + stacks * 0.15));
-      }
+      const comboFin = isComboFinisherActor(actor, ab);
+      const comboN = comboFin ? comboPointsForEstimate(actor) : 0;
+      const d5 = comboFin ? Math.max(1, Math.round(d * comboFinisherMult(5))) : d;
+      d = scaleByComboIfFinisher(actor, ab, d);
       const flatW = abilityFlatWeight(ab);
+      const hitsS = hits > 1 ? `×${hits}` : '';
+      const aoeS = ab.type === 'aoe' ? ' по области' : '';
       let s;
-      if (flatW != null) {
+      if (comboFin) {
+        s = `${fmt(d5)}${hitsS} при 5 очках${aoeS}`;
+        if (comboN > 0) s += ` · серия ${comboN} → ${fmt(d)}${hitsS}`;
+      } else if (flatW != null) {
         s = hits > 1
-          ? `${flatW}т×${hits}` + (ab.type === 'aoe' ? ' по области' : '')
-          : `${flatW}т` + (ab.type === 'aoe' ? ' по области' : '');
+          ? `${flatW}т×${hits}` + aoeS
+          : `${flatW}т` + aoeS;
       } else {
         s = hits > 1
-          ? `~${fmt(d)}×${hits}` + (ab.type === 'aoe' ? ' по области' : ' урона')
-          : `~${fmt(d)}` + (ab.type === 'aoe' ? ' по области' : ' урона');
+          ? `~${fmt(d)}×${hits}` + (aoeS || ' урона')
+          : `~${fmt(d)}` + (aoeS || ' урона');
       }
       if (ab.splashFlat != null && Number.isFinite(Number(ab.splashFlat))) {
         s += ' · ' + Number(ab.splashFlat) + 'т остальным';
@@ -484,7 +634,16 @@
         const tick = periodicTickFromFlat(actor, ab.applyDot.flat);
         const dotTurns = Number(ab.applyDot.turns) || 4;
         const dotName = ab.applyDot.name || 'период.';
-        s += ` + ${dotName} ${fmt(tick)}/р×${dotTurns}`;
+        if (comboFin) {
+          if (comboN > 0) {
+            const tickNow = scaleDotByComboIfFinisher(actor, ab, tick);
+            s += ` + ${dotName} ${fmt(tick)}/р×${dotTurns} (серия ${comboN} → ${fmt(tickNow)}/р)`;
+          } else {
+            s += ` + ${dotName} ${fmt(tick)}/р×${dotTurns}`;
+          }
+        } else {
+          s += ` + ${dotName} ${fmt(tick)}/р×${dotTurns}`;
+        }
       }
       if (ab.grantSelfBuff && ab.grantSelfBuff.id === 'wide_sweep') {
         s += ' · +Широкий размах';
@@ -497,14 +656,50 @@
       return s;
     }
     if (ab.type === 'dot' || DOT_ABILITY_IDS.has(ab.id)) {
-      if (ab.flat != null) {
-        const tick = periodicTickFromFlat(actor, ab.flat);
-        return `~${fmt(tick)}/р · ${PERIODIC_ROUNDS}р период. урон`;
+      const turns = resolveDotTurns(ab);
+      const tickFlat = resolveDotTickFlat(ab);
+      const comboFin = isComboFinisherActor(actor, ab);
+      const comboN = comboFin ? comboPointsForEstimate(actor) : 0;
+      if (tickFlat != null) {
+        let tick = periodicTickFromFlat(actor, tickFlat);
+        const skipApply = !!(ab.applyDot && !(ab.flat != null && Number(ab.flat) > 0));
+        const tick5 = comboFin && ab.applyDot
+          ? tick
+          : (comboFin ? Math.max(1, Math.round(tick * comboFinisherMult(5))) : tick);
+        tick = (comboFin && ab.applyDot)
+          ? scaleDotByComboIfFinisher(actor, ab, tick)
+          : scaleByComboIfFinisher(actor, ab, tick);
+        if (ab.applyDot && !skipApply) {
+          let hit = abilityDamageRaw(actor, ab);
+          const hit5 = comboFin ? Math.max(1, Math.round(hit * comboFinisherMult(5))) : hit;
+          hit = scaleByComboIfFinisher(actor, ab, hit);
+          if (comboFin) {
+            let s = `${fmt(hit5)} при 5 очках + ${fmt(tick5)}/р · ${turns}р`;
+            if (comboN > 0) s += ` · серия ${comboN} → ${fmt(hit)} + ${fmt(tick)}/р`;
+            return s;
+          }
+          return `~${fmt(hit)} + ${fmt(tick)}/р · ${turns}р`;
+        }
+        if (comboFin) {
+          let s = `${fmt(tick5)}/р при 5 очках · ${turns}р`;
+          if (comboN > 0) s += ` · серия ${comboN} → ${fmt(tick)}/р`;
+          return s;
+        }
+        return `~${fmt(tick)}/р · ${turns}р период. урон`;
       }
       const p = Number(ab.power) > 0 ? Number(ab.power) : 1;
-      const hit = Math.round(eff.atk * p * 0.5);
-      const tick = Math.max(1, Math.round(eff.atk * p * 0.4));
-      return `~${fmt(hit)} + ${fmt(tick)}/р · ${PERIODIC_ROUNDS}р период. урон`;
+      let hit = Math.round(eff.atk * p * 0.5);
+      let tick = Math.max(1, Math.round(eff.atk * p * 0.4));
+      const hit5 = comboFin ? Math.max(1, Math.round(hit * comboFinisherMult(5))) : hit;
+      const tick5 = comboFin ? Math.max(1, Math.round(tick * comboFinisherMult(5))) : tick;
+      hit = scaleByComboIfFinisher(actor, ab, hit);
+      tick = scaleByComboIfFinisher(actor, ab, tick);
+      if (comboFin) {
+        let s = `${fmt(hit5)} при 5 очках + ${fmt(tick5)}/р · ${turns}р`;
+        if (comboN > 0) s += ` · серия ${comboN} → ${fmt(hit)} + ${fmt(tick)}/р`;
+        return s;
+      }
+      return `~${fmt(hit)} + ${fmt(tick)}/р · ${turns}р период. урон`;
     }
     if (ab.type === 'buff') {
       if (ab.id === 'dark_soul') return 'питомцы +3 хода';
@@ -518,6 +713,7 @@
       if (ab.critMod) bits.push('+' + Math.round(Number(ab.critMod) * 100) + '% крит');
       if (ab.atkMod && ab.id !== 'metamorphosis') bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% атаки');
       if (ab.petAtkMod && ab.id !== 'metamorphosis') bits.push('+' + Math.round(Number(ab.petAtkMod) * 100) + '% урон петов');
+      if (ab.armorMod) bits.push('+' + Math.round(Number(ab.armorMod) * 100) + '% брони');
       if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% урон');
       if (ab.staggerBonus) bits.push('+' + Math.round(Number(ab.staggerBonus) * 100) + '% stagger');
       if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% здоровья');
@@ -555,20 +751,158 @@
         return pool > 0 ? `щит ~${fmt(base + pool)} (+${fmt(pool)} из stagger)` : `щит ~${fmt(base)}`;
       }
       const fw = abilityFlatWeight(ab);
+      const party = ab.id === 'heaven_shield' || ab.partyShield;
+      if (fw != null && party) return `щит ${fw}т всем + Искупление`;
       return fw != null ? `щит ${fw}т` : `щит ~${fmt(abilityShieldRaw(actor, ab, actor))}`;
     }
     if (ab.type === 'cc') {
+      if (ab.ccMode === 'silence' || ab.id === 'mind_spike') return 'тишина · сбивает каст';
       const n = Number(ab.buffTurns) || Number(ab.ccTurns) || 1;
       return 'стан ' + n + 'х';
     }
     if (ab.type === 'interrupt' || INTERRUPT_IDS.has(ab.id)) return 'сбивает каст';
+    if (ab.id === 'hellfiend' || (PET_SUMMONS[ab.id] && ab.id === 'hellfiend')) {
+      return 'пет 34т · 5 ходов · кормит Искупление';
+    }
     if (ab.type === 'summon' || PET_SUMMONS[ab.id]) return 'призыв питомца';
     return ab.desc || typeLabel(ab.type);
   }
 
   /**
+   * Словарь именных эффектов: наведение на «Кавычки» в подсказке.
+   * Цифры тика живут в тексте способности / на иконке у портрета; здесь — как работает эффект.
+   */
+  const EFFECT_GLOSSARY = {
+    'Кровотечение': 'Периодический урон в конце раунда. Свой экземпляр на каждого, кто наложил. Обновление с той же кнопки заменяет тик и длительность, не ставит второй.',
+    'Широкий размах': '1 стак. Следующий «Героический удар» бьёт остальных врагов на 40% силы и вешает 40% того же «Кровотечения». Стак тратится.',
+    'Героический удар': 'Удар Оружия. Вешает «Кровотечение». Под «Широким размахом» дублируется на остальных врагов (40% удара и 40% кровотечения).',
+    'Дар хмелевара': 'Скрытый хот хмелевара. Шанс равен криту лечащего. 75% полученного хила делятся на 5 раундов. Повторный прок обновляет хот. Это не кнопка.',
+    'Выбор света': 'Хот на 2 хода после исцеления раненого. Сила от искусности и объёма хила.',
+    'Искупление': 'Носители получают долю урона кастера как лечение. Раздают щит, Молитва исцеления и Щит небес. Кормят Кара, Священный огонь, Исповедь во врага и пет.',
+    'Заживляющий туман': 'Хот. Носители дополнительно получают хил, равный 70% урона ткача.',
+    'Окутывающий туман': 'Прямой хил плюс хот на несколько раундов.',
+    'Успокаивающий туман': 'Без змеи — 3т на своём ходу. Со змеёй только выбирает цель: дальше хил идёт от змеи после каждого хода героя и моба.',
+    'Затмение': 'При полной шкале: +20% атаки на 3 хода, шкала в ноль.',
+    'Пошатывание': 'Около 35% входящего уходит в пул и тикает по себе. «Очищающий отвар» снимает долю пула в щит «Отвара неуловимости».',
+    'Отвар неуловимости': 'Щит: базовая прочность плюс урон, недавно снятый «Очищающим отваром».',
+    'Очищающий отвар': 'Снимает часть «Пошатывания». Снятое копится для щита «Отвара неуловимости».',
+    'Огненный шок': 'Дот. Пока висит, «Выброс лавы» гарантированно критует.',
+    'Выброс лавы': 'Жирный огненный удар. Если на цели «Огненный шок» — этот удар критует без броска.',
+    'Смерть и разложение': 'Лужа: свои удары дублируются по целям, которые в ней стоят.',
+    'Костяной щит': 'Разовый урон цели и щит на себя.',
+    'Неистовое восстановление': 'Хот в процентах запаса здоровья, не плоские т.',
+    'Дикая защита': 'Плюс к броне на время. Это не щит.',
+    'Разорвать': 'Финишер-дот. Цифра тика в данных — при 5 очках серии. С 1–4 очков тик слабее.',
+    'Рваная рана': 'Финишер-дот. Тик в данных — при 5 очках серии.',
+    'Потрошение': 'Финишер. На кнопке цифра «при 5 очках». С 1 очка сильно слабее.',
+    'Ликвидация': 'Финишер. Бесплатно, своё КД, без окна здоровья.',
+    'Свирепый укус': 'Финишер. На кнопке цифра при 5 очках серии.',
+    'Дикий рёв': 'Усиление атаки. Серию не ест, ход не тратит.',
+    'Боевой бот': 'Постоянный пет механиста: 25т в одну цель, +5 пара с атаки хозяина. Берёт 50% урона по хозяину.',
+    'Агония': 'Долгий дот Колдовства. Свой экземпляр на наложившего.',
+    'Порча': 'Дот. Свой экземпляр на наложившего.',
+    'Нестабильное колдовство': 'Дот. Свой экземпляр на наложившего.',
+    'Жертвенный огонь': 'Дот Разрушения. Свой экземпляр на наложившего.',
+    'Лунный огонь': 'Дот. Свой экземпляр на наложившего. Обновление с той же кнопки заменяет тик.',
+    'Солнечный огонь': 'Дот. Свой экземпляр на наложившего.',
+    'Глубокая рана': 'Дот Силы зверя. Не финишер.',
+    'Взбучка': 'Дот по области. Цифры тика — в тексте способности.',
+    'Растерзать': 'Дот Стража. Свой экземпляр на наложившего.',
+    'Омоложение': 'Хот Исцеления. Тик в конце раунда.',
+    'Восстановление': 'Хот. Тик в конце раунда.',
+    'Буйный рост': 'Хот по отряду.',
+    'Жизнецвет': 'Хот. Тик в конце раунда.',
+    'Обновление': 'Хот Света. Тик в конце раунда.',
+    'Быстрина': 'Хот шамана. Тик в конце раунда.',
+    'Исцеляющий ливень': 'Хот по отряду.',
+    'Шок небес': 'Хот после Шока небес в союзника.',
+    'Освящение': 'Дот по земле. Правосудие бьёт сильнее тех, кто стоит в нём.',
+    'Священный огонь': 'Дот Послушания. Кормит «Искупление».',
+    'Слово Тьмы: Боль': 'Дот Тьмы.',
+    'Прикосновение вампира': 'Дот Тьмы, длиннее Боли.',
+    'Всепожирающая чума': 'Короткий жирный дот Тьмы за сферы.',
+    'Укус змеи': 'Дот охотника. Свой экземпляр на наложившего.',
+    'Чёрная стрела': 'Дот Выживания.',
+    'Разрывной заряд': 'Короткий дот Выживания.',
+    'Ожог ловушки': 'Дот от ловушки.',
+    'Смертельный яд': 'Дот Ликвидации с ударов.',
+    'Отравление': 'Короткий дот поверх яда.',
+    'Гаррота': 'Дот. Накладывается с кнопки Гарроты.',
+    'Нарезка': '1 стак. Следующий одиночный удар дублируется по остальным врагам. Стак тратится.',
+    'Череда убийств': 'Короткий дот Боя.',
+    'Чума': 'Болезнь Крови. Периодический урон.',
+    'Озноб': 'Болезнь Льда. Периодический урон.',
+    'Болезнь': 'Болезнь Нечестивости. Периодический урон.',
+    'Дыхание огня': 'Дот хмелевара по области.',
+    'Буря Пустоты': 'Дот Тайной магии.',
+    'Возгорание': 'Дот Огня с Ожога. Не отдельная кнопка Возгорания.',
+    'Живая бомба': 'Дот. По истечении может задеть соседей — смотри лог боя.',
+    'Снежная буря': 'Короткий дот по всем врагам.',
+    'Липкая бомба': 'Дот сапёра.',
+    'Раскалённая глыба': 'Окно после крита «Огненного шара»: следующая «Огненная глыба» стоит 10 маны и бьёт 90т.',
+    'Раскалённый столб': 'Окно после «Огненного столба»: следующий «Огненный шар» критует.',
+    'Копьё — область': 'Окно после «Ледяной стрелы» (20%): следующее «Ледяное копьё» бьёт всех врагов.',
+    'Щит света': '+10% брони на 4 хода, до 2 стаков. Вешает Щит праведника.',
+    'Отвара неуловимости': 'Щит: база плюс урон, снятый «Очищающим отваром».',
+  };
+
+  function effectGlossaryText(name) {
+    if (!name) return '';
+    const key = String(name).replace(/^[«"']|[»"']$/g, '').trim();
+    return EFFECT_GLOSSARY[key] || '';
+  }
+
+  /** desc из кита — только цифры / КД / ресурс, без фразы «что делает». */
+  function descLooksBare(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return true;
+    const leftover = s
+      .replace(/\b(кд|ход|хода|ходу|раунд|раунда|раундов|ярость|ярости|мана|маны|пар|пара|энергия|энергии|очко|очка|очков|заряд|заряда|зарядов|серия|серии|область|перезарядка|бесплатно)\b/gi, ' ')
+      .replace(/[\d\s·.,:;+\-−~=%/|+×xх()]+/gi, ' ')
+      .replace(/\bт\b/gi, ' ')
+      .trim();
+    return leftover.length < 4;
+  }
+
+  function describeDataFacts(ab) {
+    if (!ab) return [];
+    const bits = [];
+    const ad = ab.applyDot;
+    if (ad && (ad.flat != null || ad.turns)) {
+      const nm = ad.name || 'периодический урон';
+      const fl = ad.flat != null ? Number(ad.flat) : null;
+      const tn = Number(ad.turns) || 0;
+      if (fl != null && tn) bits.push('«' + nm + '»: ' + fl + 'т за раунд, ' + tn + ' р.');
+      else if (tn) bits.push('«' + nm + '» на ' + tn + ' р.');
+    }
+    const ah = ab.applyHot;
+    if (ah) {
+      const nm = ah.name || 'периодическое лечение';
+      if (ah.hpPct != null) {
+        bits.push('«' + nm + '»: ' + Math.round(Number(ah.hpPct) * 100) + '% HP за раунд, ' + (Number(ah.turns) || 0) + ' р.');
+      } else if (ah.flat != null) {
+        bits.push('«' + nm + '»: ' + Number(ah.flat) + 'т лечения за раунд, ' + (Number(ah.turns) || 0) + ' р.');
+      }
+    }
+    if (ab.atkMod) bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% атаки' + (ab.buffTurns ? ' · ' + ab.buffTurns + 'х' : ''));
+    if (ab.petAtkMod) bits.push('+' + Math.round(Number(ab.petAtkMod) * 100) + '% урона питомца' + (ab.buffTurns ? ' · ' + ab.buffTurns + 'х' : ''));
+    if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% входящего' + (ab.buffTurns ? ' · ' + ab.buffTurns + 'х' : ''));
+    if (ab.armorMod && !ab.armorStacksMax) bits.push((Number(ab.armorMod) > 0 ? '+' : '') + Math.round(Number(ab.armorMod) * 100) + '% брони' + (ab.buffTurns ? ' · ' + ab.buffTurns + 'х' : ''));
+    if (ab.lifesteal) bits.push('вампиризм ' + Math.round(Number(ab.lifesteal) * 100) + '%');
+    if (ab.healFromDealt) bits.push('хил ' + Math.round(Number(ab.healFromDealt) * 100) + '% от нанесённого');
+    if (ab.vuln && ab.vuln.amount) {
+      bits.push('цель +' + Math.round(Number(ab.vuln.amount) * 100) + '% урона · ' + (ab.vuln.turns || 3) + 'х');
+    }
+    if (ab.enemyDmgMod) bits.push('враги −' + Math.round(Number(ab.enemyDmgMod) * 100) + '% урона');
+    if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% запаса HP');
+    const gb = ab.grantSelfBuff;
+    if (gb && gb.name) bits.push('даёт «' + gb.name + '»');
+    return bits;
+  }
+
+  /**
    * Игровое описание способности (как работает) — для тултипа на иконке.
-   * Цифры урона/КД/ресурса сюда не пишем: они справа в карточке.
+   * Цифры урона кнопки справа в карточке; цифры дотов/баффов — здесь.
    */
   function abilityDescribe(ab, actor) {
     if (!ab) return '';
@@ -593,20 +927,35 @@
       avengers: 'Щит летит по врагам. Сбивает чтение у основной цели; у остальных — с шансом. Часть урона становится щитом.',
       judgment: 'Судит врага. Если на других есть «Освящение», они получают долю урона Правосудия.',
       sot_r: 'Бьёт щитом: 80т по выбранной цели и 30т по остальным. Накладывает «Щит света» (+10% брони, 4 хода, до 2 стаков). 3 Энергии Света.',
-      spirit_link: 'Тотем на 3 хода: −10% входящего урона отряду. После каждого удара, если кто-то просел по % HP — сразу выравнивает здоровье отряда.',
+      spirit_link: 'Тотем на 3 хода: −10% входящего урона отряду. Каждые 2 удара по отряду выравнивает здоровье по %.',
       word_glory: 'Сильное исцеление одной цели за Энергию Света (СТ).',
       light_dawn: 'Исцеляет всю группу (АОЕ) за Энергию Света.',
       holy_radiance: 'Исцеляет всю группу (АОЕ).',
       holy_light: 'Сильное исцеление одной цели (СТ).',
       flash: 'Быстрое исцеление одной цели (СТ).',
-      ms: 'Накладывает «Кровотечение» на 4 хода.',
-      colossus: 'Ломает броню цели и накладывает «Кровотечение» на 4 хода.',
-      heroic: 'Накладывает «Кровотечение» на 4 хода. Под «Широким размахом» удар дублируется на остальных врагов с силой 40%.',
+      ms: 'Удар по выбранной цели. Накладывает «Кровотечение».',
+      colossus: 'Ломает броню цели и накладывает «Кровотечение».',
+      heroic: 'Удар по выбранной цели. Накладывает «Кровотечение». Под «Широким размахом» дублируется на остальных врагов с силой 40%.',
       reck: '+35% атаки на следующие 2 удара. Не завершает ваш ход.',
+      fireball: 'Удар по выбранной цели. Крит вешает «Раскалённую глыбу»: следующая «Огненная глыба» стоит 10 маны и бьёт 90т.',
+      pyroblast: 'Тяжёлый удар. Обычно 50 маны. Под «Раскалённой глыбой» — 10 маны и 90т, окно снимается.',
+      flamestrike: 'Урон по всем врагам. 33% шанс повесить «Раскалённый столб»: следующий «Огненный шар» критует.',
+      frostbolt: 'Удар по выбранной цели. 20% шанс повесить «Копьё — область»: следующее «Ледяное копьё» бьёт всех врагов.',
+      ice_lance: 'Удар по выбранной цели. Под «Копьё — область» бьёт всех врагов, окно снимается.',
+      lv: 'Удар по выбранной цели. Если на цели «Огненный шок» — этот удар критует без броска.',
+      flame_shock: 'Прямой удар и дот. Пока висит «Огненный шок», «Выброс лавы» критует.',
+      malefic: 'Удар. +10% за каждый свой дот на этой цели.',
+      haunt: 'Удар за осколок. +15% за каждый свой дот на этой цели.',
+      jade_serpent: 'Призывает «Нефритовая змея» на 3 раунда. Змея не стоит в очереди: после хода каждого героя и моба лечит выбранного «Успокаивающим туманом» на 3т и бьёт последнюю цель хозяина на 3т. Не завершает ваш ход.',
+      soothing: 'Без змеи — 3т выбранному союзнику. Со змеёй не тратит ход и только выбирает, кого змея будет лечить.',
+      niuzao: 'Призывает Нюцзао на 3 раунда. Не завершает ваш ход.',
+      slice: 'Даёт 1 стак «Нарезка»: следующий одиночный удар дублируется по остальным врагам.',
     };
     if (byId[id]) {
       let s = byId[id];
-      if (ab.freeAction) s += ' Не завершает ваш ход.';
+      if (ab.freeAction && !/не заверш|без хода|не тратит ход/.test(s.toLowerCase())) s += ' Не завершает ваш ход.';
+      const extra = describeDataFacts(ab).filter(f => s.indexOf(f) < 0);
+      if (extra.length) s += ' ' + extra.join(' ');
       return s;
     }
     // Arms Вихрь: grantSelfBuff wide_sweep (у Неистовства — обычный AoE)
@@ -615,10 +964,8 @@
     }
 
     const raw = (ab.desc && String(ab.desc).trim()) || '';
-    // desc из таблицы, если это не пустышка и не голые цифры/КД
-    const looksNumeric = raw && /^[\d\s·.\-−~%ткд/+×xхордпарманаяростьэнерг]+$/i.test(raw.replace(/[а-яёa-z]/gi, ''));
     const parts = [];
-    if (raw && raw.length > 2 && !looksNumeric) parts.push(raw);
+    if (raw && raw.length > 2 && !descLooksBare(raw)) parts.push(raw);
 
     if (!parts.length) {
       switch (t) {
@@ -673,18 +1020,16 @@
       }
     }
 
-    // Доп. механики, если не очевидны из desc
     const blob = parts.join(' ').toLowerCase();
-    if (ab.applyDot && !/период|кровотеч|дот|яд|ожог/.test(blob)) {
-      const dn = ab.applyDot.name || 'периодический урон';
-      const dt = Number(ab.applyDot.turns) || 4;
-      parts.push(`Накладывает «${dn}» на ${dt} хода.`);
+    for (const f of describeDataFacts(ab)) {
+      const low = f.toLowerCase();
+      if (blob.indexOf(low) >= 0) continue;
+      const q = (f.match(/«([^»]+)»/) || [])[1];
+      if (q && blob.indexOf(q.toLowerCase()) >= 0 && /\d+\s*т/.test(blob)) continue;
+      parts.push(f);
     }
     if (ab.grantSelfBuff && ab.grantSelfBuff.id === 'wide_sweep' && !/широкий размах|героический/.test(blob)) {
       parts.push('Даёт 1 стак «Широкий размах»: следующий «Героический удар» дублируется на остальных (40%).');
-    }
-    if (ab.applyHot && !/период|лечение|хот|исцел/.test(blob)) {
-      parts.push('Оставляет периодическое лечение.');
     }
     if (ab.holyShock && !/враг|союзник|шок/.test(blob)) {
       parts.push('Можно направить во врага (урон) или в союзника (исцеление).');
@@ -717,6 +1062,11 @@
     if (ab.maxCharges && !/заряд/.test(blob)) {
       parts.push('Имеет несколько зарядов.');
     }
+    const comboRes = actor && actor.res && actor.res.secondary && actor.res.secondary.type === 'combo';
+    if (comboRes && typeof FINISHER_IDS !== 'undefined' && FINISHER_IDS.has(id)
+        && !/при 5 очк|серии|серия 0\.22/.test(blob)) {
+      parts.push('Цифра на кнопке — при 5 очках серии (0.22 / 0.42 / 0.68 / 1.05 / 1.55).');
+    }
 
     return parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
   }
@@ -740,13 +1090,72 @@
     'rend', 'agony', 'ua', 'corruption', 'immolate', 'doom',
     'swp', 'vt', 'devouring', 'holy_fire', 'serpent', 'black_arrow',
     'garrote', 'rupture', 'living_bomb', 'nether_tempest', 'flame_shock',
-    'plague_strike', 'outbreak', 'poison', 'd', 'dot', 'sticky_bomb']);
+    'plague_strike', 'poison', 'd', 'dot', 'sticky_bomb']);
 
-  /** Apply or refresh a buff/debuff/dot on unit (same id replaces old). */
+  /**
+   * DoT / HoT / уязвимость / −защита: отдельный экземпляр на каждого наложившего.
+   * Личный бафф, стан, рёв на пак — по-прежнему один на id.
+   */
+  function statusIsPerCaster(buff) {
+    if (!buff) return false;
+    if (buff.periodic || Number(buff.dot) > 0 || Number(buff.hot) > 0) return true;
+    if (buff.dmgTakenMod) return true;
+    if (buff.defMod != null && Number(buff.defMod) < 0) return true;
+    const id = String(buff.id || '');
+    return /^(dot_|hot_|vuln_|hmark)/.test(id);
+  }
+
+  /** Пустой fromUid = общий эффект. Иначе только наложивший и его пет. */
+  function statusAffectsViewer(buff, viewer) {
+    if (!buff) return false;
+    const owner = buff.fromUid;
+    if (owner == null || owner === '') return true;
+    if (!viewer) return false;
+    if (viewer.uid === owner) return true;
+    if (viewer.ownerUid && viewer.ownerUid === owner) return true;
+    return false;
+  }
+
+  function statusOwnerKey(buff) {
+    if (!buff || buff.fromUid == null || buff.fromUid === '') return '';
+    return String(buff.fromUid);
+  }
+
+  /** Apply or refresh. Per-caster effects replace only the same id + fromUid. */
   function applyStatus(unit, buff) {
     if (!unit || !buff) return;
     if (!unit.buffs) unit.buffs = [];
-    unit.buffs = unit.buffs.filter(b => b.id !== buff.id);
+    // Стаки (Удар воина Света / броня): плюсовать, не затирать. Полный пересмотр сложения — отдельно.
+    if (buff.stackable || (buff.stacks != null && String(buff.id || '').indexOf('armor_') === 0)) {
+      const owner = statusOwnerKey(buff);
+      const ex = unit.buffs.find(b => b && b.id === buff.id && statusOwnerKey(b) === owner);
+      if (ex) {
+        const maxS = Number(buff.armorStacksMax || ex.armorStacksMax || 99);
+        const add = Math.max(1, Number(buff.stacks) || 1);
+        const cur = Math.max(1, Number(ex.stacks) || 1);
+        if (cur >= maxS) {
+          ex.turns = buff.turns;
+          return;
+        }
+        const next = Math.min(maxS, cur + add);
+        const perArmor = (Number(buff.armorMod) || 0) / add;
+        if (perArmor) ex.armorMod = perArmor * next;
+        ex.stacks = next;
+        ex.turns = buff.turns;
+        if (ex.name && /×\d+/.test(ex.name)) ex.name = ex.name.replace(/×\d+/, '×' + next);
+        else if (ex.name) ex.name = String(ex.name).replace(/ ×\d+$/, '') + ' ×' + next;
+        return;
+      }
+    }
+    if (statusIsPerCaster(buff)) {
+      const owner = statusOwnerKey(buff);
+      unit.buffs = unit.buffs.filter(b => {
+        if (!b || b.id !== buff.id) return true;
+        return statusOwnerKey(b) !== owner;
+      });
+    } else {
+      unit.buffs = unit.buffs.filter(b => !b || b.id !== buff.id);
+    }
     unit.buffs.push(buff);
   }
   function scoreLabel() {

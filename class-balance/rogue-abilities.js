@@ -1,20 +1,22 @@
 /**
  * Mythic Key — MoP 5.4.8 lite
- * Rogue balance kit (assassination / combat / subtlety)
+ * Rogue balance kit (assassination / combat / subtlety) — test rebalance
  *
  * Модель: Energy (primary) + Combo (secondary).
  * Builders: genSec (gs) > 0
  * Finishers: costSec (cs) === 1 → при оплате dump ALL combo (движок)
  * Premeditation: только gs:2 (без hardcode +2 в castAbility)
  *
- * Не трогает mythic-key.html. Подключение: подмена specs rogue в WOW_CLASSES
- * или ручной merge полей abilities / resource / secondary / stats.
+ * FLAT_REF ≈ 15т → 1.0× atk. Builders/AoE — fl; combo-finishers — power
+ * (DoT-тики rupture / SnD power-scale от потраченных CP).
+ *
+ * Не трогает mythic-key.html. Подключение: ROGUE_BALANCE.apply / apply-all.js.
  */
 (function (global) {
   'use strict';
 
   function A(o) {
-    return {
+    const ab = {
       id: o.id,
       name: o.n,
       nameEn: o.en || o.n,
@@ -31,12 +33,38 @@
       desc: o.d || '',
       spellId: o.sid || 0,
     };
+    if (o.flat != null) ab.flat = o.flat;
+    if (o.fl != null) ab.flat = o.fl;
+    if (o.freeAction || o.fa) ab.freeAction = true;
+    if (o.hits != null) ab.hits = o.hits;
+    if (o.vuln) ab.vuln = o.vuln;
+    if (o.applyDot) ab.applyDot = o.applyDot;
+    if (o.applyHot) ab.applyHot = o.applyHot;
+    if (o.school) ab.school = o.school;
+    if (o.maxCharges != null) ab.maxCharges = o.maxCharges;
+    if (o.ch != null) ab.maxCharges = o.ch;
+    if (o.dmgReduce != null) ab.dmgReduce = o.dmgReduce;
+    if (o.dr != null) ab.dmgReduce = o.dr;
+    if (o.critBonus != null) ab.critBonus = o.critBonus;
+    if (o.critMod != null) ab.critMod = o.critMod;
+    if (o.cm != null) ab.critMod = o.cm;
+    if (o.atkMod != null) ab.atkMod = o.atkMod;
+    if (o.maxHpPct != null) ab.maxHpPct = o.maxHpPct;
+    if (o.hpPct != null) ab.maxHpPct = o.hpPct;
+    if (o.buffTurns != null) ab.buffTurns = o.buffTurns;
+    if (o.bt != null) ab.buffTurns = o.bt;
+    if (o.enemyDmgMod != null) ab.enemyDmgMod = o.enemyDmgMod;
+    if (o.cleaveFlat != null) ab.cleaveFlat = o.cleaveFlat;
+    if (o.lifesteal != null) ab.lifesteal = o.lifesteal;
+    if (o.grantSelfBuff) ab.grantSelfBuff = o.grantSelfBuff;
+    if (o.applyDotAoe || o.dotAoe) ab.applyDotAoe = true;
+    return ab;
   }
 
   /** Движок: FINISHER_IDS / EXECUTE_IDS (уже в mythic-key — не править). */
   const ENGINE_EXPECT = {
-    FINISHER_IDS: ['envenom', 'eviscerate', 'rupture', 'slice'],
-    EXECUTE_IDS: ['dispatch'],
+    FINISHER_IDS: ['dispatch', 'eviscerate', 'rupture'],
+    EXECUTE_IDS: [],
     /** cs:1 + secondary.type==='combo' → need ≥1, spend all, _spentSec = all CP */
     comboFinisherRule: 'cs:1 dumps all',
     /** Prem: +CP только через genSec в payAbility (спецкейс castAbility не должен +2) */
@@ -71,7 +99,8 @@
     },
     specs: [
       // ═════════════════════════════════════
-      // ASSASSINATION — Mutilate / Dispatch / Envenom
+      // ASSASSINATION — poisons / Garrote / Envenom
+      // Loop: Mutilate×2–3 → Envenom | Garrote/Rupture DoT | Vendetta window
       // ═════════════════════════════════════
       {
         id: 'assassination',
@@ -79,62 +108,68 @@
         nameEn: 'Assassination',
         role: 'dps',
         icon: '☠️',
-        stats: { hp: 95, atk: 18, def: 3, speed: 14 },
-        identity: ['mutilate', 'dispatch', 'envenom'],
+        testBuild: true,
+        // atk 15 = FLAT_REF: вес Nт ≈ Nт в бою
+        stats: { hp: 95, atk: 15, def: 3, speed: 14 },
+        identity: ['mutilate', 'dispatch', 'envenom', 'garrote'],
         abilities: [
-          // main 2-CP builder (E/CP ≈ 27.5)
           A({
             id: 'mutilate', n: 'Мясорубка', en: 'Mutilate', i: '🔪',
-            c: 55, gs: 2, t: 'damage', p: 1.35,
-            d: 'Основной набор: 55 энергии, +2 к серии.', sid: 1329,
+            c: 55, gs: 2, t: 'damage', fl: 22, school: 'physical',
+            applyDot: { flat: 3, turns: 5, name: 'Смертельный яд', icon: '💚', id: 'deadly_poison', school: 'nature' },
+            d: '55 эн · 22т · +2 серии · яд 3т×5', sid: 1329,
           }),
-          // execute builder ≤35% (EXECUTE_IDS)
           A({
             id: 'dispatch', n: 'Ликвидация', en: 'Dispatch', i: '🗡️',
-            c: 30, gs: 1, t: 'damage', p: 1.4,
-            d: 'Дешёвый набор по цели ≤35% HP (+1 серия).', sid: 111240,
+            c: 0, cd: 3, cs: 1, t: 'damage', fl: 32, school: 'physical',
+            d: 'Бесплатно · КД 3 · завершающий · при 5 очках 50т', sid: 111240,
           }),
-          // power finisher dump-all
           A({
             id: 'envenom', n: 'Отравление', en: 'Envenom', i: '💚',
-            c: 35, cs: 1, t: 'damage', p: 1.5,
-            d: 'Завершающий: вся серия → урон (cs:1 dump all).', sid: 32645,
+            c: 35, t: 'damage', fl: 15, school: 'nature',
+            applyDot: { flat: 2.5, turns: 2, name: 'Отравление', icon: '💚', id: 'envenom', school: 'nature' },
+            applyDotAoe: 1,
+            d: '35 эн · 15т + область 2.5т×2 · серию не тратит', sid: 32645,
           }),
           A({
             id: 'rupture', n: 'Рваная рана', en: 'Rupture', i: '🩸',
-            c: 25, cs: 1, t: 'dot', p: 0.7,
-            d: 'Завершающее кровотечение (вся серия). Mastery DoT.', sid: 1943,
-          }),
-          A({
-            id: 'vendetta', n: 'Вендетта', en: 'Vendetta', i: '🎯',
-            cd: 5, t: 'debuff', p: 0.3,
-            d: 'КД: −защита / ослабление цели.', sid: 79140,
-          }),
-          A({
-            id: 'fan', n: 'Веер клинков', en: 'Fan of Knives', i: '🌀',
-            c: 35, gs: 1, t: 'aoe', p: 0.65,
-            d: 'AoE-билдер: +1 к серии.', sid: 51723,
+            c: 25, cs: 1, t: 'damage', fl: 9, school: 'physical',
+            applyDot: { flat: 6, turns: 4, name: 'Рваная рана', icon: '🩸', id: 'rupture', school: 'physical' },
+            d: '25 эн · завершающий · при 5 очках 14т + 6т×4', sid: 1943,
           }),
           A({
             id: 'garrote', n: 'Гаррота', en: 'Garrote', i: '🤐',
-            c: 45, gs: 1, cd: 2, t: 'dot', p: 0.6,
-            d: 'DoT-билдер +1 серия (без требования стелса).', sid: 703,
+            c: 45, gs: 1, cd: 2, t: 'dot', fl: 8, school: 'physical',
+            applyDot: { flat: 5, turns: 5, name: 'Гаррота', icon: '🤐', id: 'garrote', school: 'physical' },
+            d: '45 эн · 8т + bleed 5т×5 · +1 серии · КД 2', sid: 703,
+          }),
+          A({
+            id: 'vendetta', n: 'Вендетта', en: 'Vendetta', i: '🎯',
+            cd: 5, t: 'damage', fl: 4, school: 'physical', fa: 1,
+            vuln: { amount: 0.3, turns: 3, physical: false },
+            d: '4т · +30% входящего от наложившего · 3х · без хода · КД 5', sid: 79140,
+          }),
+          A({
+            id: 'fan', n: 'Веер клинков', en: 'Fan of Knives', i: '🌀',
+            c: 35, gs: 1, t: 'aoe', fl: 11, school: 'physical',
+            d: '35 эн · 11т AoE · +1 серии', sid: 51723,
           }),
           A({
             id: 'slice', n: 'Нарезка', en: 'Slice and Dice', i: '⏱️',
-            c: 25, cs: 1, t: 'buff', p: 0.22,
-            d: 'Завершающий: +атака на 3 хода (сильнее с длинной серией).', sid: 5171,
-          }),
-          A({
-            id: 'kick', n: 'Пинок', en: 'Kick', i: '🦵',
-            c: 15, cd: 2, t: 'interrupt', p: 0,
-            d: 'Прерывание (15 энергии).', sid: 1766,
+            c: 0, t: 'buff', fa: 1, school: 'none',
+            grantSelfBuff: {
+              id: 'next_aoe', name: 'Нарезка', icon: '⏱️',
+              turns: 99, stacks: 1,
+              tip: 'След. атака — область; дот тоже на всех',
+            },
+            d: 'Бесплатно · без хода · след. атака область', sid: 5171,
           }),
         ],
       },
 
       // ═════════════════════════════════════
-      // COMBAT — Sinister Strike / Eviscerate / Adrenaline Rush
+      // COMBAT — Sinister Strike / Blade Flurry / Adrenaline
+      // Loop: SS/Revealing → Eviscerate | Blade Flurry cleave | AR burst
       // ═════════════════════════════════════
       {
         id: 'combat',
@@ -142,62 +177,64 @@
         nameEn: 'Combat',
         role: 'dps',
         icon: '⚔️',
-        stats: { hp: 100, atk: 17, def: 3, speed: 15 },
-        identity: ['ss', 'eviscerate', 'adrenaline'],
+        testBuild: true,
+        stats: { hp: 100, atk: 15, def: 3, speed: 15 },
+        identity: ['ss', 'eviscerate', 'blade_flurry', 'adrenaline'],
         abilities: [
-          // main 1-CP builder (40 E/CP — быстрее старого 50, всё ещё медленнее Assa Mut)
           A({
             id: 'ss', n: 'Коварный удар', en: 'Sinister Strike', i: '🗡️',
-            c: 40, gs: 1, t: 'damage', p: 1.2,
-            d: 'Основной набор: 40 энергии, +1 к серии.', sid: 1752,
+            c: 40, gs: 1, t: 'damage', fl: 18, school: 'physical',
+            d: '40 эн · 18т · +1 серии', sid: 1752,
           }),
           A({
             id: 'revealing', n: 'Пробивающий удар', en: 'Revealing Strike', i: '👁️',
-            c: 35, gs: 1, cd: 1, t: 'damage', p: 1.15,
-            d: 'Чуть дешевле набор (+1 серия). КД 1.', sid: 84617,
+            c: 20, gs: 1, cd: 4, t: 'damage', fl: 16, school: 'physical',
+            vuln: { amount: 0.1, turns: 3, physical: true },
+            d: '20 эн · 16т · +1 серии · +10% физ. 3х · КД 4', sid: 84617,
           }),
           A({
             id: 'eviscerate', n: 'Потрошение', en: 'Eviscerate', i: '💥',
-            c: 35, cs: 1, t: 'damage', p: 1.55,
-            d: 'Главный завершающий: вся серия → урон.', sid: 2098,
+            c: 35, cs: 1, t: 'damage', fl: 39, school: 'physical',
+            d: '35 эн · завершающий · при 5 очках 60т', sid: 2098,
           }),
           A({
             id: 'killing_spree', n: 'Череда убийств', en: 'Killing Spree', i: '🏃',
-            cd: 5, t: 'aoe', p: 1.15,
-            d: 'Бесплатный AoE-бёрст (КД 5).', sid: 51690,
+            cd: 5, t: 'aoe', fl: 18, hits: 2, school: 'physical',
+            applyDot: { flat: 4, turns: 2, name: 'Череда убийств', icon: '🩸', id: 'killing_spree', school: 'physical' },
+            d: '18т×2 AoE + кровотечение 4т×2 · КД 5', sid: 51690,
           }),
-          // lite: +энергия при касте (g) + ATK-бафф — без правки engine regen
           A({
             id: 'adrenaline', n: 'Выброс адреналина', en: 'Adrenaline Rush', i: '💉',
-            cd: 5, g: 40, t: 'buff', p: 0.28,
-            d: '+40 энергии сразу и +атака на 3 хода (lite AR).', sid: 13750,
+            cd: 5, g: 40, t: 'buff', fa: 1, atkMod: 0.25, bt: 3, school: 'none',
+            d: '+40 эн · +25% атаки 3х · без хода · КД 5', sid: 13750,
           }),
           A({
             id: 'blade_flurry', n: 'Шквал клинков', en: 'Blade Flurry', i: '🌪️',
-            c: 25, cd: 2, t: 'buff', p: 0.18,
-            d: '+атака (упрощ. cleave → self ATK).', sid: 13877,
+            c: 25, cd: 3, t: 'buff', fa: 1, atkMod: 0.12, bt: 4, school: 'none',
+            d: '25 эн · +12% атаки 4х (клив-окно) · без хода · КД 3', sid: 13877,
           }),
           A({
             id: 'fan', n: 'Веер клинков', en: 'Fan of Knives', i: '🌀',
-            c: 35, gs: 1, t: 'aoe', p: 0.7,
-            d: 'AoE + 1 к серии (как Assa).', sid: 51723,
+            c: 35, gs: 1, t: 'aoe', fl: 12, school: 'physical',
+            d: '35 эн · 12т AoE · +1 серии', sid: 51723,
           }),
           A({
             id: 'slice', n: 'Нарезка', en: 'Slice and Dice', i: '⏱️',
-            c: 25, cs: 1, t: 'buff', p: 0.22,
-            d: 'Завершающий: +атака на 3 хода.', sid: 5171,
-          }),
-          A({
-            id: 'rupture', n: 'Рваная рана', en: 'Rupture', i: '🩸',
-            c: 25, cs: 1, t: 'dot', p: 0.7,
-            d: 'Завершающее кровотечение (вся серия).', sid: 1943,
+            c: 0, t: 'buff', fa: 1, school: 'none',
+            grantSelfBuff: {
+              id: 'next_aoe', name: 'Нарезка', icon: '⏱️',
+              turns: 99, stacks: 1,
+              tip: 'След. атака — область; дот тоже на всех',
+            },
+            d: 'Бесплатно · без хода · след. атака область', sid: 5171,
           }),
         ],
       },
 
       // ═════════════════════════════════════
-      // SUBTLETY — Hemorrhage / Backstab / Shadow Dance
-      // Premeditation: gs:2 ONLY (no double)
+      // SUBTLETY — Ambush / Shadow Dance / Premeditation
+      // Loop: Prem → Ambush/Backstab → Evis · Dance window
+      // Premeditation: gs:2 ONLY (no double in castAbility)
       // ═════════════════════════════════════
       {
         id: 'subtlety',
@@ -205,57 +242,55 @@
         nameEn: 'Subtlety',
         role: 'dps',
         icon: '🌑',
-        stats: { hp: 92, atk: 18, def: 2, speed: 15 },
-        identity: ['hemorrhage', 'backstab', 'shadow_dance'],
+        testBuild: true,
+        stats: { hp: 92, atk: 15, def: 2, speed: 15 },
+        identity: ['hemorrhage', 'backstab', 'ambush', 'shadow_dance'],
         abilities: [
-          // cheap filler builder — AI (bestByPower) предпочтёт Backstab/Ambush;
-          // Hemo — energy-safe кнопка игрока
           A({
             id: 'hemorrhage', n: 'Кровоизлияние', en: 'Hemorrhage', i: '🩸',
-            c: 30, gs: 1, t: 'damage', p: 1.15,
-            d: 'Дешёвый набор: 30 энергии, +1 к серии.', sid: 16511,
+            c: 30, gs: 1, t: 'damage', fl: 16, school: 'physical',
+            applyDot: { flat: 3, turns: 4, name: 'Кровотечение', icon: '🩸', id: 'hemo_bleed', school: 'physical' },
+            d: '30 эн · 16т · +1 серии · bleed 3т×4', sid: 16511,
           }),
           A({
             id: 'backstab', n: 'Удар в спину', en: 'Backstab', i: '🔪',
-            c: 50, gs: 1, t: 'damage', p: 1.4,
-            d: 'Дорогой набор: 50 энергии, +1 к серии, выше урон.', sid: 53,
+            c: 50, gs: 1, t: 'damage', fl: 24, school: 'physical',
+            d: '50 эн · 24т · +1 серии', sid: 53,
+          }),
+          A({
+            id: 'ambush', n: 'Внезапный удар', en: 'Ambush', i: '😮',
+            c: 50, gs: 2, t: 'damage', fl: 28, school: 'physical',
+            d: '50 эн · 28т · +2 серии (окно Dance / lite без стелса)', sid: 8676,
           }),
           A({
             id: 'eviscerate', n: 'Потрошение', en: 'Eviscerate', i: '💥',
-            c: 35, cs: 1, t: 'damage', p: 1.55,
-            d: 'Завершающий: вся серия → урон. Mastery finisher.', sid: 2098,
-          }),
-          // 2-CP burst builder (stealth/Dance упрощены — всегда доступен)
-          A({
-            id: 'ambush', n: 'Внезапный удар', en: 'Ambush', i: '😮',
-            c: 50, gs: 2, t: 'damage', p: 1.55,
-            d: 'Сильный удар +2 к серии (без стелса, lite).', sid: 8676,
+            c: 35, cs: 1, t: 'damage', fl: 34, school: 'physical',
+            d: '35 эн · завершающий · при 5 очках 53т', sid: 2098,
           }),
           A({
             id: 'shadow_dance', n: 'Танец теней', en: 'Shadow Dance', i: '💃',
-            cd: 4, t: 'buff', p: 0.28,
-            d: '+атака на 3 хода (упрощ. Dance-окно).', sid: 51713,
+            cd: 4, t: 'buff', fa: 1, atkMod: 0.28, bt: 3, school: 'none',
+            d: '+28% атаки 3х (окно Dance) · без хода · КД 4', sid: 51713,
           }),
-          // CRITICAL: only gs:2 — castAbility must NOT add another +2
           A({
             id: 'prem', n: 'Умысел', en: 'Premeditation', i: '🧠',
-            cd: 3, gs: 2, t: 'buff', p: 0,
-            d: '+2 к серии без удара (только genSec, без double).', sid: 14183,
-          }),
-          A({
-            id: 'rupture', n: 'Рваная рана', en: 'Rupture', i: '🩸',
-            c: 25, cs: 1, t: 'dot', p: 0.75,
-            d: 'Завершающее кровотечение (вся серия).', sid: 1943,
+            cd: 3, gs: 2, t: 'buff', p: 0, fa: 1, school: 'none',
+            d: '+2 серии без удара · без хода · КД 3', sid: 14183,
           }),
           A({
             id: 'fan', n: 'Веер клинков', en: 'Fan of Knives', i: '🌀',
-            c: 35, gs: 1, t: 'aoe', p: 0.65,
-            d: 'AoE + 1 к серии.', sid: 51723,
+            c: 35, gs: 1, t: 'aoe', fl: 11, school: 'physical',
+            d: '35 эн · 11т AoE · +1 серии', sid: 51723,
           }),
           A({
             id: 'slice', n: 'Нарезка', en: 'Slice and Dice', i: '⏱️',
-            c: 25, cs: 1, t: 'buff', p: 0.22,
-            d: 'Завершающий: +атака на 3 хода.', sid: 5171,
+            c: 0, t: 'buff', fa: 1, school: 'none',
+            grantSelfBuff: {
+              id: 'next_aoe', name: 'Нарезка', icon: '⏱️',
+              turns: 99, stacks: 1,
+              tip: 'След. атака — область; дот тоже на всех',
+            },
+            d: 'Бесплатно · без хода · след. атака область', sid: 5171,
           }),
         ],
       },
@@ -284,38 +319,47 @@
     }
     wowClass.resource = { ...ROGUE_CLASS.resource };
     wowClass.secondary = { ...ROGUE_CLASS.secondary };
+    if (ROGUE_CLASS.mastery) wowClass.mastery = JSON.parse(JSON.stringify(ROGUE_CLASS.mastery));
     for (const balSpec of ROGUE_CLASS.specs) {
       const target = (wowClass.specs || []).find((s) => s.id === balSpec.id);
       if (!target) continue;
       target.stats = { ...balSpec.stats };
       target.abilities = balSpec.abilities.map((a) => ({ ...a }));
+      if (balSpec.identity) target.identity = balSpec.identity.slice();
+      if (balSpec.testBuild != null) target.testBuild = balSpec.testBuild;
     }
     return wowClass;
   }
 
+  function applyRogueBalance(classes) {
+    if (!Array.isArray(classes)) return false;
+    const i = classes.findIndex((c) => c.id === 'rogue');
+    const clone = JSON.parse(JSON.stringify(ROGUE_CLASS));
+    if (i < 0) {
+      classes.push(clone);
+      return true;
+    }
+    classes[i] = clone;
+    return true;
+  }
+
   const API = {
+    version: 'mop-5.4.8-lite-rogue-test',
     ROGUE_CLASS,
+    class: ROGUE_CLASS,
+    classId: 'rogue',
     ENGINE_EXPECT,
     A,
     indexByAbility,
     applyToWowClass,
+    apply: applyRogueBalance,
   };
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = API;
   }
   global.ROGUE_BALANCE = API;
-  function applyRogueBalance(classes) {
-    if (!Array.isArray(classes)) return false;
-    const i = classes.findIndex((c) => c.id === 'rogue');
-    if (i < 0) {
-      classes.push(JSON.parse(JSON.stringify(ROGUE_CLASS)));
-      return true;
-    }
-    applyToWowClass(classes[i]);
-    return true;
-  }
-  API.apply = applyRogueBalance;
+  global.ROGUE_CLASS = ROGUE_CLASS;
   global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
   global.CLASS_BALANCE_PACKS.push({ id: 'rogue', apply: applyRogueBalance });
 

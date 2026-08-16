@@ -85,20 +85,22 @@
             c: 7, gs: 20, t: 'damage', fl: 24, school: 'arcane',
             d: '24т · +20 затмение', sid: 2912 }),
           A({ id: 'moonfire', n: 'Лунный огонь', en: 'Moonfire', i: '🌙',
-            c: 5, t: 'dot', fl: 8, school: 'arcane',
-            d: 'DoT 8т/р · 5 маны', sid: 8921 }),
+            c: 5, t: 'dot', school: 'arcane',
+            applyDot: { flat: 8, turns: 5, name: 'Лунный огонь', id: 'moonfire', icon: '🌙', school: 'arcane' },
+            d: '8т×5 · 5 маны', sid: 8921 }),
           A({ id: 'sunfire', n: 'Солнечный огонь', en: 'Sunfire', i: '☀️',
-            c: 5, t: 'dot', fl: 8, school: 'nature',
-            d: 'DoT 8т/р · 5 маны', sid: 93402 }),
+            c: 5, t: 'dot', school: 'nature',
+            applyDot: { flat: 8, turns: 5, name: 'Солнечный огонь', id: 'sunfire', icon: '☀️', school: 'nature' },
+            d: '8т×5 · 5 маны', sid: 93402 }),
           A({ id: 'starsurge', n: 'Звёздный поток', en: 'Starsurge', i: '💫',
-            c: 8, gs: 12, cd: 1, t: 'damage', fl: 32, school: 'arcane',
-            d: '32т · +12 затмение · КД 1', sid: 78674 }),
+            c: 8, gs: 12, cd: 2, t: 'damage', fl: 32, school: 'arcane',
+            d: '32т · +12 затмение · КД 2', sid: 78674 }),
           A({ id: 'starfall', n: 'Звездопад', en: 'Starfall', i: '🌠',
             c: 12, cd: 3, t: 'aoe', fl: 16, school: 'arcane',
-            d: '16т AoE · КД 3', sid: 48505 }),
+            d: '16т область · КД 3', sid: 48505 }),
           A({ id: 'hurricane', n: 'Ураган', en: 'Hurricane', i: '🌪️',
             c: 12, t: 'aoe', fl: 13, school: 'nature',
-            d: '13т AoE · 12 маны', sid: 16914 }),
+            d: '13т область · 12 маны', sid: 16914 }),
           A({ id: 'celestial', n: 'Небесное выравнивание', en: 'Celestial Alignment', i: '🌌',
             cd: 5, t: 'buff', fa: 1, atkMod: 0.25, bt: 3, school: 'none',
             d: '+25% ATK · 3 хода · без хода', sid: 112071 }),
@@ -128,30 +130,32 @@
             c: 40, gs: 1, t: 'damage', fl: 20, school: 'physical',
             d: '20т · 40 эн · +1 серия', sid: 5221 }),
           A({ id: 'rake', n: 'Глубокая рана', en: 'Rake', i: '🩸',
-            c: 35, gs: 1, t: 'dot', fl: 9, school: 'physical',
-            d: 'DoT 9т/р · +1 серия', sid: 1822 }),
+            c: 35, gs: 1, t: 'dot', school: 'physical',
+            applyDot: { flat: 9, turns: 4, name: 'Глубокая рана', id: 'rake', icon: '🩸', school: 'physical' },
+            d: '9т×4 · 35 эн · +1 серия', sid: 1822 }),
           A({ id: 'rip', n: 'Разорвать', en: 'Rip', i: '💔',
-            c: 30, cs: 1, t: 'dot', p: 0.9, school: 'physical',
-            d: 'Завершающий DoT · вся серия', sid: 1079 }),
+            c: 30, cs: 1, t: 'dot', school: 'physical',
+            applyDot: { flat: 8, turns: 5, name: 'Разорвать', id: 'rip', icon: '💔', school: 'physical' },
+            d: '30 эн · завершающий · при 5 очках 8т×5', sid: 1079 }),
           A({ id: 'ferocious', n: 'Свирепый укус', en: 'Ferocious Bite', i: '🦷',
-            c: 25, cs: 1, t: 'damage', p: 1.65, school: 'physical',
-            d: 'Завершающий урон · вся серия', sid: 22568 }),
+            c: 25, cs: 1, t: 'damage', fl: 33.5, school: 'physical',
+            d: '25 эн · завершающий · при 5 очках 52т', sid: 22568 }),
           A({ id: 'thrash', n: 'Взбучка', en: 'Thrash', i: '🌀',
-            c: 45, gs: 1, t: 'aoe', fl: 12, school: 'physical',
-            applyDot: { flat: 4, turns: 3, name: 'Взбучка', icon: '🩸', id: 'thrash_bleed', school: 'physical' },
-            d: '12т AoE + DoT · +1 серия', sid: 106830 }),
+            c: 45, gs: 1, cd: 2, t: 'aoe', fl: 12, school: 'physical',
+            applyDot: { flat: 4, turns: 4, name: 'Взбучка', icon: '🩸', id: 'thrash_bleed', school: 'physical' },
+            d: '12т область + 4т×4 · 45 эн · +1 серия · КД 2', sid: 106830 }),
           A({ id: 'swipe', n: 'Размах', en: 'Swipe', i: '👋',
             c: 40, gs: 1, t: 'aoe', fl: 12, school: 'physical',
-            d: '12т AoE · +1 серия', sid: 62078 }),
+            d: '12т область · 40 эн · +1 серия', sid: 62078 }),
           A({ id: 'tigers_fury', n: 'Тигриное неистовство', en: "Tiger's Fury", i: '🐯',
             cd: 3, g: 60, t: 'buff', fa: 1, atkMod: 0.15, bt: 2, school: 'none',
-            d: '+60 энергии · +15% ATK · 2 хода · без хода', sid: 5217 }),
+            d: '+60 энергии · +15% атаки · 2 хода · без хода', sid: 5217 }),
           A({ id: 'berserk', n: 'Берсерк', en: 'Berserk', i: '😡',
             cd: 5, t: 'buff', fa: 1, atkMod: 0.28, bt: 3, school: 'none',
-            d: '+28% ATK · 3 хода · без хода', sid: 106951 }),
+            d: '+28% атаки · 3 хода · без хода', sid: 106951 }),
           A({ id: 'savage_roar', n: 'Дикий рёв', en: 'Savage Roar', i: '📢',
-            c: 25, cs: 1, t: 'buff', atkMod: 0.18, bt: 4, school: 'none',
-            d: 'Завершающий: +18% ATK · 4 хода · вся серия', sid: 52610 }),
+            c: 25, cd: 4, t: 'buff', fa: 1, atkMod: 0.18, bt: 4, school: 'none',
+            d: '+18% атаки · 4 хода · 25 эн · КД 4 · без хода · серию не ест', sid: 52610 }),
         ],
       },
 
@@ -171,30 +175,32 @@
         resourceOverride: { type: 'rage', name: 'Ярость', icon: '💢', max: 100, start: 20, regen: 8 },
         abilities: [
           A({ id: 'mangle', n: 'Увечье', en: 'Mangle', i: '🐻',
-            g: 20, cd: 1, t: 'damage', fl: 18, school: 'physical',
-            d: '18т · +20 ярости · КД 1', sid: 33878 }),
+            g: 20, t: 'damage', fl: 18, school: 'physical',
+            d: '18т · +20 ярости', sid: 33878 }),
           A({ id: 'thrash', n: 'Взбучка', en: 'Thrash', i: '🌀',
-            c: 20, t: 'aoe', fl: 17, school: 'physical',
-            applyDot: { flat: 4, turns: 3, name: 'Взбучка', icon: '🩸', id: 'thrash_g', school: 'physical' },
-            d: '17т AoE + DoT · 20 ярости', sid: 77758 }),
+            g: 15, cd: 3, t: 'aoe', fl: 20, school: 'physical',
+            applyDot: { flat: 4, turns: 2, name: 'Взбучка', icon: '🩸', id: 'thrash_g', school: 'physical' },
+            d: '20т область + 4т×2 · +15 ярости · КД 3', sid: 77758 }),
           A({ id: 'lacerate', n: 'Растерзать', en: 'Lacerate', i: '🩸',
-            c: 15, t: 'dot', fl: 10, school: 'physical',
-            d: 'DoT 10т/р · 15 ярости', sid: 33745 }),
+            c: 40, cd: 3, t: 'damage', fl: 40, school: 'physical',
+            applyDot: { flat: 6, turns: 2, name: 'Растерзать', id: 'lacerate', icon: '🩸', school: 'physical' },
+            d: '40т + 6т×2 · 40 ярости · КД 3', sid: 33745 }),
           A({ id: 'maul', n: 'Трепка', en: 'Maul', i: '👊',
-            c: 30, t: 'damage', fl: 28, school: 'physical',
-            d: '28т · 30 ярости', sid: 6807 }),
+            c: 15, t: 'damage', fl: 28, school: 'physical',
+            d: '28т · 15 ярости', sid: 6807 }),
           A({ id: 'frenzied', n: 'Неистовое восстановление', en: 'Frenzied Regeneration', i: '💚',
-            c: 50, cd: 2, t: 'heal', fl: 40, school: 'none',
-            d: 'Самохил 40т · 50 ярости · КД 2', sid: 22842 }),
+            c: 40, cd: 5, ch: 2, t: 'heal', school: 'none',
+            applyHot: { hpPct: 0.19, turns: 2, name: 'Неистовое восстановление' },
+            d: '19% HP × 2 хода · 40 ярости · КД 5 · 2 заряда', sid: 22842 }),
           A({ id: 'savage_def', n: 'Дикая защита', en: 'Savage Defense', i: '🛡️',
-            c: 50, t: 'shield', fl: 40, school: 'none',
-            d: 'Щит 40т · 50 ярости', sid: 62606 }),
+            c: 30, t: 'buff', am: 0.08, bt: 4, school: 'none',
+            d: '+8% брони · 4 хода · 30 ярости', sid: 62606 }),
           A({ id: 'barkskin', n: 'Дубовая кожа', en: 'Barkskin', i: '🪵',
             cd: 4, t: 'buff', fa: 1, dr: 0.2, bt: 2, school: 'none',
             d: '−20% урон · 2 хода · без хода', sid: 22812 }),
           A({ id: 'survival', n: 'Инстинкты выживания', en: 'Survival Instincts', i: '❤️',
-            cd: 6, t: 'buff', fa: 1, dr: 0.5, bt: 2, school: 'none',
-            d: '−50% урон · 2 хода · без хода', sid: 61336 }),
+            cd: 10, ch: 2, t: 'buff', fa: 1, dr: 0.5, bt: 2, school: 'none',
+            d: '−50% урон · 2 хода · без хода · КД 10 · 2 заряда', sid: 61336 }),
           A({ id: 'growl', n: 'Рык', en: 'Growl', i: '📢',
             cd: 2, t: 'taunt', p: 0, fa: 1, school: 'none',
             d: 'Агро · без хода', sid: 6795 }),
@@ -224,16 +230,16 @@
             c: 13, t: 'heal', fl: 28, school: 'nature',
             applyHot: { flat: 4, turns: 4, name: 'Восстановление' },
             d: 'СТ · 28т + HoT 4т×4 · 13 маны', sid: 8936 }),
-          A({ id: 'ht', n: 'Целительное прикосновение', en: 'Healing Touch', i: '💚',
-            c: 14, t: 'heal', fl: 35, school: 'nature',
-            d: 'СТ · 35т · 14 маны', sid: 5185 }),
+          A({ id: 'wrath', n: 'Гнев', en: 'Wrath', i: '🌟',
+            c: 5, t: 'damage', fl: 15, school: 'nature',
+            d: '15т · 5 маны', sid: 5176 }),
           A({ id: 'wg', n: 'Буйный рост', en: 'Wild Growth', i: '🌸',
             c: 16, cd: 2, t: 'heal_aoe', fl: 18, school: 'nature',
             applyHot: { flat: 5, turns: 4, name: 'Буйный рост' },
             d: 'АОЕ · 18т + HoT 5т×4 · КД 2', sid: 48438 }),
           A({ id: 'swiftmend', n: 'Быстрое восстановление', en: 'Swiftmend', i: '⚡',
-            c: 10, cd: 2, t: 'heal', fl: 40, school: 'nature',
-            d: 'СТ · 40т · КД 2 · HoT не снимает (lite)', sid: 18562 }),
+            c: 10, cd: 3, t: 'heal', fl: 50, school: 'nature',
+            d: 'СТ · 50т · КД 3', sid: 18562 }),
           A({ id: 'lifebloom', n: 'Жизнецвет', en: 'Lifebloom', i: '🌼',
             c: 8, t: 'heal', fl: 10, school: 'nature',
             applyHot: { flat: 7, turns: 5, name: 'Жизнецвет' },
@@ -245,8 +251,9 @@
             c: 9, t: 'heal', fl: 24, school: 'nature',
             d: 'СТ · 24т · 9 маны', sid: 50464 }),
           A({ id: 'moonfire', n: 'Лунный огонь', en: 'Moonfire', i: '🌙',
-            c: 5, t: 'dot', fl: 7, school: 'arcane',
-            d: 'DoT 7т/р · 5 маны', sid: 8921 }),
+            c: 5, t: 'dot', school: 'arcane',
+            applyDot: { flat: 7, turns: 5, name: 'Лунный огонь', id: 'moonfire', icon: '🌙', school: 'arcane' },
+            d: '7т×5 · 5 маны', sid: 8921 }),
         ],
       },
     ],
@@ -270,15 +277,67 @@
     return applyTo(classes);
   }
 
+  function validate() {
+    const bal = DRUID.specs.find((s) => s.id === 'balance');
+    const fer = DRUID.specs.find((s) => s.id === 'feral');
+    const gua = DRUID.specs.find((s) => s.id === 'guardian');
+    const res = DRUID.specs.find((s) => s.id === 'restoration');
+    const byId = (spec, id) => spec.abilities.find((a) => a.id === id);
+    const checks = {
+      'moonfire 8x5': byId(bal, 'moonfire').applyDot
+        && byId(bal, 'moonfire').applyDot.flat === 8
+        && byId(bal, 'moonfire').applyDot.turns === 5
+        && !(byId(bal, 'moonfire').flat > 0),
+      'sunfire 8x5': byId(bal, 'sunfire').applyDot
+        && byId(bal, 'sunfire').applyDot.turns === 5
+        && byId(bal, 'sunfire').applyDot.flat === 8,
+      'starsurge cd2': byId(bal, 'starsurge').cd === 2,
+      'rake 9x4': byId(fer, 'rake').applyDot
+        && byId(fer, 'rake').applyDot.flat === 9
+        && byId(fer, 'rake').applyDot.turns === 4,
+      'rip 8x5': byId(fer, 'rip').applyDot
+        && byId(fer, 'rip').applyDot.flat === 8
+        && byId(fer, 'rip').applyDot.turns === 5
+        && byId(fer, 'rip').costSec === 1,
+      'ferocious 33.5': byId(fer, 'ferocious').flat === 33.5 && byId(fer, 'ferocious').costSec === 1,
+      'thrash feral cd2 4x4': byId(fer, 'thrash').cd === 2
+        && byId(fer, 'thrash').applyDot.turns === 4,
+      'savage_roar fa no combo': byId(fer, 'savage_roar').freeAction === true
+        && !byId(fer, 'savage_roar').costSec,
+      'mangle no cd': !byId(gua, 'mangle').cd,
+      'thrash g +15': byId(gua, 'thrash').gen === 15 && byId(gua, 'thrash').cd === 3,
+      'lacerate 40+6x2': byId(gua, 'lacerate').flat === 40
+        && byId(gua, 'lacerate').applyDot.flat === 6
+        && byId(gua, 'lacerate').applyDot.turns === 2,
+      'frenzied 19% x2': byId(gua, 'frenzied').applyHot
+        && byId(gua, 'frenzied').applyHot.hpPct === 0.19
+        && byId(gua, 'frenzied').maxCharges === 2
+        && byId(gua, 'frenzied').cost === 40,
+      'savage_def armor': byId(gua, 'savage_def').type === 'buff'
+        && byId(gua, 'savage_def').armorMod === 0.08
+        && byId(gua, 'savage_def').cost === 30,
+      'survival 2ch cd10': byId(gua, 'survival').maxCharges === 2 && byId(gua, 'survival').cd === 10,
+      'resto no ht': !byId(res, 'ht'),
+      'resto wrath 15': byId(res, 'wrath') && byId(res, 'wrath').flat === 15,
+      'resto moonfire 7x5': byId(res, 'moonfire').applyDot
+        && byId(res, 'moonfire').applyDot.flat === 7
+        && byId(res, 'moonfire').applyDot.turns === 5,
+      'swiftmend 50 cd3': byId(res, 'swiftmend').flat === 50 && byId(res, 'swiftmend').cd === 3,
+    };
+    const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([k]) => k);
+    return { ok: failed.length === 0, checks, failed };
+  }
+
   const api = {
     classId: 'druid',
-    version: '-test',
+    version: '5.4.8-druid-s31',
     A,
     cls: DRUID,
     class: DRUID,
     specs: DRUID.specs,
     applyTo,
     apply: applyDruidBalance,
+    validate,
     /**
      * engineNeeds — фичи, которые данными не закрыть.
      */

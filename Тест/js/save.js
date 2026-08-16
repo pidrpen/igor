@@ -81,7 +81,7 @@
       const e = { classId: x.classId, specId: x.specId, sec: x.sec ? { ...x.sec } : defaultSec(), gear: normalizeGear(x.gear) };
       ensureSec(e);
       return e;
-    });
+    }).filter(e => !WOW_MOP || !WOW_MOP.getSpec || WOW_MOP.getSpec(e.classId, e.specId));
     try {
       if (data.dungeonId && document.getElementById('dungeon-select')) {
         const ds = document.getElementById('dungeon-select');

@@ -38,6 +38,10 @@
     try { hidePassivePocket(); } catch (_) {}
     if (actions) actions.innerHTML = '';
     if (checkEnd()) return;
+    try {
+      const fin = currentActor();
+      if (typeof tickJadeSerpentsAfterTurn === 'function') tickJadeSerpentsAfterTurn(fin);
+    } catch (e) { console.error('[serpent tick]', e); }
     combat.turnIndex++;
     try { renderCombat(); } catch (err) { console.error('[afterAction render]', err); }
     saveRun();
@@ -45,6 +49,11 @@
   }
 
   function checkEnd() {
+    if (typeof raidVaultMaybeAdvance === 'function') {
+      try { raidVaultMaybeAdvance(); } catch (e) { console.error('[vault]', e); }
+    }
+    const hiddenBoss = (combat?.enemies || []).some(e => e.alive && e.vaultAway);
+    if (!living('enemy').length && hiddenBoss) return false;
     if (!living('enemy').length) {
       combat.over = true;
       log('Пулл зачищен — идём дальше (без полного восстановления)', 'system');

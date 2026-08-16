@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>SMOKE_PENDING</title>
+  <script src="../wow-mop-data.js"></script>
+  <script src="../class-balance/warrior-abilities.js"></script>
+  <script src="../class-balance/paladin-abilities.js"></script>
+  <script src="../class-balance/hunter-abilities.js"></script>
+  <script src="../class-balance/rogue-abilities.js"></script>
+  <script src="../class-balance/priest-abilities.js"></script>
+  <script src="../class-balance/deathknight-abilities.js"></script>
+  <script src="../class-balance/shaman-abilities.js"></script>
+  <script src="../class-balance/mage-abilities.js"></script>
+  <script src="../class-balance/warlock-abilities.js"></script>
+  <script src="../class-balance/monk-abilities.js"></script>
+  <script src="../class-balance/druid-abilities.js"></script>
+  <script src="../class-balance/apply-all.js"></script>
+</head>
+<body>
+<pre id="out">running…</pre>
+<script>
+(function () {
+  const fails = [];
+  const warns = [];
+  const log = [];
+  function fail(m) { fails.push(m); log.push('FAIL ' + m); }
+  function warn(m) { warns.push(m); log.push('WARN ' + m); }
+  function ok(m) { log.push('OK   ' + m); }
+
+  try {
+    if (!window.WOW_MOP || !Array.isArray(WOW_MOP.classes)) fail('WOW_MOP.classes missing');
+    const applied = window.CLASS_BALANCE_APPLIED || [];
+    ok('applied: ' + (applied.join(', ') || '(none)'));
+    const expected = ['warrior','paladin','hunter','rogue','priest','deathknight','shaman','mage','warlock','monk','druid'];
+    for (const id of expected) {
+      if (!applied.includes(id)) fail('pack not applied: ' + id);
+    }
+    const byId = Object.fromEntries(WOW_MOP.classes.map(c => [c.id, c]));
+    for (const id of expected) {
+      const cls = byId[id];
+      if (!cls) { fail('class missing: ' + id); continue; }
+      if (!cls.specs || !cls.specs.length) { fail(id + ': no specs'); continue; }
+      for (const spec of cls.specs) {
+        const key = id + ':' + spec.id;
+        if (!spec.role) fail(key + ': missing role');
+        if (!spec.abilities || spec.abilities.length < 3) fail(key + ': need ≥3 abilities');
+        else ok(key + ' abilities=' + spec.abilities.length);
+        if (spec.role === 'healer') {
+          const hasHeal = spec.abilities.some(a => a.type === 'heal' || a.type === 'heal_aoe');
+          if (!hasHeal) fail(key + ': healer without heal');
+        }
+        if (spec.role === 'tank') {
+          const hasTaunt = spec.abilities.some(a => a.type === 'taunt' || /taunt|reckoning|growl|provoke|dark_command/.test(a.id || ''));
+          if (!hasTaunt) warn(key + ': tank without taunt');
+        }
+        for (const ab of (spec.abilities || [])) {
+          if (!ab.id) fail(key + ': ability without id');
+          if (!ab.type) fail(key + '/' + ab.id + ': missing type');
+          if (ab.cost != null && ab.cost < 0) fail(key + '/' + ab.id + ': negative cost');
+          if (typeof ab.power === 'number' && ab.power > 3.5) warn(key + '/' + ab.id + ': high power ' + ab.power);
+        }
+      }
+    }
+    if (!byId.engineer) warn('engineer missing (optional)');
+  } catch (e) {
+    fail('exception: ' + e.message);
+  }
+
+  const summary = fails.length
+    ? ('SMOKE_FAIL count=' + fails.length + ' warns=' + warns.length)
+    : ('SMOKE_OK warns=' + warns.length);
+  document.title = summary;
+  document.getElementById('out').textContent =
+    summary + '\n\n' + log.join('\n') +
+    (fails.length ? '\n\n' + fails.map(f => '• ' + f).join('\n') : '');
+  // Marker for dump-dom scrapers
+  const marker = document.createElement('div');
+  marker.id = 'smoke-result';
+  marker.setAttribute('data-status', fails.length ? 'FAIL' : 'OK');
+  marker.setAttribute('data-fails', String(fails.length));
+  marker.setAttribute('data-warns', String(warns.length));
+  marker.textContent = summary;
+  document.body.appendChild(marker);
+})();
+</script>
+</body>
+</html>

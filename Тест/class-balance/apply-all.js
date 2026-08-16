@@ -11,6 +11,7 @@
  * Legacy globals are still accepted (see discoverLegacyPacks).
  *
  * Load order: wow-mop-data.js → *-abilities.js → apply-all.js
+ * Правда по классу = файл пакета. wow-mop-data после apply не читают.
  */
 (function (global) {
   'use strict';

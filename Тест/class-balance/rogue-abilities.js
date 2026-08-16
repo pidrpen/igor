@@ -56,13 +56,15 @@
     if (o.enemyDmgMod != null) ab.enemyDmgMod = o.enemyDmgMod;
     if (o.cleaveFlat != null) ab.cleaveFlat = o.cleaveFlat;
     if (o.lifesteal != null) ab.lifesteal = o.lifesteal;
+    if (o.grantSelfBuff) ab.grantSelfBuff = o.grantSelfBuff;
+    if (o.applyDotAoe || o.dotAoe) ab.applyDotAoe = true;
     return ab;
   }
 
   /** Движок: FINISHER_IDS / EXECUTE_IDS (уже в mythic-key — не править). */
   const ENGINE_EXPECT = {
-    FINISHER_IDS: ['envenom', 'eviscerate', 'rupture', 'slice'],
-    EXECUTE_IDS: ['dispatch'],
+    FINISHER_IDS: ['dispatch', 'eviscerate', 'rupture'],
+    EXECUTE_IDS: [],
     /** cs:1 + secondary.type==='combo' → need ≥1, spend all, _spentSec = all CP */
     comboFinisherRule: 'cs:1 dumps all',
     /** Prem: +CP только через genSec в payAbility (спецкейс castAbility не должен +2) */
@@ -114,23 +116,26 @@
           A({
             id: 'mutilate', n: 'Мясорубка', en: 'Mutilate', i: '🔪',
             c: 55, gs: 2, t: 'damage', fl: 22, school: 'physical',
-            applyDot: { flat: 3, turns: 4, name: 'Смертельный яд', icon: '💚', id: 'deadly_poison', school: 'nature' },
-            d: '55 эн · 22т · +2 серии · яд 3т×4', sid: 1329,
+            applyDot: { flat: 3, turns: 5, name: 'Смертельный яд', icon: '💚', id: 'deadly_poison', school: 'nature' },
+            d: '55 эн · 22т · +2 серии · яд 3т×5', sid: 1329,
           }),
           A({
             id: 'dispatch', n: 'Ликвидация', en: 'Dispatch', i: '🗡️',
-            c: 30, gs: 1, t: 'damage', fl: 24, school: 'physical',
-            d: '30 эн · 24т · +1 серии · ≤35% HP', sid: 111240,
+            c: 0, cd: 3, cs: 1, t: 'damage', fl: 32, school: 'physical',
+            d: 'Бесплатно · КД 3 · завершающий · при 5 очках 50т', sid: 111240,
           }),
           A({
             id: 'envenom', n: 'Отравление', en: 'Envenom', i: '💚',
-            c: 35, cs: 1, t: 'damage', p: 1.55, school: 'nature',
-            d: '35 эн · завершающий (вся серия) · природа', sid: 32645,
+            c: 35, t: 'damage', fl: 15, school: 'nature',
+            applyDot: { flat: 2.5, turns: 2, name: 'Отравление', icon: '💚', id: 'envenom', school: 'nature' },
+            applyDotAoe: 1,
+            d: '35 эн · 15т + область 2.5т×2 · серию не тратит', sid: 32645,
           }),
           A({
             id: 'rupture', n: 'Рваная рана', en: 'Rupture', i: '🩸',
-            c: 25, cs: 1, t: 'dot', p: 0.75, school: 'physical',
-            d: '25 эн · завершающий bleed (вся серия)', sid: 1943,
+            c: 25, cs: 1, t: 'damage', fl: 9, school: 'physical',
+            applyDot: { flat: 6, turns: 4, name: 'Рваная рана', icon: '🩸', id: 'rupture', school: 'physical' },
+            d: '25 эн · завершающий · при 5 очках 14т + 6т×4', sid: 1943,
           }),
           A({
             id: 'garrote', n: 'Гаррота', en: 'Garrote', i: '🤐',
@@ -142,7 +147,7 @@
             id: 'vendetta', n: 'Вендетта', en: 'Vendetta', i: '🎯',
             cd: 5, t: 'damage', fl: 4, school: 'physical', fa: 1,
             vuln: { amount: 0.3, turns: 3, physical: false },
-            d: '4т · цель +30% урона 3х · без хода · КД 5', sid: 79140,
+            d: '4т · +30% входящего от наложившего · 3х · без хода · КД 5', sid: 79140,
           }),
           A({
             id: 'fan', n: 'Веер клинков', en: 'Fan of Knives', i: '🌀',
@@ -151,13 +156,13 @@
           }),
           A({
             id: 'slice', n: 'Нарезка', en: 'Slice and Dice', i: '⏱️',
-            c: 25, cs: 1, t: 'buff', p: 0.22, school: 'none',
-            d: '25 эн · завершающий: +атака (сильнее с длинной серией)', sid: 5171,
-          }),
-          A({
-            id: 'kick', n: 'Пинок', en: 'Kick', i: '🦵',
-            c: 15, cd: 2, t: 'interrupt', p: 0, school: 'physical',
-            d: '15 эн · прерывание · КД 2', sid: 1766,
+            c: 0, t: 'buff', fa: 1, school: 'none',
+            grantSelfBuff: {
+              id: 'next_aoe', name: 'Нарезка', icon: '⏱️',
+              turns: 99, stacks: 1,
+              tip: 'След. атака — область; дот тоже на всех',
+            },
+            d: 'Бесплатно · без хода · след. атака область', sid: 5171,
           }),
         ],
       },
@@ -183,19 +188,20 @@
           }),
           A({
             id: 'revealing', n: 'Пробивающий удар', en: 'Revealing Strike', i: '👁️',
-            c: 35, gs: 1, cd: 1, t: 'damage', fl: 16, school: 'physical',
+            c: 20, gs: 1, cd: 4, t: 'damage', fl: 16, school: 'physical',
             vuln: { amount: 0.1, turns: 3, physical: true },
-            d: '35 эн · 16т · +1 серии · +10% физ. 3х · КД 1', sid: 84617,
+            d: '20 эн · 16т · +1 серии · +10% физ. 3х · КД 4', sid: 84617,
           }),
           A({
             id: 'eviscerate', n: 'Потрошение', en: 'Eviscerate', i: '💥',
-            c: 35, cs: 1, t: 'damage', p: 1.6, school: 'physical',
-            d: '35 эн · завершающий (вся серия)', sid: 2098,
+            c: 35, cs: 1, t: 'damage', fl: 39, school: 'physical',
+            d: '35 эн · завершающий · при 5 очках 60т', sid: 2098,
           }),
           A({
             id: 'killing_spree', n: 'Череда убийств', en: 'Killing Spree', i: '🏃',
             cd: 5, t: 'aoe', fl: 18, hits: 2, school: 'physical',
-            d: '18т×2 AoE · КД 5', sid: 51690,
+            applyDot: { flat: 4, turns: 2, name: 'Череда убийств', icon: '🩸', id: 'killing_spree', school: 'physical' },
+            d: '18т×2 AoE + кровотечение 4т×2 · КД 5', sid: 51690,
           }),
           A({
             id: 'adrenaline', n: 'Выброс адреналина', en: 'Adrenaline Rush', i: '💉',
@@ -214,13 +220,13 @@
           }),
           A({
             id: 'slice', n: 'Нарезка', en: 'Slice and Dice', i: '⏱️',
-            c: 25, cs: 1, t: 'buff', p: 0.22, school: 'none',
-            d: '25 эн · завершающий: +атака (сильнее с серией)', sid: 5171,
-          }),
-          A({
-            id: 'rupture', n: 'Рваная рана', en: 'Rupture', i: '🩸',
-            c: 25, cs: 1, t: 'dot', p: 0.7, school: 'physical',
-            d: '25 эн · завершающий bleed (вся серия)', sid: 1943,
+            c: 0, t: 'buff', fa: 1, school: 'none',
+            grantSelfBuff: {
+              id: 'next_aoe', name: 'Нарезка', icon: '⏱️',
+              turns: 99, stacks: 1,
+              tip: 'След. атака — область; дот тоже на всех',
+            },
+            d: 'Бесплатно · без хода · след. атака область', sid: 5171,
           }),
         ],
       },
@@ -258,8 +264,8 @@
           }),
           A({
             id: 'eviscerate', n: 'Потрошение', en: 'Eviscerate', i: '💥',
-            c: 35, cs: 1, t: 'damage', p: 1.6, school: 'physical',
-            d: '35 эн · завершающий (вся серия) · mastery Палач', sid: 2098,
+            c: 35, cs: 1, t: 'damage', fl: 34, school: 'physical',
+            d: '35 эн · завершающий · при 5 очках 53т', sid: 2098,
           }),
           A({
             id: 'shadow_dance', n: 'Танец теней', en: 'Shadow Dance', i: '💃',
@@ -272,19 +278,19 @@
             d: '+2 серии без удара · без хода · КД 3', sid: 14183,
           }),
           A({
-            id: 'rupture', n: 'Рваная рана', en: 'Rupture', i: '🩸',
-            c: 25, cs: 1, t: 'dot', p: 0.8, school: 'physical',
-            d: '25 эн · завершающий bleed (вся серия)', sid: 1943,
-          }),
-          A({
             id: 'fan', n: 'Веер клинков', en: 'Fan of Knives', i: '🌀',
             c: 35, gs: 1, t: 'aoe', fl: 11, school: 'physical',
             d: '35 эн · 11т AoE · +1 серии', sid: 51723,
           }),
           A({
             id: 'slice', n: 'Нарезка', en: 'Slice and Dice', i: '⏱️',
-            c: 25, cs: 1, t: 'buff', p: 0.22, school: 'none',
-            d: '25 эн · завершающий: +атака (сильнее с серией)', sid: 5171,
+            c: 0, t: 'buff', fa: 1, school: 'none',
+            grantSelfBuff: {
+              id: 'next_aoe', name: 'Нарезка', icon: '⏱️',
+              turns: 99, stacks: 1,
+              tip: 'След. атака — область; дот тоже на всех',
+            },
+            d: 'Бесплатно · без хода · след. атака область', sid: 5171,
           }),
         ],
       },
