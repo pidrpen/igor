@@ -21,7 +21,7 @@
   const SEC_VERS_PCT_PER_RATING = 0.005; // 0.5% за 1 рейтинг
   const SEC_MASTERY_RATING = 120;      // базовый рейтинг искусности
   // Конверсия шмоток → рейтинг 1:1 (раньше было ×10–14 — отсюда «бешеные» % в отряде).
-  // Полный сет: обычно +30–80 рейтинга к криту (~+5–14%), не сотни.
+  // Полный сет: обычно +30–80 рейтинга к криту (~·5–14%), не сотни.
   const GEAR_CRIT_PER_POINT = 1;
   const GEAR_VERS_PER_POINT = 1;
   const GEAR_MASTERY_PER_POINT = 1;
@@ -67,7 +67,7 @@
     priest_holy:         { name: 'Отзвук Света', effect: 'Увеличивает лечение и периодическое исцеление', kind: 'heal', pctAt120: 39 },
     priest_shadow:       { name: 'Теневой отклик', effect: 'Увеличивает периодический урон / урон тьмы', kind: 'dot', pctAt120: 42 },
     // Death Knight
-    deathknight_blood:   { name: 'Кровавый щит', effect: 'Снижает входящий урон; усиливает щит-эффекты', kind: 'tank', pctAt120: 36 },
+    deathknight_blood:   { name: 'Кровавый щит', effect: 'Усиливает щит с Удара смерти (20% реально возвращённого HP)', kind: 'blood_shield', pctAt120: 36 },
     deathknight_frost:   { name: 'Ледяное сердце', effect: 'Увеличивает весь исходящий урон', kind: 'dmg', pctAt120: 41 },
     deathknight_unholy:  { name: 'Клинок ужаса', effect: 'Увеличивает периодический урон / болезни и урон питомца', kind: 'dot_pet', pctAt120: 41 },
     // Shaman
@@ -118,4 +118,3 @@
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
   /** Recount: reset totals for a new key run */
-
