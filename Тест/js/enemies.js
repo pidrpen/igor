@@ -242,7 +242,7 @@
     raidBosses: {
       leishen: {
         id: 'ls', name: 'Лэй Шэнь, Повелитель Грома', icon: '⚡', role: 'tank',
-        hp: 3480, atk: 34, def: 12, speed: 9, mana: 80,
+        hp: 800, atk: 17, def: 10, speed: 9, mana: 80,
         mech: { id: 'thunder_king', addName: 'Проводник грома', addId: 'eq', addHp: 1.05, n: 2, mustKillTurns: 4 },
         phases: [
           { at: 1, name: 'Престол грома', abilities: [
@@ -912,8 +912,8 @@
       toast('Ярость императора');
     }
 
-    if (combat.round >= 34) {
-      const raw = Math.round((getEff(boss).atk || boss.atk) * 1.4);
+    if (combat.round >= 90) {
+      const raw = Math.round((getEff(boss).atk || boss.atk) * 0.14);
       for (const h of livingHeroes()) {
         dealTrue(h, raw, boss, 'aoe', { school: 'nature', abilityName: 'Берсерк', isAoe: true });
       }

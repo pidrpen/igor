@@ -2,9 +2,9 @@
 (function () {
   const CATA_BG = 'assets/backgrounds/raid-catacombs.jpg';
   const FIELD_BG = 'assets/backgrounds/raid-field.jpg';
-  const PILLAR_HP = 4000000;
-  const PILLAR_DRAIN = 100000;
-  const PILLAR_AOE = 3000;
+  const PILLAR_HP = 360000;
+  const PILLAR_DRAIN = 22000;
+  const PILLAR_AOE = 2200;
 
   function ss() { return (typeof STAT_SCALE === 'number') ? STAT_SCALE : 1000; }
 
@@ -215,77 +215,77 @@
     const k = n + (forPlayer ? 0 : 0);
     const halls = [
       [
-        { name: 'Грозовой глашатай', id: 'r', role: 'dps', hp: 220, atk: 24, def: 4, speed: 12, mana: 50,
+        { name: 'Грозовой глашатай', id: 'r', role: 'dps', hp: 32, atk: 12, def: 4, speed: 12, mana: 50,
           abs: [
             { id: 'bolt', name: 'Разряд свода', cost: 0, cd: 0, type: 'damage', power: 1.45, school: 'nature' },
             { id: 'cast', name: 'Вопль катакомб', cost: 12, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 4, school: 'nature' },
           ] },
-        { name: 'Клинок династии', id: 'j', role: 'dps', hp: 240, atk: 26, def: 6, speed: 11,
+        { name: 'Клинок династии', id: 'j', role: 'dps', hp: 36, atk: 13, def: 6, speed: 11,
           abs: [
             { id: 'h', name: 'Рассечение свода', cost: 0, cd: 0, type: 'damage', power: 1.55, school: 'physical' },
             { id: 'buster', name: 'Казнь стража', cost: 12, cd: 2, type: 'cast_aoe', power: 1.35, castKind: 'buster', castPrio: 2, school: 'physical' },
           ] },
-        { name: 'Клинок династии', id: 'j', role: 'dps', hp: 240, atk: 26, def: 6, speed: 11,
+        { name: 'Клинок династии', id: 'j', role: 'dps', hp: 36, atk: 13, def: 6, speed: 11,
           abs: [
             { id: 'h', name: 'Рассечение свода', cost: 0, cd: 0, type: 'damage', power: 1.55, school: 'physical' },
             { id: 'aoe', name: 'Вихрь искр', cost: 10, cd: 2, type: 'aoe', power: 0.78, school: 'nature' },
           ] },
       ],
       [
-        { name: 'Жрец грозы', id: 'm', role: 'healer', hp: 200, atk: 20, def: 3, speed: 11, mana: 60,
+        { name: 'Жрец грозы', id: 'm', role: 'healer', hp: 30, atk: 11, def: 3, speed: 11, mana: 60,
           abs: [
             { id: 'b', name: 'Тень грома', cost: 0, cd: 0, type: 'damage', power: 1.25, school: 'nature' },
             { id: 'h', name: 'Заряд плоти', cost: 12, cd: 2, type: 'heal', power: 0.38 },
             { id: 'cast', name: 'Гимн династии', cost: 12, cd: 2, type: 'cast_aoe', power: 0.88, castKind: 'kick', castPrio: 3, school: 'nature' },
           ] },
-        { name: 'Грозовой глашатай', id: 'r', role: 'dps', hp: 210, atk: 25, def: 4, speed: 12, mana: 50,
+        { name: 'Грозовой глашатай', id: 'r', role: 'dps', hp: 34, atk: 13, def: 4, speed: 12, mana: 50,
           abs: [
             { id: 'bolt', name: 'Разряд свода', cost: 0, cd: 0, type: 'damage', power: 1.50, school: 'nature' },
             { id: 'cast', name: 'Цепная молния', cost: 12, cd: 2, type: 'cast_aoe', power: 1.00, castKind: 'kick', castPrio: 4, school: 'nature' },
           ] },
-        { name: 'Палач свода', id: 'as', role: 'dps', hp: 230, atk: 28, def: 4, speed: 15,
+        { name: 'Палач свода', id: 'as', role: 'dps', hp: 38, atk: 14, def: 4, speed: 15,
           abs: [
             { id: 'stab', name: 'Удар в спину', cost: 0, cd: 0, type: 'damage', power: 1.60 },
             { id: 'exec', name: 'Коллапс', cost: 10, cd: 2, type: 'damage', power: 2.20 },
           ] },
       ],
       [
-        { name: 'Капитан катакомб', id: 'c', role: 'tank', hp: 420, atk: 28, def: 14, speed: 8, mana: 30,
+        { name: 'Капитан катакомб', id: 'c', role: 'tank', hp: 62, atk: 15, def: 14, speed: 8, mana: 30,
           abs: [
             { id: 'c', name: 'Рассечение', cost: 0, cd: 0, type: 'damage', power: 1.60, school: 'physical' },
             { id: 's', name: 'Клич свода', cost: 10, cd: 3, type: 'buff', power: 0.25 },
             { id: 'buster', name: 'Децимация', cost: 12, cd: 2, type: 'cast_aoe', power: 1.40, castKind: 'buster', castPrio: 2, school: 'physical' },
           ] },
-        { name: 'Грозовой глашатай', id: 'r', role: 'dps', hp: 200, atk: 24, def: 4, speed: 12, mana: 50,
+        { name: 'Грозовой глашатай', id: 'r', role: 'dps', hp: 30, atk: 12, def: 4, speed: 12, mana: 50,
           abs: [
             { id: 'bolt', name: 'Разряд свода', cost: 0, cd: 0, type: 'damage', power: 1.45, school: 'nature' },
             { id: 'cast', name: 'Вопль катакомб', cost: 12, cd: 2, type: 'cast_aoe', power: 0.92, castKind: 'kick', castPrio: 4, school: 'nature' },
           ] },
       ],
       [
-        { name: 'Нефритовый палач', id: 'j', role: 'dps', hp: 260, atk: 27, def: 6, speed: 11,
+        { name: 'Нефритовый палач', id: 'j', role: 'dps', hp: 26, atk: 13, def: 6, speed: 11,
           abs: [
             { id: 'cleave', name: 'Раскол', cost: 0, cd: 0, type: 'damage', power: 1.50 },
             { id: 'whirl', name: 'Вихрь клинков', cost: 10, cd: 2, type: 'aoe', power: 0.82 },
           ] },
-        { name: 'Ткач молний', id: 's', role: 'dps', hp: 210, atk: 24, def: 3, speed: 13, mana: 40,
+        { name: 'Ткач молний', id: 's', role: 'dps', hp: 24, atk: 12, def: 3, speed: 13, mana: 40,
           abs: [
             { id: 'bite', name: 'Укус искры', cost: 0, cd: 0, type: 'damage', power: 1.35 },
             { id: 'cast', name: 'Сеть молний', cost: 12, cd: 2, type: 'cast_aoe', power: 0.90, castKind: 'kick', castPrio: 3, school: 'nature' },
           ] },
-        { name: 'Ткач молний', id: 's', role: 'dps', hp: 210, atk: 24, def: 3, speed: 13, mana: 40,
+        { name: 'Ткач молний', id: 's', role: 'dps', hp: 24, atk: 12, def: 3, speed: 13, mana: 40,
           abs: [
             { id: 'bite', name: 'Укус искры', cost: 0, cd: 0, type: 'damage', power: 1.35 },
             { id: 'aoe', name: 'Зола грома', cost: 10, cd: 2, type: 'aoe', power: 0.70, school: 'nature' },
           ] },
-        { name: 'Копейщик династии', id: 'a', role: 'dps', hp: 190, atk: 25, def: 3, speed: 13,
+        { name: 'Копейщик династии', id: 'a', role: 'dps', hp: 22, atk: 13, def: 3, speed: 13,
           abs: [
             { id: 'h', name: 'Выстрел', cost: 0, cd: 0, type: 'damage', power: 1.40 },
             { id: 'v', name: 'Залп', cost: 10, cd: 3, type: 'aoe', power: 0.72 },
           ] },
       ],
       [
-        { name: 'Страж нижнего свода', id: 'sg', role: 'tank', hp: 560, atk: 30, def: 16, speed: 7, mana: 40,
+        { name: 'Страж нижнего свода', id: 'sg', role: 'tank', hp: 88, atk: 16, def: 16, speed: 7, mana: 40,
           abs: [
             { id: 'bash', name: 'Сокрушение свода', cost: 0, cd: 0, type: 'damage', power: 1.65, school: 'physical' },
             { id: 'buster', name: 'Обвал камня', cost: 12, cd: 2, type: 'cast_aoe', power: 1.45, castKind: 'buster', castPrio: 2, school: 'physical' },
@@ -335,7 +335,7 @@
         hp: t.hp, atk: t.atk, def: t.def || 4, speed: t.speed || 10, mana: t.mana || 25,
         abilities: t.abs || [{ id: 'h', name: 'Удар', cost: 0, cd: 0, type: 'damage', power: 1.4 }],
       };
-      const u = scaleEnemy(tpl, k, false, true);
+      const u = scaleEnemy(tpl, k, false, false);
       u.mechRole = 'cata_wave';
       u.raidRoom = room;
       u.name = t.name;
@@ -584,10 +584,11 @@
     mk('left');
     mk('right');
     showRaidPlace('Поле под дворцом', 'Столбы тока слева и справа · только лечение');
-    log('Два столба тока: по ' + (typeof fmt === 'function' ? fmt(PILLAR_HP) : '4.0м') +
-      ' HP (4.0м). Бить нельзя. Лечение 1–9 → клик по столбу. Каждый ход −' +
-      (typeof fmt === 'function' ? fmt(PILLAR_DRAIN) : '100т') +
-      '. Область 3т × (1 + доля дыры).', 'enemy');
+    log('Два столба тока: по ' + (typeof fmt === 'function' ? fmt(PILLAR_HP) : PILLAR_HP) +
+      ' HP. Бить нельзя. Лечение 1–9 → клик по столбу. Каждый ход −' +
+      (typeof fmt === 'function' ? fmt(PILLAR_DRAIN) : PILLAR_DRAIN) +
+      '. Область ' + (typeof fmt === 'function' ? fmt(PILLAR_AOE) : PILLAR_AOE) +
+      ' × (1 + доля дыры).', 'enemy');
     toast('Столбы: только хил');
     try { paintBossFlanks(); } catch (_) {}
     try { if (typeof renderCombat === 'function') renderCombat(); } catch (_) {}

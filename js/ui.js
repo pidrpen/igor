@@ -885,7 +885,7 @@
       beginRunScreen();
       applyDungeonTheme();
       if (raid) {
-        log(`Рейд 10 · +${keyLevel}: ${dungeon.name}. Лэй Шэнь, Повелитель Грома. Без шмоток рейд почти не закрывается.`, 'system');
+        log(`Рейд 10 · +${keyLevel}: ${dungeon.name}. Лэй Шэнь, Повелитель Грома. Без шмоток тяжело, но закрывается.`, 'system');
         log('Механики: смена танков (Перегрузка ×3) · Проводники СТ · метки молнии · соки сфер · кики кастов.', 'system');
         log('Авто-рейд: союзники ходят сами. Клик по герою — взять управление.', 'system');
       } else {
@@ -1275,8 +1275,8 @@
       atkM *= 1.40 * Math.pow(1.16, over - 1);
     }
     if (run && run.raid) {
-      hpM *= 1.85;
-      atkM *= 1.50;
+      hpM *= 1.12;
+      atkM *= 1.08;
     }
     if (isBoss && hasEffect('boss_hp')) { hpM *= affixValue('boss_hp', 1.4); atkM *= 1.15; }
     if (!isBoss && hasEffect('trash_hp')) hpM *= affixValue('trash_hp', 1.35);
