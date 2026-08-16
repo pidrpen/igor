@@ -1,8 +1,8 @@
 # Mythic Key
 
-На GitHub этот файл лежит в корне репозитория, а содержимое `igor-main/` — тоже в корне. Локально: `igor-main/Тест/`. В клоне: `Тест/`.
-
 Рабочая копия — `igor-main/Тест/`. `igor-main/` выше `Тест/` — основа: не редактировать, пока пользователь не скажет «перелив».
+
+GitHub: [pidrpen/igor](https://github.com/pidrpen/igor). В клоне игра в корне: `Тест/` = локальный `igor-main/Тест/`.
 
 Контракт: `.grok/skills/mythic-key/SKILL.md`  
 Карта файлов (не обходить репозиторий заново): `.grok/skills/mythic-key/references/карта.md`

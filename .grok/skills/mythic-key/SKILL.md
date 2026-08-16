@@ -11,7 +11,9 @@ description: >
 
 # Mythic Key
 
-Корень репозитория — папка с `AGENTS.md` (родитель `igor-main/`). Скилл лежит в `.grok/skills/mythic-key/`.
+Корень рабочей копии — папка с `AGENTS.md` (родитель `igor-main/`). Скилл лежит в `.grok/skills/mythic-key/`.
+
+Клон GitHub `pidrpen/igor`: в корне уже содержимое `igor-main/` плюс этот `AGENTS.md` и `.grok/`. Префикс `igor-main/` в путях отбросить.
 
 ## Новая сессия
 
@@ -84,7 +86,7 @@ description: >
 
 - `js/test-room/`, `assets/sprites/`
 - `js/shop/`
-- `class-balance/cheat-abilities.js`, пакет инженера
+- `class-balance/cheat-abilities.js` (инженер уже в основе)
 - бейджи `TEST_SPECS` / пометки «тест» на спеках
 - Excel, `задачи_мне.txt`, предложения ИИ
 - `прокачка/`
