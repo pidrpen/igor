@@ -52,6 +52,9 @@
     if (typeof raidVaultMaybeAdvance === 'function') {
       try { raidVaultMaybeAdvance(); } catch (e) { console.error('[vault]', e); }
     }
+    if (typeof raidCataMaybeAdvance === 'function') {
+      try { raidCataMaybeAdvance(); } catch (e) { console.error('[cata]', e); }
+    }
     const hiddenBoss = (combat?.enemies || []).some(e => e.alive && e.vaultAway);
     if (!living('enemy').length && hiddenBoss) return false;
     if (!living('enemy').length) {

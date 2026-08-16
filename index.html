@@ -23,7 +23,7 @@
   <script src="class-balance/apply-all.js?v=5.4.8.40-pour"></script>
   <link rel="stylesheet" href="css/main.css?v=5.4.9" />
   <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34-tl" />
-  <link rel="stylesheet" href="css/raid.css?v=5.4.9-lobbyfx" />
+  <link rel="stylesheet" href="css/raid.css?v=5.4.9-pour2" />
 </head>
 <body>
   <button class="btn btn-sm" type="button" id="btn-lobby-chrome" title="Скрыть карточки и посмотреть фон">Скрыть интерфейс</button>
@@ -124,10 +124,14 @@
       </aside>
       <main class="battle-area" id="battle-area">
         <div class="turn-banner" id="turn-banner">Ход</div>
-        <div class="boss-frame" id="boss-frame">
-          <div class="bf-name" id="boss-name">Босс</div>
-          <div class="bf-bar"><i id="boss-hp-fill" style="width:100%"></i><span class="bf-text" id="boss-hp-text">0/0</span></div>
-          <div class="bf-phases" id="boss-phases"></div>
+        <div class="boss-flank" id="boss-flank">
+          <div class="boss-flank-slot" id="boss-flank-left" data-flank="left"></div>
+          <div class="boss-frame" id="boss-frame">
+            <div class="bf-name" id="boss-name">Босс</div>
+            <div class="bf-bar"><i id="boss-hp-fill" style="width:100%"></i><span class="bf-text" id="boss-hp-text">0/0</span></div>
+            <div class="bf-phases" id="boss-phases"></div>
+          </div>
+          <div class="boss-flank-slot" id="boss-flank-right" data-flank="right"></div>
         </div>
         <div class="phase-banner" id="phase-banner">Бой</div>
         <div class="phase-sub" id="phase-sub"></div>
@@ -144,6 +148,31 @@
           </div>
         </div>
         <div id="raid-fx-layer" class="raid-fx-layer hidden"></div>
+        <div id="raid-split-stage" class="raid-split-stage hidden" aria-hidden="true">
+          <div class="raid-split-col" data-room="azure">
+            <div class="raid-split-head">
+              <span class="raid-split-title">🔵 Зал трона</span>
+              <span class="raid-split-task">Кик «Зов династии»</span>
+              <span class="raid-split-you">Ваша группа · 1–9</span>
+            </div>
+            <div class="raid-split-foes unit-row" data-side="enemy"></div>
+            <div class="raid-split-friends unit-row" data-side="ally"></div>
+          </div>
+          <div class="raid-split-mid">
+            <div class="raid-split-wire" id="raid-split-wire" aria-hidden="true"></div>
+            <button type="button" id="btn-raid-swap-room" class="btn btn-sm hidden">Другая группа</button>
+            <button type="button" id="btn-raid-merge" class="btn btn-sm hidden" disabled>Собрать рейд</button>
+          </div>
+          <div class="raid-split-col" data-room="gold">
+            <div class="raid-split-head">
+              <span class="raid-split-title">🟡 Зал сфер</span>
+              <span class="raid-split-task">Соки + проводник СТ</span>
+              <span class="raid-split-you">Только ИИ</span>
+            </div>
+            <div class="raid-split-foes unit-row" data-side="enemy"></div>
+            <div class="raid-split-friends unit-row" data-side="ally"></div>
+          </div>
+        </div>
         <div>
           <div class="section-title" style="text-align:center">Враги</div>
           <div class="unit-row" id="enemy-row"></div>
@@ -275,10 +304,10 @@
   <script src="js/state.js?v=5.4.9-bloodsh"></script>
   <script src="js/core.js?v=5.4.9"></script>
   <script src="js/ui/balance-panel.js?v=5.4.9"></script>
-  <script src="js/ui/fx.js?v=5.4.8.34"></script>
-  <script src="js/enemies.js?v=5.4.8.40-pour"></script>
-  <script src="js/route.js?v=5.4.8.42-key"></script>
-  <script src="js/raid.js?v=5.4.9-lobbyfx"></script>
+  <script src="js/ui/fx.js?v=5.4.9-pour"></script>
+  <script src="js/enemies.js?v=5.4.9-pour"></script>
+  <script src="js/route.js?v=5.4.9-pour"></script>
+  <script src="js/raid.js?v=5.4.9-pour"></script>
   <script src="js/gear.js?v=5.4.8.40-pour"></script>
   <script src="js/systems/telegraph-loot.js?v=5.4.8.40-pour"></script>
   <script src="js/systems/stats.js?v=5.4.9-bloodsh"></script>
@@ -291,8 +320,12 @@
   <script src="js/systems/abilities.js?v=5.4.9-bloodsh"></script>
   <script src="js/systems/damage.js?v=5.4.8.40-pour"></script>
   <script src="js/systems/ai.js?v=5.4.8.40-pour"></script>
-  <script src="js/systems/combat-flow.js?v=5.4.8.42-key"></script>
+  <script src="js/systems/combat-flow.js?v=5.4.9-pour"></script>
   <script src="js/save.js?v=5.4.8.39-boot"></script>
-  <script src="js/ui.js?v=5.4.9-nokeystat"></script>
+  <script src="js/ui.js?v=5.4.9-pour"></script>
+  <script src="js/dungeon-inst.js?v=5.4.9-pour"></script>
+  <script src="js/raid-split.js?v=5.4.9-pour"></script>
+  <script src="js/raid-finale.js?v=5.4.9-pour"></script>
+  <script src="js/raid-catacombs.js?v=5.4.9-pour"></script>
 </body>
 </html>

@@ -16,7 +16,7 @@
 
   const DUNGEONS = [
     { id: 'crypts', name: 'Склеп Эха', theme: 'crypt', timerBase: 28 * 60,
-      midName: 'Хранитель склепа', finalName: 'Повелитель Склепа',
+      midName: 'Хранитель Отзвука', finalName: 'Ваэр, Последнее Эхо',
       pathLabels: { a: 'Галерея костей', b: 'Могильный чемпион', c: 'Костяной двор', d: 'Хранитель урн' } },
     { id: 'forge', name: 'Пепельная Кузня', theme: 'forge', timerBase: 27 * 60,
       midName: 'Мастер горна', finalName: 'Пепельная Королева',

@@ -376,12 +376,66 @@
     return { motion, school, impact, shape };
   }
 
+  function playLeiShenFx(actor, ability, targets, layer, from) {
+    if (!actor || !ability || !layer) return;
+    const name = String(ability.name || '');
+    const buster = ability.castKind === 'buster' || /Казнь|Децимация|Гнев Грома/.test(name);
+    const aoe = ability.type === 'aoe' || ability.type === 'cast_aoe' || ability.castKind === 'aoe' || /поле|разряд/.test(name);
+    const list = (targets || []).filter(Boolean);
+    if (typeof flashScreen === 'function') flashScreen(buster || aoe);
+    const bolts = document.createElement('canvas');
+    bolts.className = 'lei-fx-bolts';
+    bolts.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:70;';
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    bolts.width = Math.floor(window.innerWidth * dpr);
+    bolts.height = Math.floor(window.innerHeight * dpr);
+    layer.appendChild(bolts);
+    const ctx = bolts.getContext('2d');
+    if (ctx && typeof buildStrike === 'function' && typeof strokeBolt === 'function') {
+      const specs = aoe
+        ? [{ x: 0.2, fat: true, branch: 3 }, { x: 0.5, fat: true, branch: 4 }, { x: 0.8, fat: false, branch: 2 }]
+        : [{ x: from.x / Math.max(1, window.innerWidth), fat: !!buster, branch: buster ? 3 : 2 }];
+      const built = specs.map(s => buildStrike(bolts.width, bolts.height, s)).filter(Boolean);
+      const started = performance.now();
+      const life = buster ? 900 : 600;
+      const tick = (now) => {
+        const t = now - started;
+        ctx.clearRect(0, 0, bolts.width, bolts.height);
+        ctx.globalAlpha = Math.max(0, 1 - t / life);
+        for (const b of built) {
+          strokeBolt(ctx, b.main, b.fat ? 5 : 3, 'rgba(220,244,255,0.95)', 14);
+          strokeBolt(ctx, b.main, b.fat ? 2 : 1.2, 'rgba(255,255,255,0.95)', 4);
+          for (const br of (b.branches || [])) strokeBolt(ctx, br, 1.3, 'rgba(180,220,255,0.8)', 8);
+        }
+        ctx.globalAlpha = 1;
+        if (t < life) requestAnimationFrame(tick);
+        else bolts.remove();
+      };
+      requestAnimationFrame(tick);
+    } else {
+      setTimeout(() => bolts.remove(), 600);
+    }
+    for (const t of list) {
+      const c = unitCenter(t.uid);
+      if (!c) continue;
+      const ring = document.createElement('div');
+      ring.className = 'lei-fx-ring' + (buster ? ' buster' : '');
+      ring.style.left = c.x + 'px';
+      ring.style.top = c.y + 'px';
+      layer.appendChild(ring);
+      setTimeout(() => ring.remove(), 900);
+    }
+  }
+
   function playSkillAnim(actor, ability, targets) {
     if (!juiceOk() || !actor) return;
     const layer = document.getElementById('skill-fx-layer');
     if (!layer) return;
     const from = unitCenter(actor.uid);
     if (!from) return;
+    if (actor.raidBoss || (actor.mech && actor.mech.id === 'thunder_king') || actor.heroId === 'ls') {
+      try { playLeiShenFx(actor, ability, targets, layer, from); } catch (e) { console.error('[lei fx]', e); }
+    }
     const list = (targets || []).filter(Boolean);
     const fx = resolveSkillFx(ability, actor);
     const school = fx.school === 'heal' ? 'heal' : (fx.school || '');
@@ -707,6 +761,7 @@
       ph.innerHTML = boss.phases.map((_, i) =>
         `<span class="${i <= (boss.phaseIndex || 0) ? 'on' : ''}"></span>`).join('');
     } else ph.innerHTML = '';
+    try { if (typeof paintBossFlanks === 'function') paintBossFlanks(); } catch (_) {}
   }
   // Portraits + battle backgrounds only (ability icons stay emoji).
   // Base is always the game root `assets/` folder (resolved from this script URL),

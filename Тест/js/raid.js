@@ -502,9 +502,6 @@
     const tpl = raidBossTpl();
     if (!tpl) return [];
     const boss = scaleEnemy(tpl, k, true, false);
-    boss.maxHp = Math.round(boss.maxHp * 1.15);
-    boss.hp = boss.maxHp;
-    boss.atk = Math.round(boss.atk * 1.08);
     boss.raidBoss = true;
     return [boss];
   }
@@ -576,7 +573,7 @@
     const usable = actor.abilities.filter(a => canPay(actor, a));
     if (!usable.length) return false;
     const boss = foes.find(e => e.isBoss) || foes[0];
-    const conductors = foes.filter(e => e.mechRole === 'conductor' || e.mustKillTurns);
+    const conductors = foes.filter(e => e.mechRole === 'conductor' || e.mechRole === 'echo' || e.mustKillTurns);
     const lowestAlly = (list) => {
       const a = (list || friends).filter(u => u && u.alive);
       if (!a.length) return null;
@@ -658,14 +655,27 @@
 
   function raidPhaseTitle() {
     const boss = (combat?.enemies || []).find(e => e.raidBoss || (e.isBoss && e.mech?.id === 'thunder_king'));
-    if (combat?.vault && !combat.vault.dropped) return 'Под дворцом';
+    if (combat?.catacombs?.active && combat.catacombs.stage === 'waves') return 'Катакомбы под дворцом';
+    if (combat?.catacombs?.active && combat.catacombs.stage === 'pick') return 'Катакомбы под дворцом';
+    if (combat?.catacombs?.active && combat.catacombs.stage === 'field') {
+      if (boss && boss.hp / Math.max(1, boss.maxHp) <= 0.20) return 'Поле под дворцом · столбы';
+      return 'Поле под дворцом';
+    }
+    if (combat?.vault && !combat.vault.dropped) return 'Провал · под дворцом';
     if (!boss) return 'Рейд 10';
     const r = boss.hp / Math.max(1, boss.maxHp);
+    if (typeof isRaidSplitActive === 'function' && isRaidSplitActive()) return 'Два зала';
     if (r <= 0.15) return 'Ярость императора';
-    if (r <= 0.40) return 'Расколотое небо';
-    if (r <= 0.50) return 'Провал';
+    if (r <= 0.20) return 'Поле под дворцом · столбы';
+    if (r <= 0.50) return 'Поле под дворцом';
     if (r <= 0.70) return 'Зал проводников';
+    if (r <= 0.75) return 'Провал · под дворцом';
     return 'Престол грома';
+  }
+
+  function maybeTriggerRaidFinale(target) {
+    if (typeof startRaidFinale === 'function') return !!startRaidFinale(target);
+    return false;
   }
 
   function refreshRaidAlerts() {
@@ -840,7 +850,7 @@
     if (!isRaidRun() || !target || !target.alive) return;
     if (!target.raidBoss && !(target.isBoss && target.mech && target.mech.id === 'thunder_king')) return;
     if (target._vaultInter) return;
-    if (target.hp / Math.max(1, target.maxHp) > 0.5) return;
+    if (target.hp / Math.max(1, target.maxHp) > 0.75) return;
     target._vaultInter = true;
     beginRaidVault(target);
   }
@@ -854,8 +864,9 @@
     combat.vault = { wave: 0, cast: 0, castMax: VAULT_CAST_MAX, dropped: false };
     const img = document.getElementById('raid-cast-portrait');
     if (img) img.src = raidBossPortraitUrl();
-    log('Пол рушится! Рейд проваливается под дворец. Лэй Шэнь читает Небесный гнев — не дайте шкале заполниться.', 'enemy');
-    toast('Провал под дворец!');
+    log('Пол рушится на 75% HP! Рейд проваливается под дворец. Лэй Шэнь читает Небесный гнев — не дайте шкале заполниться.', 'enemy');
+    toast('Провал под дворец');
+    if (typeof showRaidPlace === 'function') showRaidPlace('Провал · под дворцом', 'Волны стражи, пока каст не заполнится');
     playFloorCrack(VAULT_LOC, () => {
       spawnVaultWave();
       refreshRaidAlerts();

@@ -885,11 +885,12 @@
       beginRunScreen();
       applyDungeonTheme();
       if (raid) {
-        log(`Рейд 10 · +${keyLevel}: ${dungeon.name}. Лэй Шэнь, Повелитель Грома.`, 'system');
-        log('Механики: смена танков (Перегрузка ×3) · Проводники СТ · метки молнии · соки сфер · кики кастов.', 'system');
+        log(`Рейд 10 · +${keyLevel}: ${dungeon.name}. Лэй Шэнь, Повелитель Грома. Без шмоток рейд почти не закрывается.`, 'system');
+        log('Механики: смена танков (Перегрузка ×3) · Проводники СТ · метки молнии · соки сфер · кики кастов · с 40% два зала.', 'system');
         log('Авто-рейд: союзники ходят сами. Клик по герою — взять управление.', 'system');
       } else {
-        log(`Ключ +${keyLevel}: ${dungeon.name}. Маршрут с развилками · нужно ⚔ ${FORCES_TARGET}% сил (на карте ~${FORCES_MAP_BUDGET}%).`, 'system');
+        log(`Ключ +${keyLevel}: ${dungeon.name}. Маршрут с развилками · нужно ⚔ ${FORCES_TARGET}% сил (на карте ~${FORCES_MAP_BUDGET}%).` +
+          (keyLevel >= 9 ? ' Потолок без шмоток — +8. Выше стена.' : (keyLevel >= 8 ? ' +8 — потолок без шмоток.' : '')), 'system');
       }
       log(`Отряд: ${run.party.map(p => p.fullName).join(', ')}`, 'system');
       updateHud(); renderPath(); renderPowers(); enterRoom();
@@ -1025,6 +1026,11 @@
   }
   function renderPath() {
     const list = document.getElementById('path-list');
+    if (run?.raid) {
+      if (list) { list.innerHTML = ''; list.classList.add('hidden'); }
+      return;
+    }
+    if (list) list.classList.remove('hidden');
     if (!list || !run?.route) { if (list) list.innerHTML = ''; return; }
     const N = run.route.nodes;
     if (!N.start || !N.hall) {
@@ -1256,12 +1262,23 @@
   }
 
   function scaleEnemy(tpl, k, isBoss, isElite) {
-    // Key curve: enemies outpace heroes (~2%/key ATK). +5 should already hurt.
-    // +2 → ×1.0, +5 → ~×1.48 HP / ×1.36 ATK, +10 → ~×2.28 / ×1.96, +15 → ~×3.08 / ×2.56
-    let hpM = 1 + (k - 2) * 0.16;
-    let atkM = 1 + (k - 2) * 0.12;
-    // Mid keys (+4…+9) get a small bump so +5 isn't free
-    if (k >= 4 && k <= 9) { hpM *= 1.08; atkM *= 1.1; }
+    // Герой от ключа не растёт. Потолок без шмоток: +8 закрываем редко, +9+ — стена.
+    // Шмот потом снизит разрыв, множители здесь не трогать «чтобы пройти сейчас».
+    k = Math.max(2, +k || 2);
+    let hpM = 1 + (k - 2) * 0.18;
+    let atkM = 1 + (k - 2) * 0.14;
+    if (k >= 5) { hpM *= 1.10; atkM *= 1.12; }
+    if (k >= 7) { hpM *= 1.12; atkM *= 1.10; }
+    if (k >= 8) { hpM *= 1.15; atkM *= 1.12; }
+    if (k >= 9) {
+      const over = k - 8;
+      hpM *= 1.55 * Math.pow(1.22, over - 1);
+      atkM *= 1.40 * Math.pow(1.16, over - 1);
+    }
+    if (run && run.raid) {
+      hpM *= 1.85;
+      atkM *= 1.50;
+    }
     if (isBoss && hasEffect('boss_hp')) { hpM *= affixValue('boss_hp', 1.4); atkM *= 1.15; }
     if (!isBoss && hasEffect('trash_hp')) hpM *= affixValue('trash_hp', 1.35);
     let abilities = (tpl.abilities || []).map(a => ({ ...a }));

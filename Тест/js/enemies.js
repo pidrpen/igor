@@ -123,24 +123,22 @@
         ] },
     ],
     bosses: {
-      crypt: { id: 'bl', name: 'Повелитель Склепа', icon: '👑', role: 'tank', hp: 560, atk: 20, def: 9, speed: 8, mana: 50,
-        mech: { id: 'soul_link', addName: 'Якорь души', addId: 'sg', addHp: 1.45 },
+      crypt: { id: 'bl', name: 'Ваэр, Последнее Эхо', icon: '👑', role: 'tank', hp: 560, atk: 20, def: 9, speed: 8, mana: 50,
+        mech: { id: 'echo_vaer' },
         phases: [
           { at: 1, name: 'Костяной двор', abilities: [
-            { id: 'a', name: 'Копьё могил', cost: 0, cd: 0, type: 'damage', power: 1.25 },
-            { id: 'cast', name: 'Ритуал костей', cost: 12, cd: 2, type: 'cast_aoe', power: 0.85, castKind: 'kick', castPrio: 3 },
-            { id: 's', name: 'Призыв скелетов', cost: 12, cd: 3, type: 'summon', power: 1 },
+            { id: 'a', name: 'Копьё отзвука', cost: 0, cd: 0, type: 'damage', power: 1.25, school: 'shadow' },
+            { id: 'cast', name: 'Хор гробницы', cost: 12, cd: 2, type: 'cast_aoe', power: 0.85, castKind: 'kick', castPrio: 3, school: 'shadow' },
           ]},
           { at: 0.65, name: 'Кровавый алтарь', abilities: [
-            { id: 'a', name: 'Копьё могил', cost: 0, cd: 0, type: 'damage', power: 1.35 },
-            { id: 'buster', name: 'Казнь стража', cost: 14, cd: 2, type: 'cast_aoe', power: 1.1, castKind: 'buster', castPrio: 2 },
-            { id: 'n', name: 'Вспышка праха', cost: 12, cd: 2, type: 'aoe', power: 0.72 },
+            { id: 'a', name: 'Копьё отзвука', cost: 0, cd: 0, type: 'damage', power: 1.35, school: 'shadow' },
+            { id: 'buster', name: 'Казнь эха', cost: 14, cd: 2, type: 'cast_aoe', power: 1.1, castKind: 'buster', castPrio: 2, school: 'physical' },
+            { id: 'cast', name: 'Хор гробницы', cost: 12, cd: 2, type: 'cast_aoe', power: 0.85, castKind: 'kick', castPrio: 3, school: 'shadow' },
           ]},
-          { at: 0.3, name: 'Трон мёртвых', abilities: [
-            { id: 'a', name: 'Копьё могил', cost: 0, cd: 0, type: 'damage', power: 1.4 },
-            { id: 'n', name: 'Волна смерти', cost: 10, cd: 1, type: 'aoe', power: 0.8 },
-            { id: 'cast', name: 'Некротическая бомба', cost: 14, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 4 },
-            { id: 's', name: 'Призыв', cost: 12, cd: 3, type: 'summon', power: 1 },
+          { at: 0.3, name: 'Последнее эхо', abilities: [
+            { id: 'a', name: 'Копьё отзвука', cost: 0, cd: 0, type: 'damage', power: 1.4, school: 'shadow' },
+            { id: 'n', name: 'Волна смерти', cost: 10, cd: 1, type: 'aoe', power: 0.8, school: 'shadow' },
+            { id: 'cast', name: 'Некротическая бомба', cost: 14, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'aoe', castPrio: 4, school: 'shadow' },
           ]},
         ]},
       forge: { id: 'eq', name: 'Пепельная Королева', icon: '🔥', role: 'dps', hp: 530, atk: 22, def: 6, speed: 11, mana: 55,
@@ -163,7 +161,7 @@
           ]},
         ]},
       tide: { id: 'th', name: 'Ужас Прилива', icon: '🌊', role: 'tank', hp: 590, atk: 19, def: 10, speed: 8, mana: 50,
-        mech: { id: 'drown_mark' },
+        mech: { id: 'tide_inst' },
         phases: [
           { at: 1, name: 'Глубины', abilities: [
             { id: 't', name: 'Щупальце', cost: 0, cd: 0, type: 'damage', power: 1.2 },
@@ -182,7 +180,7 @@
           ]},
         ]},
       jade: { id: 'sha', name: 'Ша Сомнения', icon: '☯️', role: 'dps', hp: 575, atk: 21, def: 7, speed: 10, mana: 55,
-        mech: { id: 'sha_split', addName: 'Воплощение сомнения', addId: 'as', addHp: 1.2, at: 0.55 },
+        mech: { id: 'jade_inst' },
         phases: [
           { at: 1, name: 'Сомнение', abilities: [
             { id: 'bolt', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 1.25 },
@@ -201,7 +199,7 @@
           ]},
         ]},
       rift: { id: 'bz', name: 'Пожиратель Разлома', icon: '🌑', role: 'dps', hp: 590, atk: 22, def: 7, speed: 11, mana: 55,
-        mech: { id: 'rift_priority', addName: 'Нестабильный осколок', addId: 'eq', addHp: 1.1, mustKillTurns: 3 },
+        mech: { id: 'rift_inst' },
         phases: [
           { at: 1, name: 'Трещина', abilities: [
             { id: 'bolt', name: 'Луч хаоса', cost: 0, cd: 0, type: 'damage', power: 1.25 },
@@ -220,7 +218,7 @@
           ]},
         ]},
       ember: { id: 'sp', name: 'Угольный Титан', icon: '🪨', role: 'tank', hp: 600, atk: 21, def: 11, speed: 7, mana: 45,
-        mech: { id: 'ember_feed', addName: 'Живой уголёк', addId: 'p', addHp: 0.85, n: 2 },
+        mech: { id: 'ember_inst' },
         phases: [
           { at: 1, name: 'Тлеющие угли', abilities: [
             { id: 'slam', name: 'Удар угля', cost: 0, cd: 0, type: 'damage', power: 1.25 },
@@ -244,48 +242,50 @@
     raidBosses: {
       leishen: {
         id: 'ls', name: 'Лэй Шэнь, Повелитель Грома', icon: '⚡', role: 'tank',
-        hp: 2480, atk: 26, def: 12, speed: 9, mana: 80,
-        mech: { id: 'thunder_king', addName: 'Проводник грома', addId: 'eq', addHp: 0.95, n: 2, mustKillTurns: 4 },
+        hp: 3480, atk: 34, def: 12, speed: 9, mana: 80,
+        mech: { id: 'thunder_king', addName: 'Проводник грома', addId: 'eq', addHp: 1.05, n: 2, mustKillTurns: 4 },
         phases: [
           { at: 1, name: 'Престол грома', abilities: [
-            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'damage', power: 1.35, school: 'physical' },
-            { id: 'cast', name: 'Сверхзаряд', cost: 12, cd: 2, type: 'cast_aoe', power: 0.92, castKind: 'kick', castPrio: 4, school: 'nature' },
-            { id: 'nova', name: 'Грозовое поле', cost: 12, cd: 3, type: 'aoe', power: 0.62, school: 'nature' },
+            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'damage', power: 1.52, school: 'physical' },
+            { id: 'cast', name: 'Сверхзаряд', cost: 12, cd: 2, type: 'cast_aoe', power: 1.00, castKind: 'kick', castPrio: 4, school: 'nature' },
+            { id: 'nova', name: 'Грозовое поле', cost: 12, cd: 3, type: 'aoe', power: 0.70, school: 'nature' },
           ]},
           { at: 0.70, name: 'Зал проводников', abilities: [
-            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'damage', power: 1.45, school: 'physical' },
-            { id: 'buster', name: 'Казнь стража', cost: 14, cd: 2, type: 'cast_aoe', power: 1.2, castKind: 'buster', castPrio: 2, school: 'physical' },
-            { id: 'cast', name: 'Цепная молния', cost: 12, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 4, school: 'nature' },
+            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'damage', power: 1.58, school: 'physical' },
+            { id: 'buster', name: 'Казнь стража', cost: 14, cd: 2, type: 'cast_aoe', power: 1.28, castKind: 'buster', castPrio: 2, school: 'physical' },
+            { id: 'cast', name: 'Цепная молния', cost: 12, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'kick', castPrio: 4, school: 'nature' },
             { id: 'adds', name: 'Призыв проводников', cost: 10, cd: 4, type: 'summon', power: 1 },
           ]},
           { at: 0.40, name: 'Расколотое небо', abilities: [
-            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'damage', power: 1.5, school: 'physical' },
-            { id: 'buster', name: 'Децимация', cost: 14, cd: 2, type: 'cast_aoe', power: 1.25, castKind: 'buster', castPrio: 2, school: 'nature' },
-            { id: 'cast', name: 'Небесный разряд', cost: 12, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'aoe', castPrio: 4, school: 'nature' },
+            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'damage', power: 1.62, school: 'physical' },
+            { id: 'buster', name: 'Децимация', cost: 14, cd: 2, type: 'cast_aoe', power: 1.32, castKind: 'buster', castPrio: 2, school: 'nature' },
+            { id: 'cast', name: 'Небесный разряд', cost: 12, cd: 2, type: 'cast_aoe', power: 1.12, castKind: 'aoe', castPrio: 4, school: 'nature' },
             { id: 'adds', name: 'Проводники', cost: 10, cd: 3, type: 'summon', power: 1 },
           ]},
           { at: 0.15, name: 'Ярость императора', abilities: [
-            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'aoe', power: 0.88, school: 'physical' },
-            { id: 'buster', name: 'Гнев Грома', cost: 12, cd: 1, type: 'cast_aoe', power: 1.3, castKind: 'buster', castPrio: 2, school: 'nature' },
-            { id: 'cast', name: 'Конец династии', cost: 14, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'kick', castPrio: 4, school: 'nature' },
+            { id: 'smash', name: 'Удар тирана', cost: 0, cd: 0, type: 'aoe', power: 0.98, school: 'physical' },
+            { id: 'buster', name: 'Гнев Грома', cost: 12, cd: 1, type: 'cast_aoe', power: 1.38, castKind: 'buster', castPrio: 2, school: 'nature' },
+            { id: 'cast', name: 'Конец династии', cost: 14, cd: 2, type: 'cast_aoe', power: 1.22, castKind: 'kick', castPrio: 4, school: 'nature' },
+          ]},
+          { at: 0.05, name: 'Небесный гнев', abilities: [
+            { id: 'cast', name: 'Небесный гнев', cost: 0, cd: 0, type: 'cast_aoe', power: 1.4, castKind: 'aoe', castPrio: 5, school: 'nature' },
           ]},
         ],
       },
     },
     /** Mid-bosses: unique per dungeon, used on mid node */
     midBosses: {
-      crypt: { id: 'sg', name: 'Хранитель склепа', icon: '🪦', role: 'tank', hp: 380, atk: 18, def: 10, speed: 8, mana: 40,
-        mech: { id: 'bone_ward', stacks: 4 },
+      crypt: { id: 'sg', name: 'Хранитель Отзвука', icon: '🪦', role: 'tank', hp: 380, atk: 18, def: 10, speed: 8, mana: 40,
+        mech: { id: 'echo_keeper', stacks: 4 },
         phases: [
           { at: 1, name: 'Стража', abilities: [
             { id: 's', name: 'Удар щитом', cost: 0, cd: 0, type: 'damage', power: 1.2 },
-            { id: 'cast', name: 'Костяной залп', cost: 12, cd: 2, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3 },
-            { id: 'slam', name: 'Топот', cost: 10, cd: 2, type: 'aoe', power: 0.6 },
+            { id: 'cast', name: 'Каменный хор', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3, school: 'shadow' },
           ]},
-          { at: 0.4, name: 'Ярость', abilities: [
+          { at: 0.4, name: 'Срыв эха', abilities: [
             { id: 's', name: 'Удар щитом', cost: 0, cd: 0, type: 'damage', power: 1.35 },
-            { id: 'buster', name: 'Сокрушение', cost: 12, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'buster', castPrio: 2 },
-            { id: 'slam', name: 'Топот', cost: 8, cd: 1, type: 'aoe', power: 0.7 },
+            { id: 'buster', name: 'Сокрушение гробницы', cost: 12, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'buster', castPrio: 2 },
+            { id: 'cast', name: 'Каменный хор', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3, school: 'shadow' },
           ]},
         ]},
       forge: { id: 'nk', name: 'Мастер горна', icon: '⚒️', role: 'dps', hp: 360, atk: 20, def: 6, speed: 10, mana: 45,
@@ -314,7 +314,7 @@
           ]},
         ]},
       jade: { id: 'as', name: 'Ученик ша', icon: '🧘', role: 'dps', hp: 350, atk: 19, def: 5, speed: 12, mana: 50,
-        mech: { id: 'sha_split', addName: 'Тень ученика', addId: 'sha', addHp: 0.9, at: 0.4 },
+        mech: { id: 'jade_inst' },
         phases: [
           { at: 1, name: 'Медитация', abilities: [
             { id: 'bolt', name: 'Удар ци', cost: 0, cd: 0, type: 'damage', power: 1.2 },
@@ -366,49 +366,49 @@
   ENEMIES.theme = {
     crypt: {
       trash: [
-        _tpl({ id: 'z', name: 'Костяной служка', icon: '🧟', hp: 90, atk: 13, def: 4, speed: 8,
+        _tpl({ id: 'z', name: 'Костяной служка', icon: '🧟', hp: 96, atk: 14, def: 4, speed: 8,
           abilities: [
-            { id: 'h', name: 'Костяной удар', cost: 0, cd: 0, type: 'damage', power: 1.1, school: 'physical' },
-            { id: 'dot', name: 'Гниль', cost: 8, cd: 3, type: 'dot', power: 0.4, school: 'shadow' },
+            { id: 'h', name: 'Костяной удар', cost: 0, cd: 0, type: 'damage', power: 1.2, school: 'physical' },
+            { id: 'dot', name: 'Гниль', cost: 8, cd: 3, type: 'dot', power: 0.5, school: 'shadow' },
           ]}),
-        _tpl({ id: 'r', name: 'Прах-ритуалист', icon: '📿', hp: 76, atk: 12, def: 2, speed: 10, mana: 40,
+        _tpl({ id: 'r', name: 'Прах-ритуалист', icon: '📿', hp: 80, atk: 13, def: 2, speed: 10, mana: 40,
           abilities: [
-            { id: 'bolt', name: 'Порча', cost: 0, cd: 0, type: 'damage', power: 1.0, school: 'shadow' },
-            { id: 'nova', name: 'Вспышка праха', cost: 12, cd: 3, type: 'cast_aoe', power: 0.72, castKind: 'kick', castPrio: 3, school: 'shadow' },
+            { id: 'bolt', name: 'Порча', cost: 0, cd: 0, type: 'damage', power: 1.1, school: 'shadow' },
+            { id: 'nova', name: 'Вспышка праха', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3, school: 'shadow' },
           ]}),
-        _tpl({ id: 's', name: 'Ткач савана', icon: '🕷️', hp: 80, atk: 14, def: 2, speed: 13,
+        _tpl({ id: 's', name: 'Ткач савана', icon: '🕷️', hp: 84, atk: 15, def: 2, speed: 13, mana: 25,
           abilities: [
-            { id: 'bite', name: 'Укус', cost: 0, cd: 0, type: 'damage', power: 1.05 },
+            { id: 'bite', name: 'Укус', cost: 0, cd: 0, type: 'damage', power: 1.15 },
             { id: 'web', name: 'Саван', cost: 10, cd: 3, type: 'debuff', power: 0.16 },
           ]}),
-        _tpl({ id: 'm', name: 'Могильный мистик', icon: '🔮', role: 'healer', hp: 70, atk: 11, def: 2, speed: 10, mana: 45,
+        _tpl({ id: 'm', name: 'Могильный мистик', icon: '🔮', role: 'healer', hp: 76, atk: 12, def: 2, speed: 10, mana: 45,
           abilities: [
-            { id: 'b', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 0.95, school: 'shadow' },
-            { id: 'h', name: 'Тёмный хил', cost: 12, cd: 2, type: 'heal', power: 0.3 },
+            { id: 'b', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 1.0, school: 'shadow' },
+            { id: 'h', name: 'Тёмный хил', cost: 12, cd: 2, type: 'heal', power: 0.32 },
           ]}),
       ],
       elite: [
-        _tpl({ id: 'nk', name: 'Некромант склепа', icon: '💀', role: 'healer', hp: 175, atk: 16, def: 3, speed: 9, mana: 60,
+        _tpl({ id: 'nk', name: 'Некромант склепа', icon: '💀', role: 'healer', hp: 182, atk: 17, def: 3, speed: 9, mana: 60,
           abilities: [
-            { id: 'bolt', name: 'Костяной шип', cost: 0, cd: 0, type: 'damage', power: 1.1, school: 'shadow' },
+            { id: 'bolt', name: 'Костяной шип', cost: 0, cd: 0, type: 'damage', power: 1.15, school: 'shadow' },
             { id: 'heal', name: 'Тёмное исцеление', cost: 12, cd: 2, type: 'heal', power: 0.35 },
             { id: 'sum', name: 'Восставший', cost: 14, cd: 3, type: 'summon', power: 1 },
-            { id: 'nova', name: 'Взрыв костей', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3 },
+            { id: 'nova', name: 'Взрыв костей', cost: 12, cd: 3, type: 'cast_aoe', power: 0.88, castKind: 'kick', castPrio: 3 },
           ]}),
-        _tpl({ id: 'pl', name: 'Ткач боли', icon: '🩸', hp: 185, atk: 20, def: 3, speed: 12, mana: 55,
+        _tpl({ id: 'pl', name: 'Ткач боли', icon: '🩸', hp: 190, atk: 21, def: 3, speed: 12, mana: 55,
           abilities: [
-            { id: 'lash', name: 'Плеть', cost: 0, cd: 0, type: 'damage', power: 1.2 },
-            { id: 'dot', name: 'Агония', cost: 8, cd: 2, type: 'dot', power: 0.55, school: 'shadow' },
+            { id: 'lash', name: 'Плеть', cost: 0, cd: 0, type: 'damage', power: 1.25 },
+            { id: 'dot', name: 'Агония', cost: 8, cd: 2, type: 'dot', power: 0.65, school: 'shadow' },
             { id: 'burst', name: 'Всплеск боли', cost: 12, cd: 3, type: 'cast_aoe', power: 0.95, castKind: 'aoe', castPrio: 3 },
           ]}),
       ],
       st: [
-        _tpl({ id: 'sg', name: 'Могильный страж', icon: '🗿', role: 'tank', hp: 310, atk: 20, def: 15, speed: 6,
+        _tpl({ id: 'sg', name: 'Могильный страж', icon: '🗿', role: 'tank', hp: 315, atk: 21, def: 15, speed: 6, mana: 25,
           abilities: [
             { id: 'bash', name: 'Сокрушение', cost: 0, cd: 0, type: 'damage', power: 1.5 },
-            { id: 'exec', name: 'Казнь стража', cost: 10, cd: 2, type: 'damage', power: 2.0 },
+            { id: 'exec', name: 'Казнь стража', cost: 10, cd: 2, type: 'cast_aoe', power: 2.0, castKind: 'buster', castPrio: 2 },
             { id: 'wall', name: 'Костяная кожа', cost: 0, cd: 3, type: 'shield', power: 0.4 },
-            { id: 'cast', name: 'Обвал склепа', cost: 12, cd: 3, type: 'cast_aoe', power: 0.9, castKind: 'kick', castPrio: 3 },
+            { id: 'cast', name: 'Обвал склепа', cost: 12, cd: 3, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 3 },
           ]}),
       ],
     },
@@ -419,15 +419,15 @@
             { id: 'bolt', name: 'Огонь', cost: 0, cd: 0, type: 'damage', power: 1.1, school: 'fire' },
             { id: 'bomb', name: 'Живая бомба', cost: 12, cd: 3, type: 'cast_aoe', power: 0.78, castKind: 'kick', castPrio: 3, school: 'fire' },
           ]}),
-        _tpl({ id: 'b', name: 'Шлаковый громила', icon: '💪', role: 'tank', hp: 145, atk: 14, def: 9, speed: 6,
+        _tpl({ id: 'b', name: 'Шлаковый громила', icon: '💪', role: 'tank', hp: 155, atk: 16, def: 9, speed: 6, mana: 20,
           abilities: [
-            { id: 's', name: 'Удар', cost: 0, cd: 0, type: 'damage', power: 1.15 },
-            { id: 'slam', name: 'Топот горна', cost: 8, cd: 2, type: 'aoe', power: 0.5 },
+            { id: 's', name: 'Шлаковый удар', cost: 0, cd: 0, type: 'damage', power: 1.4, school: 'fire' },
+            { id: 'bash', name: 'Ковочный удар', cost: 10, cd: 3, type: 'cast_aoe', power: 1.3, castKind: 'buster', castPrio: 2, school: 'fire' },
           ]}),
         _tpl({ id: 'j', name: 'Молотобоец', icon: '🪓', hp: 88, atk: 16, def: 5, speed: 9,
           abilities: [
-            { id: 'cleave', name: 'Раскол', cost: 0, cd: 0, type: 'damage', power: 1.25 },
-            { id: 'whirl', name: 'Вихрь искр', cost: 12, cd: 3, type: 'aoe', power: 0.6, school: 'fire' },
+            { id: 'cleave', name: 'Раскол', cost: 0, cd: 0, type: 'damage', power: 1.3 },
+            { id: 'whirl', name: 'Вихрь искр', cost: 12, cd: 2, type: 'aoe', power: 0.7, school: 'fire' },
           ]}),
       ],
       elite: [
@@ -441,44 +441,44 @@
         _tpl({ id: 'sg', name: 'Шлаковый исполин', icon: '🗿', role: 'tank', hp: 320, atk: 19, def: 16, speed: 5,
           abilities: [
             { id: 'bash', name: 'Раскалённый кулак', cost: 0, cd: 0, type: 'damage', power: 1.55, school: 'fire' },
-            { id: 'exec', name: 'Проковка', cost: 10, cd: 2, type: 'damage', power: 2.05, school: 'fire' },
+            { id: 'exec', name: 'Проковка', cost: 10, cd: 2, type: 'cast_aoe', power: 1.5, castKind: 'buster', castPrio: 2, school: 'fire' },
             { id: 'cast', name: 'Перекал', cost: 12, cd: 3, type: 'cast_aoe', power: 0.92, castKind: 'kick', castPrio: 4, school: 'fire' },
           ]}),
       ],
     },
     tide: {
       trash: [
-        _tpl({ id: 'a', name: 'Коралловый стрелок', icon: '🏹', hp: 72, atk: 15, def: 2, speed: 12,
+        _tpl({ id: 'a', name: 'Коралловый стрелок', icon: '🏹', hp: 76, atk: 15, def: 2, speed: 12,
           abilities: [
-            { id: 'h', name: 'Гарпун', cost: 0, cd: 0, type: 'damage', power: 1.15 },
-            { id: 'v', name: 'Залп соли', cost: 10, cd: 3, type: 'aoe', power: 0.48 },
+            { id: 'h', name: 'Гарпун', cost: 0, cd: 0, type: 'damage', power: 1.2 },
+            { id: 'v', name: 'Залп соли', cost: 10, cd: 3, type: 'aoe', power: 0.52, school: 'frost' },
           ]}),
-        _tpl({ id: 'm', name: 'Жрец глубин', icon: '🔮', role: 'healer', hp: 72, atk: 11, def: 2, speed: 10, mana: 50,
+        _tpl({ id: 'm', name: 'Жрец глубин', icon: '🔮', role: 'healer', hp: 80, atk: 12, def: 2, speed: 10, mana: 50,
           abilities: [
-            { id: 'b', name: 'Волна', cost: 0, cd: 0, type: 'damage', power: 0.95, school: 'frost' },
+            { id: 'b', name: 'Волна', cost: 0, cd: 0, type: 'damage', power: 1.0, school: 'frost' },
             { id: 'h', name: 'Исцеление глубин', cost: 12, cd: 2, type: 'heal', power: 0.32 },
-            { id: 'c', name: 'Гимн моря', cost: 10, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 4, school: 'frost' },
+            { id: 'c', name: 'Гимн моря', cost: 12, cd: 2, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 4, school: 'frost' },
           ]}),
-        _tpl({ id: 'th', name: 'Щупальце', icon: '🌊', hp: 95, atk: 14, def: 5, speed: 8,
+        _tpl({ id: 'th', name: 'Щупальце', icon: '🌊', role: 'tank', hp: 150, atk: 18, def: 8, speed: 7,
           abilities: [
-            { id: 't', name: 'Хватка', cost: 0, cd: 0, type: 'damage', power: 1.2 },
-            { id: 's', name: 'Шквал', cost: 10, cd: 2, type: 'aoe', power: 0.55 },
+            { id: 't', name: 'Хватка', cost: 0, cd: 0, type: 'damage', power: 1.6, school: 'physical' },
+            { id: 's', name: 'Шквал', cost: 10, cd: 2, type: 'aoe', power: 0.72, school: 'frost' },
           ]}),
       ],
       elite: [
-        _tpl({ id: 'pl', name: 'Оракул прилива', icon: '🐚', role: 'healer', hp: 180, atk: 16, def: 4, speed: 11, mana: 60,
+        _tpl({ id: 'pl', name: 'Оракул прилива', icon: '🐚', role: 'healer', hp: 185, atk: 17, def: 4, speed: 11, mana: 60,
           abilities: [
-            { id: 'bolt', name: 'Волна', cost: 0, cd: 0, type: 'damage', power: 1.1, school: 'frost' },
+            { id: 'bolt', name: 'Волна', cost: 0, cd: 0, type: 'damage', power: 1.15, school: 'frost' },
             { id: 'h', name: 'Исцеление глубин', cost: 12, cd: 2, type: 'heal', power: 0.36 },
-            { id: 'cast', name: 'Цунами', cost: 12, cd: 2, type: 'cast_aoe', power: 0.9, castKind: 'aoe', castPrio: 3, school: 'frost' },
+            { id: 'cast', name: 'Цунами', cost: 12, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'aoe', castPrio: 3, school: 'frost' },
           ]}),
       ],
       st: [
-        _tpl({ id: 'b', name: 'Утопленный страж', icon: '💪', role: 'tank', hp: 330, atk: 20, def: 14, speed: 6,
+        _tpl({ id: 'b', name: 'Утопленный страж', icon: '💪', role: 'tank', hp: 345, atk: 23, def: 15, speed: 6, mana: 25,
           abilities: [
-            { id: 's', name: 'Удар якорем', cost: 0, cd: 0, type: 'damage', power: 1.5 },
-            { id: 'exec', name: 'На дно', cost: 10, cd: 2, type: 'damage', power: 2.1 },
-            { id: 'cast', name: 'Водоворот', cost: 12, cd: 3, type: 'cast_aoe', power: 0.9, castKind: 'kick', castPrio: 3, school: 'frost' },
+            { id: 's', name: 'Удар якорем', cost: 0, cd: 0, type: 'damage', power: 1.7 },
+            { id: 'exec', name: 'На дно', cost: 10, cd: 2, type: 'cast_aoe', power: 2.45, castKind: 'buster', castPrio: 2 },
+            { id: 'cast', name: 'Водоворот', cost: 12, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 3, school: 'frost' },
           ]}),
       ],
     },
@@ -494,10 +494,11 @@
             { id: 'bolt', name: 'Сомнение', cost: 0, cd: 0, type: 'damage', power: 1.1, school: 'shadow' },
             { id: 'cast', name: 'Смятение', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3, school: 'shadow' },
           ]}),
-        _tpl({ id: 'c', name: 'Страж двора', icon: '🪖', role: 'tank', hp: 150, atk: 14, def: 10, speed: 7,
+        _tpl({ id: 'c', name: 'Страж двора', icon: '🪖', role: 'tank', hp: 150, atk: 16, def: 10, speed: 7,
           abilities: [
-            { id: 'c', name: 'Рассечение', cost: 0, cd: 0, type: 'damage', power: 1.15 },
-            { id: 's', name: 'Клич', cost: 10, cd: 3, type: 'buff', power: 0.2 },
+            { id: 'c', name: 'Рассечение', cost: 0, cd: 0, type: 'damage', power: 1.45 },
+            { id: 's', name: 'Клич', cost: 10, cd: 3, type: 'buff', power: 0.25 },
+            { id: 'verdict', name: 'Нефритовый приговор', cost: 12, cd: 3, type: 'cast_aoe', power: 1.75, castKind: 'buster', castPrio: 2 },
           ]}),
       ],
       elite: [
@@ -513,7 +514,7 @@
           abilities: [
             { id: 'bash', name: 'Каменный кулак', cost: 0, cd: 0, type: 'damage', power: 1.5 },
             { id: 'exec', name: 'Дробление', cost: 10, cd: 2, type: 'damage', power: 2.0 },
-            { id: 'cast', name: 'Смятение', cost: 12, cd: 3, type: 'cast_aoe', power: 0.85, castKind: 'kick', castPrio: 3 },
+            { id: 'cast', name: 'Взгляд камня', cost: 12, cd: 3, type: 'cast_aoe', power: 0.85, castKind: 'kick', castPrio: 3 },
           ]}),
       ],
     },
@@ -521,20 +522,21 @@
       trash: [
         _tpl({ id: 'w', name: 'Осколок пустоты', icon: '😈', hp: 80, atk: 15, def: 2, speed: 12, mana: 40,
           abilities: [
-            { id: 'b', name: 'Луч хаоса', cost: 0, cd: 0, type: 'damage', power: 1.2, school: 'shadow' },
-            { id: 'n', name: 'Искажение', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3, school: 'shadow' },
+            { id: 'b', name: 'Луч хаоса', cost: 0, cd: 0, type: 'damage', power: 1.25, school: 'shadow' },
+            { id: 'n', name: 'Искажение', cost: 12, cd: 3, type: 'cast_aoe', power: 0.82, castKind: 'kick', castPrio: 3, school: 'shadow' },
           ]}),
-        _tpl({ id: 'bz', name: 'Ползун разлома', icon: '🌑', hp: 88, atk: 14, def: 4, speed: 11,
+        _tpl({ id: 'bz', name: 'Ползун разлома', icon: '🌑', hp: 152, atk: 16, def: 11, speed: 6, mana: 35,
           abilities: [
-            { id: 'hit', name: 'Разрыв', cost: 0, cd: 0, type: 'damage', power: 1.15 },
-            { id: 'slam', name: 'Волна пустоты', cost: 10, cd: 2, type: 'aoe', power: 0.55, school: 'shadow' },
+            { id: 'hit', name: 'Разрыв', cost: 0, cd: 0, type: 'damage', power: 1.3 },
+            { id: 'slam', name: 'Волна пустоты', cost: 10, cd: 2, type: 'aoe', power: 0.64, school: 'shadow' },
           ]}),
       ],
       elite: [
-        _tpl({ id: 'eq', name: 'Страж трещины', icon: '🌀', role: 'tank', hp: 200, atk: 18, def: 10, speed: 9, mana: 45,
+        _tpl({ id: 'eq', name: 'Страж трещины', icon: '🌀', role: 'tank', hp: 200, atk: 20, def: 13, speed: 7, mana: 45,
           abilities: [
-            { id: 'h', name: 'Удар разлома', cost: 0, cd: 0, type: 'damage', power: 1.25 },
-            { id: 'cast', name: 'Искажение', cost: 12, cd: 2, type: 'cast_aoe', power: 0.88, castKind: 'kick', castPrio: 3, school: 'shadow' },
+            { id: 'h', name: 'Удар разлома', cost: 0, cd: 0, type: 'damage', power: 1.4 },
+            { id: 'bash', name: 'Сжатие трещины', cost: 12, cd: 3, type: 'cast_aoe', power: 1.7, castKind: 'buster', castPrio: 2, school: 'shadow' },
+            { id: 'cast', name: 'Искажение', cost: 12, cd: 2, type: 'cast_aoe', power: 0.9, castKind: 'kick', castPrio: 3, school: 'shadow' },
           ]}),
       ],
       st: [
@@ -553,10 +555,10 @@
             { id: 'bolt', name: 'Искра', cost: 0, cd: 0, type: 'damage', power: 1.1, school: 'fire' },
             { id: 'aoe', name: 'Зола', cost: 10, cd: 2, type: 'aoe', power: 0.5, school: 'fire' },
           ]}),
-        _tpl({ id: 'b', name: 'Пепельный громила', icon: '💪', role: 'tank', hp: 148, atk: 14, def: 9, speed: 6,
+        _tpl({ id: 'b', name: 'Пепельный громила', icon: '💪', role: 'tank', hp: 172, atk: 16, def: 10, speed: 6,
           abilities: [
-            { id: 's', name: 'Удар угля', cost: 0, cd: 0, type: 'damage', power: 1.15, school: 'fire' },
-            { id: 'slam', name: 'Обвал жара', cost: 8, cd: 2, type: 'aoe', power: 0.52, school: 'fire' },
+            { id: 's', name: 'Удар угля', cost: 0, cd: 0, type: 'damage', power: 1.4, school: 'fire' },
+            { id: 'slam', name: 'Обвал жара', cost: 10, cd: 3, type: 'cast_aoe', power: 0.85, castKind: 'buster', castPrio: 2, school: 'fire' },
           ]}),
       ],
       elite: [
@@ -640,9 +642,9 @@
       if (m.id === 'thunder_king') {
         applyStatus(boss, {
           id: 'thunder_king', name: 'Повелитель грома', icon: '⚡', turns: 99,
-          tip: '10-ман: смена танков, проводники СТ, соки молний, кики.',
+          tip: '10-ман: смена танков, проводники СТ, соки, кики. С 40% — два зала (кик / соки), провод бьёт через порог.',
         });
-        log('Лэй Шэнь: смена танков по Перегрузке ×3 · Проводники СТ · соки молний живыми.', 'system');
+        log('Лэй Шэнь: смена танков по Перегрузке ×3 · Проводники СТ · соки живыми · с 40% два зала.', 'system');
         toast('Рейд 10 · Лэй Шэнь');
       }
     }
@@ -755,7 +757,7 @@
     const mt = (typeof currentMainTank === 'function' ? currentMainTank(boss) : tanks[0]) || heroes[0];
     const ratio = boss.hp / Math.max(1, boss.maxHp);
 
-    if (ratio <= 0.50 && !boss._vaultInter && typeof beginRaidVault === 'function') {
+    if (ratio <= 0.75 && !boss._vaultInter && typeof beginRaidVault === 'function') {
       boss._vaultInter = true;
       beginRaidVault(boss);
       return;
@@ -765,6 +767,28 @@
       if (typeof tickRaidVaultCast === 'function') tickRaidVaultCast(boss);
       return;
     }
+
+    if (ratio <= 0.50 && !boss._catacombs && typeof beginRaidCatacombs === 'function'
+        && (!combat.vault || combat.vault.dropped)) {
+      boss._catacombs = true;
+      beginRaidCatacombs(boss);
+      return;
+    }
+
+    if (combat.catacombs && combat.catacombs.active && combat.catacombs.stage !== 'field' && !combat.catacombs.youDone) {
+      return;
+    }
+
+    if (typeof isRaidSplitActive === 'function' && isRaidSplitActive()) {
+      if (typeof tickRaidSplit === 'function') tickRaidSplit(boss);
+      return;
+    }
+
+    if (ratio <= 0.20 && !boss._pillars && typeof spawnRaidPillars === 'function'
+        && (!combat.catacombs || combat.catacombs.stage === 'field')) {
+      spawnRaidPillars(boss);
+    }
+    if (typeof tickRaidPillars === 'function') tickRaidPillars(boss);
 
     // Tank swap: overload stacks on current MT
     if (mt && mt.alive) {
@@ -783,7 +807,7 @@
       const stacks = ov?.stacks || 1;
       log(`${mt.name}: Перегрузка ×${stacks}`, 'enemy');
       if (stacks >= 3) {
-        const smash = Math.round(mt.maxHp * 0.42);
+        const smash = Math.round(mt.maxHp * 0.48);
         dealTrue(mt, smash, boss, 'dmg', { school: 'nature', abilityName: 'Разряд перегрузки' });
         const splash = Math.round((getEff(boss).atk || boss.atk) * 0.35);
         for (const h of heroes) {
@@ -837,19 +861,6 @@
     }
     if (ratio <= 0.40 && !boss._cond40) {
       boss._cond40 = true;
-      for (let i = 0; i < (m.n || 2); i++) {
-        const add = spawnMechAdd(boss, { ...m, role: 'conductor', addHp: 1.05 });
-        if (add) {
-          add.mustKillTurns = (m.mustKillTurns || 4) - 1;
-          add.name = (m.addName || add.name) + ' · ' + (i + 1);
-        }
-      }
-      applyStatus(boss, {
-        id: 'cond_shield', name: 'Ток проводников', icon: '🔌', turns: 99,
-        dmgReduce: 0.35, tip: 'Пока проводники живы — босс −35% урона.',
-      });
-      if (typeof startRaidSoakAssign === 'function') startRaidSoakAssign(3);
-      else toast('Соки молний — держите HP');
     }
 
     const conds = (combat.enemies || []).filter(x => x.alive && x.mechRole === 'conductor');
@@ -901,7 +912,7 @@
       toast('Ярость императора');
     }
 
-    if (combat.round >= 30) {
+    if (combat.round >= 34) {
       const raw = Math.round((getEff(boss).atk || boss.atk) * 1.4);
       for (const h of livingHeroes()) {
         dealTrue(h, raw, boss, 'aoe', { school: 'nature', abilityName: 'Берсерк', isAoe: true });

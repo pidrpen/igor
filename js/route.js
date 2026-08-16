@@ -16,7 +16,7 @@
 
   const DUNGEONS = [
     { id: 'crypts', name: 'Склеп Эха', theme: 'crypt', timerBase: 28 * 60,
-      midName: 'Хранитель склепа', finalName: 'Повелитель Склепа',
+      midName: 'Хранитель Отзвука', finalName: 'Ваэр, Последнее Эхо',
       pathLabels: { a: 'Галерея костей', b: 'Могильный чемпион', c: 'Костяной двор', d: 'Хранитель урн' } },
     { id: 'forge', name: 'Пепельная Кузня', theme: 'forge', timerBase: 27 * 60,
       midName: 'Мастер горна', finalName: 'Пепельная Королева',
@@ -134,7 +134,7 @@
     // paladin
     'sot_r', 'ardent', 'divine_prot',
     // DK blood
-    'bone_shield', 'icebound', 'vampiric_blood', 'rune_tap',
+    'icebound', 'vampiric_blood', 'rune_tap',
     // brewmaster
     'guard', 'elusive', 'fort_brew', 'purifying',
     // guardian
@@ -156,6 +156,8 @@
     if (TARGET_ALLY_ANY.has(ab.id)) return 'ally_any';
     // Holy Shock etc.: click ally OR enemy
     if (ab.holyShock) return 'ally_or_enemy';
+    if (ab.id === 'penance') return 'ally_or_enemy';
+    if (ab.id === 'heaven_shield' || ab.partyShield) return 'party';
     if (ab.type === 'dispel') return 'ally_any';
     if (ab.type === 'purge' || ab.type === 'cc') return 'enemy';
     if (ab.type === 'heal') return 'ally_any';
@@ -206,5 +208,5 @@
     { id: 'power_kick', name: 'Печать прерывания', icon: '⚡', desc: 'Прерывания: −1 КД (мин. 1)', kickCdBonus: 1, playStyle: true },
     { id: 'power_skip', name: 'Карта обхода', icon: '🗺️', desc: '1×: пропустить trash-пулл (силы 0)', keyPower: 'skip_trash', playStyle: true },
     { id: 'power_shield', name: 'Оберег группы', icon: '🛡️', desc: 'Актив 1×/бой: щит 18% здоровья отряду', keyPower: 'party_shield', playStyle: true },
-    { id: 'power_focus', name: 'Метка охотника', icon: '🏹', desc: 'Актив: +40% урона по цели 2 хода', keyPower: 'hunter_mark', playStyle: true },
+    { id: 'power_focus', name: 'Метка охотника', icon: '🏹', desc: 'Актив: −25% защиты цели на 2 хода', keyPower: 'hunter_mark', playStyle: true },
   ];
