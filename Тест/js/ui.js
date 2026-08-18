@@ -891,7 +891,7 @@
       beginRunScreen();
       applyDungeonTheme();
       if (raid) {
-        log(`Рейд 10 · ${typeof raidDiffLabel === 'function' ? raidDiffLabel(raidDiff) : raidDiff}: ${dungeon.name}. Лэй Шэнь, Повелитель Грома. Уровень ключа не действует. Обычный — голый кит, еле закрывается.`, 'system');
+        log(`Рейд 10 · ${typeof raidDiffLabel === 'function' ? raidDiffLabel(raidDiff) : raidDiff}: ${dungeon.name}. Лэй Шэнь толстый. Обычный ≈ 10.6м HP / ~41т. Героический ≈ 19.5м HP. Минутный спринт не закрывает.`, 'system');
         log('Механики: смена танков (Перегрузка ×3) · Проводники СТ · метки молнии · соки сфер · кики кастов · с 40% два зала.', 'system');
         log('Авто-рейд: союзники ходят сами. Клик по герою — взять управление.', 'system');
       } else {
@@ -1298,6 +1298,12 @@
     if (run && run.raid) {
       hpM *= 1.12;
       atkM *= 1.08;
+      // Босс: 1.52м снимали за минуту. Обычка ×7 ≈ 10.6м; героик ×10 от базы +8 ≈ 19.5м.
+      if (isBoss) {
+        const heroic = run.raidDiff === 'heroic';
+        hpM *= heroic ? 10 : 7;
+        atkM *= heroic ? 1.55 : 1.40;
+      }
     }
     if (isBoss && hasEffect('boss_hp')) { hpM *= affixValue('boss_hp', 1.4); atkM *= 1.15; }
     if (!isBoss && hasEffect('trash_hp')) hpM *= affixValue('trash_hp', 1.35);
