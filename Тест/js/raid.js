@@ -2,6 +2,7 @@
   const RAID_SIZE = 10;
   const RAID_NEED = { tank: 2, healer: 2, dps: 6 };
   let gameMode = 'key'; // 'key' | 'raid'
+  let raidDifficulty = 'normal'; // 'normal' | 'heroic'
   let raidAutoAllies = true;
   let raidPlayerUid = null;
 
@@ -30,6 +31,23 @@
 
   function isRaidRun() { return !!(run && run.raid); }
   function isRaidLobby() { return gameMode === 'raid'; }
+  function getRaidDiff() {
+    if (run && run.raid) return run.raidDiff === 'heroic' ? 'heroic' : 'normal';
+    return raidDifficulty === 'heroic' ? 'heroic' : 'normal';
+  }
+  function raidScaleKey(diff) {
+    return (diff || getRaidDiff()) === 'heroic' ? 8 : 5;
+  }
+  function raidDiffLabel(diff) {
+    return (diff || getRaidDiff()) === 'heroic' ? 'Героический' : 'Обычный';
+  }
+  function setRaidDiff(diff) {
+    raidDifficulty = diff === 'heroic' ? 'heroic' : 'normal';
+    document.getElementById('btn-raid-normal')?.classList.toggle('on', raidDifficulty === 'normal');
+    document.getElementById('btn-raid-heroic')?.classList.toggle('on', raidDifficulty === 'heroic');
+    try { refreshKeystone(); } catch (_) {}
+    try { savePartyProfile(); } catch (_) {}
+  }
   function getPartySize() {
     if (run) return run.raid ? RAID_SIZE : 5;
     return gameMode === 'raid' ? RAID_SIZE : 5;
@@ -443,6 +461,10 @@
     affixTitle?.classList.toggle('hidden', raid);
     document.getElementById('week-badge')?.classList.toggle('hidden', raid);
     document.getElementById('affix-list')?.classList.toggle('hidden', raid);
+    document.getElementById('key-setup')?.classList.toggle('hidden', raid);
+    document.getElementById('raid-setup')?.classList.toggle('hidden', !raid);
+    document.getElementById('btn-raid-normal')?.classList.toggle('on', getRaidDiff() === 'normal');
+    document.getElementById('btn-raid-heroic')?.classList.toggle('on', getRaidDiff() === 'heroic');
     refreshKeystone();
   }
 
@@ -498,7 +520,7 @@
   }
 
   function spawnRaidEncounter() {
-    const k = run.keyLevel;
+    const k = raidScaleKey(run.raidDiff);
     const tpl = raidBossTpl();
     if (!tpl) return [];
     const boss = scaleEnemy(tpl, k, true, false);
@@ -510,6 +532,8 @@
     preloadLobbyBgs();
     document.getElementById('btn-mode-key')?.addEventListener('click', () => setGameMode('key'));
     document.getElementById('btn-mode-raid')?.addEventListener('click', () => setGameMode('raid'));
+    document.getElementById('btn-raid-normal')?.addEventListener('click', () => setRaidDiff('normal'));
+    document.getElementById('btn-raid-heroic')?.addEventListener('click', () => setRaidDiff('heroic'));
     document.getElementById('btn-fill-raid')?.addEventListener('click', fillRaidPreset);
     document.getElementById('btn-lobby-chrome')?.addEventListener('click', () => {
       document.body.classList.toggle('lobby-chrome-hidden');
@@ -541,8 +565,8 @@
     if (!isRaidRun()) return;
     const forces = document.getElementById('hud-forces');
     if (forces) {
-      forces.textContent = '⚔ Рейд 10';
-      forces.title = 'Тест рейдового босса на 10 человек';
+      forces.textContent = 'Рейд 10 · ' + raidDiffLabel();
+      forces.title = 'Лэй Шэнь. Уровень ключа не действует.';
     }
     const ff = document.getElementById('forces-fill');
     if (ff) {

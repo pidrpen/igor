@@ -22,9 +22,9 @@
   <script src="class-balance/engineer-abilities.js?v=5.4.8.39-eng"></script>
   <script src="class-balance/cheat-abilities.js?v=5.4.8.38-cheat"></script>
   <script src="class-balance/apply-all.js?v=5.4.8.38-cheat"></script>
-  <link rel="stylesheet" href="css/main.css?v=5.4.9" />
+  <link rel="stylesheet" href="css/main.css?v=5.4.9-raidnh" />
   <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34-shamfx2" />
-  <link rel="stylesheet" href="css/test-room.css?v=5.4.9-pillar" />
+  <link rel="stylesheet" href="css/test-room.css?v=5.4.9-phaser1" />
 </head>
 <body>
   <button class="btn btn-sm" type="button" id="btn-lobby-chrome" title="Скрыть карточки и посмотреть фон">Скрыть интерфейс</button>
@@ -66,10 +66,19 @@
         <div class="party-slots" id="party-slots"></div>
         <p class="party-req bad" id="party-req">Нужны: 1 танк · 1 целитель · 3 бойца</p>
         <button class="btn btn-ok hidden" type="button" id="btn-fill-raid" style="width:100%;margin:.35rem 0 .55rem">Собрать рейд 10 (пресет)</button>
-        <p class="keys-hint hidden" id="raid-hint">Тест сложного рейдового босса на 10 человек: <b>Лэй Шэнь, Повелитель Грома</b>. Смена танков, проводники, соки молний, кики. Союзники ходят сами — клик по герою, чтобы взять управление.</p>
-        <div class="key-row">
+        <p class="keys-hint hidden" id="raid-hint">Лэй Шэнь, Повелитель Грома. Уровень ключа здесь не действует. <b>Обычный</b> — голый кит, еле закрывается. <b>Героический</b> — как потолок +8. Союзники ходят сами — клик по герою, чтобы взять управление.</p>
+        <div class="key-row" id="key-setup">
           <div class="field"><label>Подземелье</label><select id="dungeon-select"></select></div>
           <div class="field"><label>Уровень ключа</label><select id="key-level"></select></div>
+        </div>
+        <div class="key-row hidden" id="raid-setup">
+          <div class="field">
+            <label>Сложность рейда</label>
+            <div class="mode-toggle" role="group" aria-label="Сложность рейда">
+              <button class="btn on" type="button" id="btn-raid-normal">Обычный</button>
+              <button class="btn" type="button" id="btn-raid-heroic">Героический</button>
+            </div>
+          </div>
         </div>
         <div class="keystone-frame" id="keystone-frame">
           <div class="ks-level" id="ks-level">+5</div>
@@ -108,6 +117,11 @@
         <span class="hub-title">Тест анимаций</span>
         <span class="hub-desc">Хмелевар 8-bit: джаб и бочонок. Слева любой спек. 1 или 5 духов. HP не снимается.</span>
       </button>
+      <a class="test-hub-card" href="phaser-арена/">
+        <span class="hub-kicker">песочница</span>
+        <span class="hub-title">Phaser-арена</span>
+        <span class="hub-desc">Отдельное поле на холсте. Хмелевар против духов, HP снимается. Ключ и основу не трогает.</span>
+      </a>
       <button class="test-hub-card" type="button" id="btn-hub-style">
         <span class="hub-kicker">новая</span>
         <span class="hub-title">Рисовка персонажа</span>
@@ -574,12 +588,12 @@
   <div id="vignette"></div>
   <div class="skill-fx-layer" id="skill-fx-layer"></div>
   <script src="js/state.js?v=5.4.9-bloodsh"></script>
-  <script src="js/core.js?v=5.4.9-cheat"></script>
+  <script src="js/core.js?v=5.4.9-raidnh"></script>
   <script src="js/ui/balance-panel.js?v=5.4.9"></script>
   <script src="js/ui/fx.js?v=5.4.9-pillar"></script>
   <script src="js/enemies.js?v=5.4.9-lsn"></script>
   <script src="js/route.js?v=5.4.9-inst"></script>
-  <script src="js/raid.js?v=5.4.9-ceil"></script>
+  <script src="js/raid.js?v=5.4.9-raidnh"></script>
   <script src="js/gear.js?v=5.4.8.34-gear6"></script>
   <script src="js/shop/shop-sets.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop-trinkets-data.js?v=5.4.8.34-gear2"></script>
@@ -596,8 +610,8 @@
   <script src="js/systems/damage.js?v=5.4.8.40-aura"></script>
   <script src="js/systems/ai.js?v=5.4.8.39-eng"></script>
   <script src="js/systems/combat-flow.js?v=5.4.9-cata"></script>
-  <script src="js/save.js?v=5.4.8.39-boot"></script>
-  <script src="js/ui.js?v=5.4.9-lsn"></script>
+  <script src="js/save.js?v=5.4.9-raidnh"></script>
+  <script src="js/ui.js?v=5.4.9-raidnh"></script>
   <script src="js/dungeon-inst.js?v=5.4.9-inst"></script>
   <script src="js/raid-split.js?v=5.4.9-split"></script>
   <script src="js/raid-finale.js?v=5.4.9-finale"></script>

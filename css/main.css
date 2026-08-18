@@ -817,6 +817,9 @@
     }
 
     .key-row { display: flex; flex-wrap: wrap; gap: .7rem; align-items: end; margin: .7rem 0; }
+    #raid-setup { display: none; }
+    #raid-setup:not(.hidden) { display: flex; }
+    body.raid-lobby #key-setup { display: none; }
     .field label { display: block; font-size: .72rem; color: var(--muted); margin-bottom: .25rem; }
     .field select { background: var(--panel2); border: 1px solid var(--border); color: var(--text);
       border-radius: 8px; padding: .45rem .65rem; min-width: 140px; }

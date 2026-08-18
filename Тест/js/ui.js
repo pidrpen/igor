@@ -864,16 +864,22 @@
         ? RAID_DUNGEON
         : DUNGEONS.find(d => d.id === document.getElementById('dungeon-select').value);
       if (!dungeon) { toast('Выберите подземелье'); return; }
-      const keyLevel = +document.getElementById('key-level').value;
+      const raidDiff = raid
+        ? (typeof getRaidDiff === 'function' ? getRaidDiff() : 'normal')
+        : null;
+      const keyLevel = raid
+        ? (typeof raidScaleKey === 'function' ? raidScaleKey(raidDiff) : (raidDiff === 'heroic' ? 8 : 5))
+        : +document.getElementById('key-level').value;
       const affixes = raid ? [] : keyAffixes(keyLevel);
       const timerMax = raid
-        ? Math.max(8 * 60, 10 * 60 - (keyLevel - 2) * 12)
+        ? (raidDiff === 'heroic' ? 8 * 60 : 10 * 60)
         : Math.max(12 * 60, dungeon.timerBase - (keyLevel - 2) * 25);
       run = {
         dungeon, keyLevel, affixes, roomIndex: 0, talents: [], deaths: 0,
         timerMax, timerLeft: timerMax, logs: [], restBuffBattles: 0, finished: false,
         forces: 0, loot: [],
         raid: !!raid,
+        raidDiff: raid ? (raidDiff === 'heroic' ? 'heroic' : 'normal') : null,
         route: raid ? generateRaidRoute() : generateRoute(dungeon),
         party: party.map(p => createHero(p.classId, p.specId, keyLevel, p.sec, p.gear)),
         _roomArt: {}, // стабильные фоны комнат (rift/ember)
@@ -885,7 +891,7 @@
       beginRunScreen();
       applyDungeonTheme();
       if (raid) {
-        log(`Рейд 10 · +${keyLevel}: ${dungeon.name}. Лэй Шэнь, Повелитель Грома. Без шмоток тяжело, но закрывается.`, 'system');
+        log(`Рейд 10 · ${typeof raidDiffLabel === 'function' ? raidDiffLabel(raidDiff) : raidDiff}: ${dungeon.name}. Лэй Шэнь, Повелитель Грома. Уровень ключа не действует. Обычный — голый кит, еле закрывается.`, 'system');
         log('Механики: смена танков (Перегрузка ×3) · Проводники СТ · метки молнии · соки сфер · кики кастов · с 40% два зала.', 'system');
         log('Авто-рейд: союзники ходят сами. Клик по герою — взять управление.', 'system');
       } else {
@@ -915,9 +921,15 @@
         ensureSec(e);
         return e;
       });
-      const keyLevel = data.keyLevel;
+      const isRaidSave = !!(data.raid || data.dungeonId === 'throne');
+      const raidDiff = isRaidSave
+        ? (data.raidDiff === 'heroic' || (!data.raidDiff && data.keyLevel >= 8) ? 'heroic' : 'normal')
+        : null;
+      const keyLevel = isRaidSave
+        ? (typeof raidScaleKey === 'function' ? raidScaleKey(raidDiff) : (raidDiff === 'heroic' ? 8 : 5))
+        : data.keyLevel;
       run = {
-        dungeon, keyLevel, affixes: keyAffixes(keyLevel),
+        dungeon, keyLevel, affixes: isRaidSave ? [] : keyAffixes(keyLevel),
         roomIndex: data.roomIndex || 0,
         talents: data.talents || [],
         deaths: data.deaths || 0,
@@ -945,7 +957,8 @@
           if (p.res) h.res = p.res;
           return h;
         }),
-        raid: !!data.raid || data.dungeonId === 'throne',
+        raid: isRaidSave,
+        raidDiff: raidDiff,
         _roomArt: data._roomArt || {},
       };
       if (!run.party.length) {
@@ -973,7 +986,9 @@
 
   function updateHud() {
     if (!run) return;
-    document.getElementById('hud-key').textContent = '+' + run.keyLevel;
+    document.getElementById('hud-key').textContent = run.raid
+      ? (typeof raidDiffLabel === 'function' ? raidDiffLabel(run.raidDiff) : (run.raidDiff === 'heroic' ? 'Героический' : 'Обычный'))
+      : ('+' + run.keyLevel);
     document.getElementById('hud-dungeon').textContent = run.dungeon.name;
     const m = Math.floor(run.timerLeft / 60), s = run.timerLeft % 60;
     document.getElementById('hud-timer').textContent = `⏱ ${m}:${String(s).padStart(2, '0')}`;
@@ -1264,6 +1279,11 @@
   function scaleEnemy(tpl, k, isBoss, isElite) {
     // Герой от ключа не растёт. Потолок без шмоток: +8 закрываем редко, +9+ — стена.
     // Шмот потом снизит разрыв, множители здесь не трогать «чтобы пройти сейчас».
+    if (run && run.raid) {
+      k = (typeof raidScaleKey === 'function')
+        ? raidScaleKey(run.raidDiff)
+        : (run.raidDiff === 'heroic' ? 8 : 5);
+    }
     k = Math.max(2, +k || 2);
     let hpM = 1 + (k - 2) * 0.18;
     let atkM = 1 + (k - 2) * 0.14;

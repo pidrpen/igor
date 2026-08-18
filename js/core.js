@@ -216,10 +216,15 @@
     }
   }
   function refreshKeystone() {
-    const lvl = document.getElementById('key-level')?.value || '5';
-    const dun = DUNGEONS.find(d => d.id === document.getElementById('dungeon-select')?.value);
     const el = document.getElementById('ks-level');
     const nm = document.getElementById('ks-name');
+    if (typeof isRaidLobby === 'function' && isRaidLobby()) {
+      if (el) el.textContent = (typeof raidDiffLabel === 'function') ? raidDiffLabel() : 'Обычный';
+      if (nm) nm.textContent = 'Лэй Шэнь, Повелитель Грома';
+      return;
+    }
+    const lvl = document.getElementById('key-level')?.value || '5';
+    const dun = DUNGEONS.find(d => d.id === document.getElementById('dungeon-select')?.value);
     if (el) el.textContent = '+' + lvl;
     if (nm) nm.textContent = dun ? dun.name : '—';
   }
