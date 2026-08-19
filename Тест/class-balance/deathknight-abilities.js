@@ -161,9 +161,9 @@
         stats: { hp: 115, atk: 15, def: 5, speed: 11 },
         abilities: [
           A({ id: 'scourge', n: 'Удар Плети', en: 'Scourge Strike', i: '☠️',
-            r: { u: 1 }, rp: 10, t: 'damage', fl: 22, school: 'shadow',
+            r: { u: 1 }, rp: 10, t: 'damage', fl: 26, school: 'shadow',
             cleaveOnDnd: 1,
-            d: 'Руна нечестивости · 22т · дубль по Смерти и разложению', sid: 55090 }),
+            d: 'Руна нечестивости · 26т · дубль по Смерти и разложению', sid: 55090 }),
           A({ id: 'festering', n: 'Удар разложения', en: 'Festering Strike', i: '🦠',
             r: { b: 1, f: 1 }, rp: 20, t: 'damage', fl: 18, school: 'physical',
             cleaveOnDnd: 1,

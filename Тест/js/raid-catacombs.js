@@ -547,25 +547,24 @@
 
   function spawnRaidPillars(boss) {
     if (!combat || !boss || boss._pillars) return;
-    const s = cata();
-    if (s && s.stage !== 'field') return;
+    if (combat.vault && !combat.vault.dropped) return;
     boss._pillars = true;
     combat._pillarRound = combat.round;
-    forceRaidBg('field');
+    try { forceRaidBg('field'); } catch (_) {}
     const mk = (side) => {
       const u = {
         uid: (typeof uid === 'function' ? uid() : 'pilar_' + side),
         heroId: 'eq',
         name: side === 'left' ? 'Столб тока · лево' : 'Столб тока · право',
         icon: '⚡',
-        role: 'dps',
-        side: 'enemy',
+        role: 'healer',
+        side: 'ally',
         alive: true,
         maxHp: PILLAR_HP,
         hp: PILLAR_HP,
         atk: 0,
         def: 0,
-        speed: 1,
+        speed: 0,
         shield: 0,
         forcesValue: 0,
         buffs: [],
@@ -576,6 +575,7 @@
         flank: side,
         isBoss: false,
         isElite: false,
+        isPet: false,
         mechRole: 'static_pillar',
       };
       combat.enemies.push(u);
@@ -583,9 +583,9 @@
     };
     mk('left');
     mk('right');
-    showRaidPlace('Поле под дворцом', 'Столбы тока слева и справа · только лечение');
-    log('Два столба тока: по ' + (typeof fmt === 'function' ? fmt(PILLAR_HP) : PILLAR_HP) +
-      ' HP. Бить нельзя. Лечение 1–9 → клик по столбу. Каждый ход −' +
+    showRaidPlace('Поле под дворцом', 'Союзные столбы у босса · лечите, иначе область от дыры');
+    log('Два союзных столба тока у Лэй Шэня: по ' + (typeof fmt === 'function' ? fmt(PILLAR_HP) : PILLAR_HP) +
+      ' HP. Бить нельзя — только лечение (кнопка → клик по столбу). Каждый раунд сами теряют ' +
       (typeof fmt === 'function' ? fmt(PILLAR_DRAIN) : PILLAR_DRAIN) +
       '. Область ' + (typeof fmt === 'function' ? fmt(PILLAR_AOE) : PILLAR_AOE) +
       ' × (1 + доля дыры).', 'enemy');
@@ -611,7 +611,7 @@
           '<div class="boss-flank-bar"><i style="width:' + pct + '%"></i></div>' +
           '<div class="boss-flank-hp">' + (typeof fmt === 'function' ? fmt(p.hp) : p.hp) +
             ' / ' + (typeof fmt === 'function' ? fmt(p.maxHp) : p.maxHp) + '</div>' +
-          '<div class="boss-flank-hint">только хил</div>' +
+          '<div class="boss-flank-hint">союзный · лечите</div>' +
         '</div>';
       slot.onclick = function (ev) {
         ev.preventDefault();
@@ -787,7 +787,7 @@
       const list = combat.enemies.filter(u => {
         if (u.instRole === 'static_pillar' || u.healOnly) return false;
         if (isCata() && !visibleCataEnemy(u)) return false;
-        if (u.vaultAway && !(u.raidBoss || (u.isBoss && u.mech && u.mech.id === 'thunder_king'))) return false;
+        if (u.vaultAway) return false;
         if (u.alive) return true;
         if (!u._deadAt) u._deadAt = now;
         return (now - u._deadAt) < 560;

@@ -68,14 +68,14 @@
       stats: { hp: 110, atk: 17, def: 5, speed: 10 },
       // d: '' — без текстового описания; UI сам пишет урон (a-cost) и метки (a-meta)
       // Кровотечение: ms / colossus / heroic — 4 хода (пассивка «Кровотечение»)
-      // Вихрь: КД 9 → 1 стак «Широкий размах» → Героический 40% урона + 40% bleed по остальным
+      // Вихрь: КД 3, 13т×2 область → 1 стак «Широкий размах» → Героический 40% урона + 40% bleed по остальным
       abilities: [
         A({ id: 'ms', n: 'Смертельный удар', en: 'Mortal Strike', i: '⚔️',
           g: 20, cd: 2, t: 'damage', p: 1, flat: 15, school: 'physical',
           applyDot: { flat: 5, turns: 4, name: 'Кровотечение', icon: '🩸', id: 'bleed', school: 'physical' },
           d: '', sid: 12294 }),
         A({ id: 'whirlwind', n: 'Вихрь', en: 'Whirlwind', i: '🌪️',
-          c: 20, cd: 9, t: 'aoe', p: 1, flat: 9, hits: 2, school: 'physical',
+          c: 20, cd: 3, t: 'aoe', p: 1, flat: 13, hits: 2, school: 'physical',
           grantSelfBuff: {
             id: 'wide_sweep', name: 'Широкий размах', icon: '🌀',
             turns: 99, stacks: 1,
@@ -83,7 +83,7 @@
           },
           d: '', sid: 1680 }),
         A({ id: 'overpower', n: 'Превосходство', en: 'Overpower', i: '💥',
-          g: 15, t: 'damage', p: 1, flat: 12, cleaveFlat: 4, school: 'physical', d: '', sid: 7384 }),
+          g: 15, t: 'damage', p: 1, flat: 12, cleaveFlat: 10, school: 'physical', d: '', sid: 7384 }),
         A({ id: 'colossus', n: 'Удар колосса', en: 'Colossus Smash', i: '🔨',
           cd: 3, t: 'damage', p: 1, flat: 21, school: 'physical',
           vuln: { amount: 0.2, turns: 3, physical: true },
@@ -111,13 +111,13 @@
       stats: { hp: 115, atk: 16, def: 4, speed: 12 },
       abilities: [
         A({ id: 'bt', n: 'Кровавая жажда', en: 'Bloodthirst', i: '🩸',
-          g: 20, cd: 3, t: 'damage', p: 1.05, lifesteal: 0.15, school: 'physical',
-          d: 'Перезарядка 3 · +20 ярости', sid: 23881 }),
+          g: 20, cd: 3, t: 'damage', fl: 22, lifesteal: 0.15, school: 'physical',
+          d: '22т · перезарядка 3 · +20 ярости', sid: 23881 }),
         A({ id: 'rb', n: 'Яростный выпад', en: 'Raging Blow', i: '💢',
-          g: 10, cd: 5, t: 'damage', fl: 23, hits: 2, ch: 2, school: 'physical',
-          d: '2 заряда как Блок щитом · не тратит ярость, +10 · два удара по 23т', sid: 85288 }),
+          g: 10, cd: 5, t: 'damage', fl: 26, hits: 2, ch: 2, school: 'physical',
+          d: '2 заряда как Блок щитом · не тратит ярость, +10 · два удара по 26т', sid: 85288 }),
         A({ id: 'whirlwind', n: 'Вихрь', en: 'Whirlwind', i: '🌪️',
-          c: 20, t: 'aoe', p: 1, flat: 12, school: 'physical', d: '', sid: 1680 }),
+          c: 20, t: 'aoe', p: 1, flat: 16, school: 'physical', d: '', sid: 1680 }),
         A({ id: 'execute', n: 'Казнь', en: 'Execute', i: '☠️',
           c: 30, t: 'damage', p: 1, flat: 32, school: 'physical', d: '', sid: 5308 }),
         A({ id: 'berserker', n: 'Ярость берсерка', en: 'Berserker Rage', i: '😡',

@@ -48,6 +48,7 @@
     'monk:brewmaster', 'monk:mistweaver', 'monk:windwalker',
     'druid:balance', 'druid:feral', 'druid:guardian', 'druid:restoration',
     'engineer:mechanist', 'engineer:sapper', 'engineer:tinkerer',
+    'demonhunter:vengeance', 'demonhunter:havoc',
     'cheat:debug',
   ]);
   const TEST_SPECS = new Set(['cheat:debug']);

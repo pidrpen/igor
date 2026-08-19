@@ -91,6 +91,8 @@
     druid_feral:         { name: 'Бритвенные когти', effect: 'Увеличивает урон кровотечений', kind: 'dot', pctAt120: 44 },
     druid_guardian:      { name: 'Природный страж', effect: 'Снижает входящий урон; небольшой бонус к запасу здоровья', kind: 'tank', pctAt120: 35 },
     druid_restoration:   { name: 'Гармония', effect: 'Увеличивает лечение и периодическое исцеление', kind: 'heal', pctAt120: 39 },
+    demonhunter_vengeance: { name: 'Скверна в жилах', effect: 'Усиливает щиты и вампиризм Мести', kind: 'tank', pctAt120: 32 },
+    demonhunter_havoc:     { name: 'Демоническое присутствие', effect: 'Увеличивает весь исходящий урон', kind: 'dmg', pctAt120: 40 },
   };
 
 

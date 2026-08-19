@@ -2,6 +2,21 @@
   function juiceOk() {
     return !window.matchMedia('(prefers-reduced-motion: reduce)').matches && gameSpeed <= 2;
   }
+  let lastSkillAnimMs = 0;
+  function noteSkillAnimMs(ms) {
+    const n = Math.max(0, Math.round(Number(ms) || 0));
+    lastSkillAnimMs = Math.max(lastSkillAnimMs, n);
+    return n;
+  }
+  function takeSkillAnimMs() {
+    const n = lastSkillAnimMs;
+    lastSkillAnimMs = 0;
+    return n;
+  }
+  function estimateChainAnimMs(targetCount) {
+    const hops = Math.max(1, Number(targetCount) || 1);
+    return hops * 330 + Math.max(0, hops - 1) * 48 + 520;
+  }
   function flashScreen(crit) {
     if (!juiceOk()) return;
     const el = document.getElementById('screen-flash');
@@ -319,7 +334,10 @@
     const blob = id + ' ' + name + ' ' + type;
 
     if (SKILL_FX[id]) {
-      return { ...SKILL_FX[id] };
+      const fx = { ...SKILL_FX[id] };
+      if (fx.motion === 'glaive' || fx.motion === 'lunge') fx.motion = 'slash';
+      if (fx.motion === 'pulse') fx.motion = 'nova';
+      return fx;
     }
 
     // School inference
@@ -587,7 +605,7 @@
       const c = unitCenter(t.uid);
       return c ? { x: c.x, y: c.y, uid: t.uid, unit: t } : null;
     }).filter(Boolean));
-    if (hops.length < 2) return;
+    if (hops.length < 2) return 0;
     const isHeal = !!opt.isHeal;
     const pal = chainPalette(opt.school, isHeal);
     const palName = opt.pal || (isHeal ? 'heal' : 'nature');
@@ -705,6 +723,7 @@
     };
     chainScene.jobs.push(job);
     if (!chainScene.raf) chainScene.raf = requestAnimationFrame(tickChainScene);
+    return estimateChainAnimMs(hops.length - 1);
   }
 
   function shamEl(layer, cls, x, y) {
@@ -753,7 +772,7 @@
 
   /** Боевые FX шамана — слой skill-fx-layer в бою, не спрайты тест-комнаты. */
   function playShamanSkillFx(layer, from, list, ability, hitPulse, actor) {
-    if (!actor || actor.classId !== 'shaman') return false;
+    if (!actor || actor.classId !== 'shaman') return 0;
     const id = ability.id || '';
     const type = String(ability.type || '');
     if (!list.length && (id === 'hst' || id === 'spirit_link' || id === 'hs' || id === 'healing_rain')) {
@@ -777,14 +796,14 @@
         pal: isHeal ? 'heal' : 'nature',
         hitPulse,
       });
-      return true;
+      return estimateChainAnimMs(Math.max(1, list.length));
     }
 
     if (id === 'lb') {
       playChainHopFx(layer, from, list.slice(0, 1), {
         school: 'nature', isHeal: false, pal: 'nature', hitPulse,
       });
-      return true;
+      return estimateChainAnimMs(1);
     }
 
     if (id === 'riptide') {
@@ -798,7 +817,7 @@
         }
         if (list[0]) pulse(list[0], 'healed');
       });
-      return true;
+      return 1240;
     }
 
     if (id === 'hw' || id === 'healing_wave') {
@@ -813,7 +832,7 @@
         laterRm(shamEl(layer, 'sham-heal-splash', to0.x, to0.y), 700);
         if (list[0]) pulse(list[0], 'healed');
       }, 380);
-      return true;
+      return 720;
     }
 
     if (id === 'chw') {
@@ -824,7 +843,7 @@
         laterRm(plus, 700);
         if (list[0]) pulse(list[0], 'healed');
       });
-      return true;
+      return 920;
     }
 
     if (id === 'hs' || id === 'healing_rain') {
@@ -842,7 +861,7 @@
           pulse(t, 'healed');
         }, i * 70);
       });
-      return true;
+      return 1100 + Math.max(0, tgts.length - 1) * 70;
     }
 
     if (id === 'hst') {
@@ -857,7 +876,7 @@
           pulse(t, 'healed');
         }, 120 + i * 80);
       });
-      return true;
+      return 1100 + Math.max(0, allies.length - 1) * 80;
     }
 
     if (id === 'spirit_link') {
@@ -873,7 +892,7 @@
         if (p) laterRm(shamEl(layer, 'sham-link-node', p.x, p.y), 900);
         pulse(t, 'shielded');
       }, 80 + i * 50));
-      return true;
+      return 1200;
     }
 
     if (id === 'unleash') {
@@ -888,7 +907,7 @@
           pulse(list[0], 'healed');
         }, 160);
       }
-      return true;
+      return 900;
     }
 
     if (id === 'flame_shock') {
@@ -897,7 +916,7 @@
         shamSparks(layer, 'sham-ember', to0.x, to0.y, 6, 22, 620);
         if (list[0]) pulse(list[0], 'hit');
       });
-      return true;
+      return 1080;
     }
 
     if (id === 'lv' || id === 'lava_burst') {
@@ -907,7 +926,7 @@
         shamSparks(layer, 'sham-ember', to0.x, to0.y, 10, 30, 680);
         if (list[0]) pulse(list[0], 'hit');
       });
-      return true;
+      return 1160;
     }
 
     if (id === 'earth_shock') {
@@ -915,7 +934,7 @@
       shamSparks(layer, 'sham-earth-chunk', to0.x, to0.y + 8, 7, 24, 640);
       laterRm(shamEl(layer, 'sham-earth-crack', to0.x, to0.y + 14), 700);
       if (list[0]) pulse(list[0], 'hit');
-      return true;
+      return 820;
     }
 
     if (id === 'ele_blast') {
@@ -924,7 +943,7 @@
         shamSparks(layer, 'sham-unleash-spark', to0.x, to0.y, 8, 28, 640);
         if (list[0]) pulse(list[0], 'hit');
       });
-      return true;
+      return 1120;
     }
 
     if (id === 'thunderstorm') {
@@ -939,7 +958,7 @@
           pulse(t, 'hit');
         }, 80 + i * 70);
       });
-      return true;
+      return 1100;
     }
 
     if (id === 'fire_nova') {
@@ -953,7 +972,7 @@
           pulse(t, 'hit');
         }, i * 60);
       });
-      return true;
+      return 860 + Math.max(0, tgts.length - 1) * 60;
     }
 
     if (id === 'stormstrike') {
@@ -961,14 +980,14 @@
       setTimeout(() => laterRm(shamEl(layer, 'sham-ss-slash sham-ss-slash-b', to0.x, to0.y), 520), 90);
       laterRm(shamEl(layer, 'sham-bolt-flash', to0.x, to0.y - 6), 400);
       if (list[0]) pulse(list[0], 'hit');
-      return true;
+      return 610;
     }
 
     if (id === 'lava_lash') {
       laterRm(shamEl(layer, 'sham-ll-slash', to0.x, to0.y), 560);
       shamSparks(layer, 'sham-ember', to0.x, to0.y, 8, 24, 620);
       if (list[0]) pulse(list[0], 'hit');
-      return true;
+      return 620;
     }
 
     if (id === 'ascendance') {
@@ -976,7 +995,7 @@
       laterRm(shamEl(layer, 'sham-storm-ring', from.x, from.y), 900);
       shamSparks(layer, 'sham-unleash-spark', from.x, from.y, 10, 42, 800);
       pulseUnit(actor.uid, 'shielded');
-      return true;
+      return 1100;
     }
 
     if (id === 'fire_ele') {
@@ -988,7 +1007,7 @@
           pulse(list[0], 'hit');
         });
       }
-      return true;
+      return 1000;
     }
 
     if (id === 'feral_spirit') {
@@ -1000,7 +1019,7 @@
           pulse(list[0], 'hit');
         }, 180);
       }
-      return true;
+      return 680;
     }
 
     if (id === 'kick' || id === 'wind_shear') {
@@ -1009,26 +1028,26 @@
       s.style.setProperty('--cut-rot', ang + 'deg');
       laterRm(s, 520);
       if (list[0]) pulse(list[0], 'hit');
-      return true;
+      return 520;
     }
 
     if (id === 'party_dispel') {
       laterRm(shamEl(layer, 'sham-cleanse', to0.x, to0.y), 800);
       if (list[0]) pulse(list[0], 'healed');
-      return true;
+      return 800;
     }
 
     if (id === 'party_purge') {
       laterRm(shamEl(layer, 'sham-purge', to0.x, to0.y), 800);
       if (list[0]) pulse(list[0], 'hit');
-      return true;
+      return 800;
     }
 
-    return false;
+    return 0;
   }
 
   function playLeiShenFx(actor, ability, targets, layer, from) {
-    if (!actor || !ability || !layer) return;
+    if (!actor || !ability || !layer) return 0;
     const name = String(ability.name || '');
     const kick = ability.castKind === 'kick' || /Сверхзаряд|Цепная|Конец династии|Гнев катакомб|Вопль/.test(name);
     const aoe = ability.type === 'aoe' || ability.type === 'cast_aoe' || ability.castKind === 'aoe' || /поле|разряд|Децимация|Гнев Грома/.test(name);
@@ -1085,16 +1104,19 @@
     tag.style.top = (from.y - 36) + 'px';
     layer.appendChild(tag);
     setTimeout(() => tag.remove(), 1100);
+    const life = kick ? 700 : (buster ? 900 : 560);
+    return Math.max(life, list.length ? 900 : 0, 1100);
   }
 
   function playSkillAnim(actor, ability, targets) {
-    if (!juiceOk() || !actor) return;
+    if (!juiceOk() || !actor) return 0;
     const layer = document.getElementById('skill-fx-layer');
-    if (!layer) return;
+    if (!layer) return 0;
     const from = unitCenter(actor.uid);
-    if (!from) return;
+    if (!from) return 0;
+    let animMs = 0;
     if (actor.raidBoss || (actor.mech && actor.mech.id === 'thunder_king') || actor.heroId === 'ls') {
-      try { playLeiShenFx(actor, ability, targets, layer, from); } catch (e) { console.error('[lei fx]', e); }
+      try { animMs = Math.max(animMs, playLeiShenFx(actor, ability, targets, layer, from) || 0); } catch (e) { console.error('[lei fx]', e); }
     }
     const list = (targets || []).filter(Boolean);
     const fx = resolveSkillFx(ability, actor);
@@ -1134,8 +1156,33 @@
       b.style.top = y + 'px';
       layer.appendChild(b);
       setTimeout(() => b.remove(), 900);
+      if (impact === 'explode' || school === 'frost' || school === 'holy') {
+        const r = document.createElement('div');
+        r.className = 'skill-ring' + (school ? ' ' + school : '');
+        r.style.left = x + 'px';
+        r.style.top = y + 'px';
+        layer.appendChild(r);
+        setTimeout(() => r.remove(), 900);
+      } else if (impact === 'drain' || school === 'shadow' || school === 'blood') {
+        const o = document.createElement('div');
+        o.className = 'skill-orbit' + (school && school !== 'physical' ? ' ' + school : ' shadow');
+        o.style.left = x + 'px';
+        o.style.top = y + 'px';
+        layer.appendChild(o);
+        setTimeout(() => o.remove(), 900);
+      } else if (school === 'fire') {
+        for (let i = 0; i < 3; i++) {
+          const d = document.createElement('div');
+          d.className = 'skill-rain-drop fire';
+          d.style.left = (x + (Math.random() * 28 - 14)) + 'px';
+          d.style.top = (y + (Math.random() * 16 - 18)) + 'px';
+          d.style.animationDelay = (i * 0.03) + 's';
+          layer.appendChild(d);
+          setTimeout(() => d.remove(), 800);
+        }
+      }
     };
-        const spawnSlash = (x, y) => {
+    const spawnSlash = (x, y) => {
       // jab-style dual geometric cut — no emoji
       const make = (rot, delay) => {
         const s = document.createElement('div');
@@ -1223,10 +1270,25 @@
       layer.appendChild(p);
       setTimeout(() => p.remove(), 650);
     };
+    const glyph = (ability && ability.icon) ? String(ability.icon) : '';
+    const spawnGlyphPop = (x, y) => {
+      if (!glyph) return;
+      const g = document.createElement('div');
+      g.className = 'skill-glyph pop';
+      g.textContent = glyph;
+      g.style.left = x + 'px';
+      g.style.top = y + 'px';
+      layer.appendChild(g);
+      setTimeout(() => g.remove(), 520);
+    };
     const spawnProjectile = (to, onHit) => {
       const proj = document.createElement('div');
-      proj.className = 'skill-projectile' + (school ? ' school-' + school : '');
-      // pure CSS orb — no emoji
+      if (glyph) {
+        proj.className = 'skill-glyph fly' + (school ? ' school-' + school : '');
+        proj.textContent = glyph;
+      } else {
+        proj.className = 'skill-projectile' + (school ? ' school-' + school : '');
+      }
       proj.style.left = from.x + 'px';
       proj.style.top = from.y + 'px';
       const dx = to.x - from.x, dy = to.y - from.y;
@@ -1253,13 +1315,16 @@
         if (onHit) onHit();
         proj.remove();
       }, dur * 1000);
+      return Math.round(dur * 1000);
     };
     const hitPulse = (t) => {
       if (type === 'heal' || type === 'heal_aoe' || type === 'shield' || school === 'heal') pulseUnit(t.uid, type === 'shield' ? 'shielded' : 'healed');
       else pulseUnit(t.uid, 'hit');
     };
+    const staggerMs = (step, n) => Math.max(0, (Math.max(1, n) - 1) * step);
 
-    if (playShamanSkillFx(layer, from, list, ability, hitPulse, actor)) return;
+    const shamMs = playShamanSkillFx(layer, from, list, ability, hitPulse, actor);
+    if (shamMs) return noteSkillAnimMs(Math.max(animMs, shamMs));
 
     // Self / buff / shield no-target
     // Summon deploy: jab-style dual slash + ring (machine deploy flash)
@@ -1274,7 +1339,7 @@
           spawnBurst(p.x, p.y, style || 'physical', 'splash');
         }, 120 + i * 90));
       }
-      return;
+      return noteSkillAnimMs(Math.max(animMs, 1100 + staggerMs(90, list.length)));
     }
 
     if (type === 'buff' || type === 'taunt' || (type === 'shield' && !list.length) || fx.motion === 'nova' && !list.length) {
@@ -1289,19 +1354,19 @@
           hitPulse(t);
         }, 100 + i * 90));
       }
-      return;
+      return noteSkillAnimMs(Math.max(animMs, 1100 + staggerMs(90, list.length)));
     }
 
     // Цепь: живая нить шаман → цель → цель.
     if (fx.motion === 'chain') {
       const isHeal = type.indexOf('heal') === 0 || school === 'heal';
-      playChainHopFx(layer, from, list, {
+      const chainMs = playChainHopFx(layer, from, list, {
         school,
         isHeal,
         pal: school || (isHeal ? 'heal' : 'nature'),
         hitPulse,
-      });
-      return;
+      }) || estimateChainAnimMs(Math.max(1, list.length));
+      return noteSkillAnimMs(Math.max(animMs, chainMs));
     }
 
     if (type === 'aoe' || type === 'heal_aoe' || type === 'cast_aoe' || fx.motion === 'swirl' || fx.motion === 'rain' || (fx.motion === 'nova' && list.length > 1)) {
@@ -1319,90 +1384,106 @@
           const to = unitCenter(t.uid);
           if (!to) return;
           if (fx.motion === 'swirl') spawnSwirl(to.x, to.y);
-          spawnBurst(to.x, to.y, style || (type === 'heal_aoe' ? 'heal' : 'aoe'), fx.impact);
+          spawnGlyphPop(to.x, to.y);
           hitPulse(t);
         }, 120 + i * 90);
       });
-      return;
+      const aoeLife = fx.motion === 'rain'
+        ? 1000 + staggerMs(70, list.length)
+        : 1100 + staggerMs(90, list.length);
+      return noteSkillAnimMs(Math.max(animMs, aoeLife));
     }
 
     // Per-target
+    let hitMs = 0;
     list.forEach((t, i) => {
       const to = unitCenter(t.uid);
       if (!to) return;
       const delay = i * 90;
+      const motion = fx.motion;
+      let piece = 900;
+      if (motion === 'beam' || type === 'heal' || type === 'shield') piece = 750;
+      else if (motion === 'slash') piece = 900;
+      else if (motion === 'slam' || motion === 'nova' || motion === 'swirl') piece = 1100;
+      else if (motion === 'arc') piece = 700;
+      else if (motion === 'pierce') piece = 650;
+      else if (motion === 'orbit' || motion === 'rain') piece = 1000;
+      else if (motion === 'chain') piece = 750;
+      else {
+        const dist = Math.hypot(to.x - from.x, to.y - from.y);
+        piece = Math.round(clamp(dist / 520, 0.42, 0.85) * 1000) + 900;
+      }
+      hitMs = Math.max(hitMs, delay + piece);
       setTimeout(() => {
-        const motion = fx.motion;
         if (motion === 'beam' || type === 'heal' || type === 'shield') {
           spawnBeam(from.x, from.y, to.x, to.y);
-          spawnBurst(to.x, to.y, style || 'heal', fx.impact);
+          spawnGlyphPop(to.x, to.y);
           hitPulse(t);
           return;
         }
         if (motion === 'chain') {
-          // hop: caster → target (visual only; multi-target handled by successive list entries)
           spawnBeam(from.x, from.y, to.x, to.y);
-          spawnBurst(to.x, to.y, style || 'nature', fx.impact);
+          spawnGlyphPop(to.x, to.y);
           hitPulse(t);
           return;
         }
         if (motion === 'slash' || motion === 'slam') {
           spawnSlash(to.x, to.y);
           if (motion === 'slam') spawnRing(to.x, to.y, true);
-          spawnBurst(to.x, to.y, style, fx.impact);
+          spawnGlyphPop(to.x, to.y);
           hitPulse(t);
           return;
         }
         if (motion === 'arc') {
           spawnArc(to.x, to.y);
-          spawnBurst(to.x, to.y, style, fx.impact);
+          spawnGlyphPop(to.x, to.y);
           hitPulse(t);
           return;
         }
         if (motion === 'pierce') {
           spawnPierce(from.x, from.y, to.x, to.y);
-          spawnBurst(to.x, to.y, style, fx.impact);
+          spawnGlyphPop(to.x, to.y);
           hitPulse(t);
           return;
         }
         if (motion === 'orbit') {
           spawnOrbit(to.x, to.y);
-          spawnBurst(to.x, to.y, style || 'shadow', fx.impact);
+          spawnGlyphPop(to.x, to.y);
           if (type === 'dot') spawnRing(to.x, to.y);
           hitPulse(t);
           return;
         }
         if (motion === 'nova') {
           spawnRing(to.x, to.y, true);
-          spawnBurst(to.x, to.y, style || 'aoe', fx.impact);
+          spawnGlyphPop(to.x, to.y);
           hitPulse(t);
           return;
         }
         if (motion === 'rain') {
           spawnRain(to.x, to.y, 6);
-          spawnBurst(to.x, to.y, style, fx.impact);
+          spawnGlyphPop(to.x, to.y);
           hitPulse(t);
           return;
         }
         if (motion === 'swirl') {
           spawnSwirl(to.x, to.y);
-          spawnBurst(to.x, to.y, style, fx.impact);
+          spawnGlyphPop(to.x, to.y);
           hitPulse(t);
           return;
         }
-        // bolt default
         spawnProjectile(to, () => {
-          spawnBurst(to.x, to.y, style || (type === 'dot' ? 'shadow' : ''), fx.impact);
+          spawnGlyphPop(to.x, to.y);
           if (type === 'dot') spawnRing(to.x, to.y);
           hitPulse(t);
         });
       }, delay);
     });
 
-    // no targets: self burst
     if (!list.length) {
       spawnBurst(from.x, from.y, style, fx.impact);
+      hitMs = 900;
     }
+    return noteSkillAnimMs(Math.max(animMs, hitMs));
   }
 
   function showTurnBanner(text) {

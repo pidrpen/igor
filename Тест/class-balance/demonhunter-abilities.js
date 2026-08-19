@@ -1,7 +1,5 @@
 /**
- * Черновик охотника на демонов. Не подключён в apply-all.
- * Карточка в лобби серая, пока нет в PATCHED_SPECS.
- * Смотреть и править здесь; в бой не заливать, пока не скажешь.
+ * Охотник на демонов — Месть / Истребление. Пакет в apply-all.
  */
 (function (global) {
   'use strict';
@@ -83,5 +81,15 @@
     ],
   };
 
+  function applyDemonhunterBalance(classes) {
+    if (!Array.isArray(classes) || !DH_CLASS) return false;
+    const i = classes.findIndex((c) => c.id === 'demonhunter');
+    const clone = JSON.parse(JSON.stringify(DH_CLASS));
+    if (i >= 0) classes[i] = clone; else classes.push(clone);
+    return true;
+  }
   global.DEMONHUNTER_DRAFT = DH_CLASS;
+  global.DEMONHUNTER_BALANCE = { apply: applyDemonhunterBalance, class: DH_CLASS };
+  global.CLASS_BALANCE_PACKS = global.CLASS_BALANCE_PACKS || [];
+  global.CLASS_BALANCE_PACKS.push({ id: 'demonhunter', apply: applyDemonhunterBalance });
 })(typeof window !== 'undefined' ? window : globalThis);
