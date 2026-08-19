@@ -36,6 +36,11 @@
     } else if (rule === 'ally_any') {
       target = resolveAbilityTarget(actor, ability, target);
       if (!target || target.side !== actor.side || target.isPet) target = actor;
+      if (target && typeof fieldSameHall === 'function' && !fieldSameHall(actor, target)) {
+        log(ability.name + ': другой зал', 'system');
+        try { toast('Другой зал — выбери своего'); } catch (_) {}
+        return;
+      }
     } else if (rule === 'enemy') {
       // цель до payAbility — иначе при fail ресурс уже списан / freeAction ломается
       const foesPre = actor.side === 'ally' ? living('enemy') : living('ally');
@@ -43,6 +48,14 @@
       if (!target) {
         log(ability.name + ': нет цели', 'system');
         return;
+      }
+      if (typeof fieldReachWhy === 'function') {
+        const why = fieldReachWhy(actor, target, ability);
+        if (why) {
+          log(ability.name + ': ' + fieldReachText(why), 'system');
+          try { toast(fieldReachText(why)); } catch (_) {}
+          return;
+        }
       }
       if (EXECUTE_IDS.has(ability.id) && target.hp / target.maxHp > 0.35) {
         log(ability.name + ' только при ≤35% здоровья', 'system');
@@ -129,7 +142,13 @@
         playSkillAnim(actor, ability, fxTargets);
         if (ability.targetHpPct != null) {
           const pct = Number(ability.targetHpPct) || 0;
-          const raw = Math.max(1, Math.round(target.maxHp * pct));
+          let raw = Math.max(1, Math.round(target.maxHp * pct));
+          if (typeof clampRaidBossDamage === 'function') raw = clampRaidBossDamage(target, raw);
+          if (!(raw > 0)) {
+            log(`${actor.name}: ${ability.name} — босс на пороге фазы, урон не прошёл`, 'system');
+            try { if (typeof raidBossOnHpTouched === 'function') raidBossOnHpTouched(target); } catch (_) {}
+            break;
+          }
           target.hp = Math.max(0, target.hp - raw);
           try { floatText(target.uid, '−' + Math.round(pct * 100) + '%', 'dmg'); } catch (_) {}
           log(`${actor.name}: ${ability.name} → ${target.name} (−${fmt(raw)})`, cls);
@@ -140,6 +159,7 @@
             checkBossPhase(target);
           }
           if (typeof maybeTriggerRaidVault === 'function') maybeTriggerRaidVault(target);
+          try { if (typeof raidBossOnHpTouched === 'function') raidBossOnHpTouched(target); } catch (_) {}
           try { updateBossFrame(); } catch (_) {}
           break;
         }

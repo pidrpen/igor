@@ -66,6 +66,22 @@
         startBtn.insertAdjacentElement('afterend', slot);
       }
     }
+    if (!document.getElementById('btn-field-trial')) {
+      const tavernBtn = document.getElementById('btn-tavern') || document.getElementById('btn-start');
+      if (tavernBtn && tavernBtn.parentNode) {
+        const fb = document.createElement('button');
+        fb.className = 'btn';
+        fb.type = 'button';
+        fb.id = 'btn-field-trial';
+        fb.style.cssText = 'width:100%;padding:.65rem;margin-top:.45rem';
+        fb.textContent = 'Поле: линии и два зала';
+        fb.addEventListener('click', () => {
+          if (typeof fieldStartTrial === 'function') fieldStartTrial();
+        });
+        const slot = document.getElementById('igor-hero-lobby-slot') || tavernBtn.parentNode;
+        slot.appendChild(fb);
+      }
+    }
     try { if (typeof igorHeroBootLobby === 'function') igorHeroBootLobby(); } catch (_) {}
     try { syncHeroPartySlot(); } catch (_) {}
 
@@ -2011,8 +2027,9 @@
     const box = document.getElementById('end-box');
     box.className = 'modal end-modal ' + (win ? 'win' : 'lose');
     document.getElementById('end-title').textContent = win
-      ? (run.raid ? `Рейд закрыт · ${score}!` : `Ключ закрыт · ${score}!`)
-      : (run.raid ? 'Рейд провален' : 'Ключ провален');
+      ? (run.raid ? `Рейд закрыт · ${score}!` : (run.fieldTrial ? `Поле закрыто · ${score}!` : `Ключ закрыт · ${score}!`))
+      : (run.raid ? 'Рейд провален' : (run.fieldTrial ? 'Поле провалено' : 'Ключ провален'));
+    try { document.body.classList.remove('has-field', 'field-split'); } catch (_) {}
     const lootStr = (run.loot || []).map(l => l.icon + ' ' + l.name).join(', ') || 'нет';
     document.getElementById('end-msg').textContent = msg + `\nДобыча: ${lootStr}`;
     document.getElementById('end-modal').classList.remove('hidden');
@@ -2028,6 +2045,7 @@
     if (fl) fl.innerHTML = '';
     floatStacks.clear();
     run = null; combat = null; paused = false;
+    try { document.body.classList.remove('has-field', 'field-split'); } catch (_) {}
     recount = null;
     showRecountPanel(false);
     try { hidePassivePocket(); } catch (_) {}

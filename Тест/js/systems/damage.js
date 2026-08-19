@@ -86,6 +86,10 @@
 
   function dealDmg(target, raw, attacker, ctx) {
     if (!target?.alive) return 0;
+    if (typeof fieldBlocksHit === 'function' && fieldBlocksHit(attacker, target, ctx)) {
+      try { floatText(target.uid, 'МИМО', 'miss'); } catch (_) {}
+      return 0;
+    }
     if (attacker && attacker.buffs && attacker.buffs.length) {
       let cut = 0;
       for (const b of attacker.buffs) {
@@ -291,6 +295,7 @@
     else if (target.isBoss) {
       checkBossPhase(target);
       try { if (typeof raidBossOnHpTouched === 'function') raidBossOnHpTouched(target); } catch (_) {}
+      try { if (typeof fieldMaybeKeySplit === 'function') fieldMaybeKeySplit(target); } catch (_) {}
     }
     if (dmg > 0 && target.side === 'ally' && !target.isPet && partyHasSpiritLink()) {
       try { maybeSpiritLinkEqualize(target.name); } catch (e) { console.error('[spirit_link]', e); }
@@ -369,6 +374,10 @@
   }
   function healUnit(t, amount, healer, opts) {
     if (!t?.alive) return 0;
+    if (healer && typeof fieldSameHall === 'function' && !fieldSameHall(healer, t)) {
+      try { toast('Другой зал — лечение не доходит'); } catch (_) {}
+      return 0;
+    }
     // opts.exact — flat «т» из таблицы без mastery/vers/loot поверх
     // opts.noEcho — не вешать «Выбор света» (тики HoT)
     // opts.abilityId / abilityName / sourceName / isHot / lifesteal — для Recount

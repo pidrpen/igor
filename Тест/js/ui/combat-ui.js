@@ -432,6 +432,44 @@
       actions.appendChild(sb);
     }
 
+    if (typeof fieldActive === 'function' && fieldActive()) {
+      const mkStep = (label, lane, rank) => {
+        const b = document.createElement('button');
+        b.className = 'btn btn-sm';
+        b.textContent = label;
+        const f = (typeof fieldOf === 'function') ? fieldOf(actor) : { hall: 'A' };
+        b.disabled = !!(actor._fieldStepped || (typeof fieldCanStep === 'function' && !fieldCanStep(actor, f.hall, lane, rank)));
+        b.onclick = () => {
+          if (typeof fieldStep === 'function') fieldStep(actor, f.hall, lane, rank);
+          showAbilities(actor);
+        };
+        actions.appendChild(b);
+      };
+      const f0 = (typeof fieldOf === 'function') ? fieldOf(actor) : { lane: 'C', rank: 'front', hall: 'A' };
+      const li = ['L', 'C', 'R'].indexOf(f0.lane);
+      if (li > 0) mkStep('Шаг влево', ['L', 'C', 'R'][li - 1], f0.rank);
+      if (li < 2 && li >= 0) mkStep('Шаг вправо', ['L', 'C', 'R'][li + 1], f0.rank);
+      mkStep(f0.rank === 'front' ? 'Назад' : 'Вперёд', f0.lane, f0.rank === 'front' ? 'back' : 'front');
+      if (typeof fieldSplitActive === 'function' && fieldSplitActive()) {
+        const sw = document.createElement('button');
+        sw.className = 'btn btn-sm';
+        sw.textContent = 'Перейти в другой зал';
+        sw.onclick = () => {
+          if (typeof fieldCrossHall === 'function' && fieldCrossHall(actor)) {
+            if (typeof afterAction === 'function') afterAction();
+          }
+        };
+        actions.appendChild(sw);
+        const echoLive = (combat.enemies || []).some(e => e && e.alive && e.mechRole === 'field_echo');
+        if (!echoLive) {
+          const mg = document.createElement('button');
+          mg.className = 'btn btn-sm';
+          mg.textContent = 'Собрать залы';
+          mg.onclick = () => { if (typeof fieldMerge === 'function') fieldMerge(); };
+          actions.appendChild(mg);
+        }
+      }
+    }
     const skip = document.createElement('button');
     skip.className = 'btn btn-sm';
     skip.textContent = 'Пропуск (Пробел)';
@@ -450,7 +488,12 @@
     const rule = abilityTargetRule(ability);
     if (rule === 'self_only') return actor;
     if (rule === 'enemy') {
-      const foes = living('enemy').filter(e => e && e.alive && !e.vaultAway);
+      let foes = living('enemy').filter(e => e && e.alive && !e.vaultAway);
+      if (typeof fieldSameHall === 'function') foes = foes.filter(e => fieldSameHall(actor, e));
+      if (typeof fieldCanReach === 'function') {
+        const open = foes.filter(e => fieldCanReach(actor, e, ability));
+        if (open.length) foes = open;
+      }
       if (!foes.length) return null;
       if (EXECUTE_IDS.has(ability.id)) {
         const exec = foes.find(e => e.hp / Math.max(1, e.maxHp) <= 0.35);
@@ -480,6 +523,11 @@
       if (typeof setRaidFocus === 'function') setRaidFocus(unit);
       return;
     }
+    if (typeof fieldSplitActive === 'function' && fieldSplitActive()
+        && unit?.side === 'ally' && !unit.isPet && !pendingTarget) {
+      if (typeof fieldSetFocus === 'function') fieldSetFocus(unit);
+      return;
+    }
     if (!pendingTarget || !combat?.waitingPlayer) return;
     if (!unit?.alive) return toast('Мёртв');
     const { actor, ability } = pendingTarget;
@@ -504,6 +552,10 @@
     if (kickOnly && !unit.casting) return toast('Цель не кастует');
     if (EXECUTE_IDS.has(ability.id) && unit.hp / unit.maxHp > 0.35) return toast('Казнь только при ≤35% здоровья');
     if (ability.id === 'touch_death' && unit.hp >= actor.hp) return toast('Здоровье цели должно быть меньше вашего');
+    if (typeof fieldReachWhy === 'function') {
+      const why = fieldReachWhy(actor, unit, ability);
+      if (why) return toast(fieldReachText(why));
+    }
     pendingTarget = null;
     castWithRuneFlash(actor, ability, unit);
   }
@@ -511,8 +563,15 @@
 
   function renderCombat() {
     ensureCombatRowClicks();
-    renderAllies();
-    renderEnemies();
+    if (typeof fieldActive === 'function' && fieldActive()) {
+      document.body.classList.add('has-field');
+      try { if (typeof fieldEnsureDom === 'function') fieldEnsureDom(); } catch (_) {}
+      try { syncBattleField(); } catch (e) { console.error('[field render]', e); renderAllies(); renderEnemies(); }
+    } else {
+      document.body.classList.remove('has-field');
+      renderAllies();
+      renderEnemies();
+    }
     bindUnitCardClicks();
     updateUnitSelectionOnly();
     updateBossFrame();
@@ -785,6 +844,64 @@
       }
       prev = el;
     }
+  }
+
+  function syncBattleField() {
+    const root = document.getElementById('battle-field');
+    if (!root || typeof fieldEnsureDom !== 'function') return;
+    fieldEnsureDom();
+    const actor = currentActor();
+    const now = Date.now();
+    const heroes = (run && run.party) ? run.party.slice() : [];
+    const foes = (combat && combat.enemies) ? combat.enemies.filter((u) => {
+      if (!u) return false;
+      if (u.vaultAway) return false;
+      if (u.healOnly || u.instRole === 'static_pillar') return false;
+      if (u.alive) return true;
+      if (!u._deadAt) u._deadAt = now;
+      return (now - u._deadAt) < 560;
+    }) : [];
+    const units = heroes.concat(foes);
+    const used = new Set();
+    root.querySelectorAll('.bf-cell').forEach((cell) => {
+      const hall = cell.dataset.hall || 'A';
+      const lane = cell.dataset.lane;
+      const rank = cell.dataset.rank;
+      const side = cell.dataset.side;
+      const here = units.filter((u) => {
+        if (!u || used.has(u.uid)) return false;
+        if (side === 'ally' && u.side !== 'ally') return false;
+        if (side === 'enemy' && u.side !== 'enemy') return false;
+        const f = (typeof fieldOf === 'function') ? fieldOf(u) : { hall: 'A', lane: 'C', rank: 'front' };
+        return f.hall === hall && f.lane === lane && f.rank === rank;
+      });
+      const wanted = here.map((u) => u.uid);
+      const map = new Map();
+      [...cell.children].forEach((el) => {
+        const uid = el.dataset.uid || el.querySelector('.unit')?.dataset.uid;
+        if (uid) map.set(uid, el);
+      });
+      [...cell.children].forEach((el) => {
+        const uid = el.dataset.uid || el.querySelector('.unit')?.dataset.uid;
+        if (!wanted.includes(uid)) el.remove();
+      });
+      here.forEach((u) => {
+        used.add(u.uid);
+        let el = map.get(u.uid);
+        if (!el || !cell.contains(el)) {
+          const wrap = document.createElement('div');
+          wrap.innerHTML = stackHtml(u, actor, u.side === 'ally').trim();
+          el = wrap.firstElementChild;
+          if (!el) return;
+          el.dataset.struct = unitStructSig(u);
+          el.dataset.aura = auraSig(u);
+          cell.appendChild(el);
+        } else {
+          el = patchUnitStack(el, u, actor, u.side === 'ally') || el;
+          if (el) el.dataset.struct = unitStructSig(u);
+        }
+      });
+    });
   }
 
   function renderAllies() {

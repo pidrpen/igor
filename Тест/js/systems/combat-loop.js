@@ -76,6 +76,7 @@
     spawnClassPets();
     try { if (typeof applyPartyClassAuras === 'function') applyPartyClassAuras(); } catch (e) { console.error('[party aura]', e); }
     try { applyBossMechanics(); } catch (e) { console.error('[boss mech]', e); }
+    try { if (typeof fieldOnCombatStart === 'function') fieldOnCombatStart(); } catch (e) { console.error('[field]', e); }
     buildTurnQueue();
     log('Бой: ' + ROOM_META[type].name, 'system');
     renderCombat();
@@ -220,6 +221,7 @@
       return;
     }
     actor._oncePerTurnUsed = {};
+    actor._fieldStepped = false;
     actor.abilities.forEach(a => {
       if (a.curCd > 0) {
         a.curCd--;
@@ -246,7 +248,8 @@
     if (paused) return;
     // Player only controls heroes; pets auto-act
     if (actor.side === 'ally' && !actor.isPet) {
-      if (typeof shouldRaidAuto === 'function' && shouldRaidAuto(actor)) {
+      if ((typeof shouldRaidAuto === 'function' && shouldRaidAuto(actor))
+          || (typeof fieldShouldAuto === 'function' && fieldShouldAuto(actor))) {
         combat.waitingPlayer = false;
         document.getElementById('ability-bar').innerHTML = '';
         try { hidePassivePocket(); } catch (_) {}
@@ -312,6 +315,7 @@
     combat._roundTicking = true;
     combat.round++;
     combat.turnIndex = 0;
+    try { if (typeof fieldOnRoundEnd === 'function') fieldOnRoundEnd(); } catch (e) { console.error('[field round]', e); }
     // Демонология: пассивный бес каждые 5 раундов
     if (run?.party && combat.round > 0 && combat.round % 5 === 0) {
       for (const p of run.party.filter(h => h.alive && h.classId === 'warlock' && h.specId === 'demonology')) {

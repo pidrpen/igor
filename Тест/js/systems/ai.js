@@ -1,20 +1,37 @@
 /* systems/ai: enemy and pet AI */
   function checkBossPhase(boss) {
     if (!boss.phases) return;
-    const ratio = boss.hp / boss.maxHp;
-    let idx = 0;
-    for (let i = 0; i < boss.phases.length; i++) {
-      if (i === 0 || ratio <= boss.phases[i].at) idx = i;
+    const max = Math.max(1, Number(boss.maxHp) || 1);
+    const hp = Number(boss.hp) || 0;
+    const ratio = hp / max;
+    let idx = Number(boss.phaseIndex) || 0;
+    const next = idx + 1;
+    if (next < boss.phases.length) {
+      const at = Number(boss.phases[next].at) || 0;
+      const gateHp = Math.max(1, Math.floor(max * at));
+      if (ratio <= at + 1e-9 || hp <= gateHp) idx = next;
     }
     if (idx !== boss.phaseIndex) {
       boss.phaseIndex = idx;
       const ph = boss.phases[idx];
-      boss.abilities = ph.abilities.map(a => ({
-        id: a.id, name: a.name, icon: '✨', cost: a.cost || 0, gen: 0, costSec: 0, genSec: 0,
-        costRunes: null, genRunic: 0, cd: a.cd || 0, baseCd: a.cd || 0, curCd: 0,
-        type: a.type, power: a.power || 1, desc: '',
-        castKind: a.castKind || null, castPrio: a.castPrio || 0,
-      }));
+      boss.abilities = (ph.abilities || []).map(a => {
+        const ab = Object.assign({}, a);
+        ab.icon = a.icon || '✨';
+        ab.cost = a.cost || 0;
+        ab.gen = a.gen || 0;
+        ab.costSec = a.costSec || 0;
+        ab.genSec = a.genSec || 0;
+        if (ab.costRunes === undefined) ab.costRunes = null;
+        ab.genRunic = a.genRunic || 0;
+        ab.cd = a.cd || 0;
+        ab.baseCd = a.cd || 0;
+        ab.curCd = 0;
+        ab.power = a.power == null ? 1 : a.power;
+        if (ab.desc == null) ab.desc = '';
+        if (ab.castKind === undefined) ab.castKind = null;
+        if (ab.castPrio == null) ab.castPrio = 0;
+        return ab;
+      });
       log('Фаза: ' + ph.name, 'enemy');
       toast(boss.name + ': ' + ph.name);
     }
@@ -60,6 +77,137 @@
     for (const s of list) tickJadeSerpent(s);
   }
 
+  function isLeiShenActor(u) {
+    return !!(u && (u.raidBoss || (u.mech && u.mech.id === 'thunder_king')));
+  }
+
+  function enemyAbilityIsTelegraph(a) {
+    if (!a) return false;
+    if (a.type === 'cast_aoe') return true;
+    const k = a.castKind;
+    return k === 'kick' || k === 'buster' || k === 'aoe' || k === 'summon' || k === 'debuff';
+  }
+
+  function enemyAbilityIsSignature(a) {
+    if (!a || enemyAbilityIsTelegraph(a)) return false;
+    if (a.type === 'heal' || a.type === 'heal_aoe' || a.type === 'taunt') return false;
+    if (a.type === 'summon' || a.type === 'debuff') return true;
+    if (a.signature || a.instFlag) {
+      if ((a.cd || a.baseCd || 0) >= 1) return true;
+      if (a.type === 'buff' || a.type === 'shield') return true;
+    }
+    return false;
+  }
+
+  function telegraphRank(a, b) {
+    const flag = (!!b.instFlag) - (!!a.instFlag);
+    if (flag) return flag;
+    const prio = (b.castPrio || 0) - (a.castPrio || 0);
+    if (prio) return prio;
+    const kindScore = (k) => (k === 'kick' ? 3 : k === 'buster' ? 2 : k === 'aoe' ? 1 : 0);
+    const ks = kindScore(b.castKind) - kindScore(a.castKind);
+    if (ks) return ks;
+    return (b.power || 0) - (a.power || 0);
+  }
+
+  function signatureRank(a, b) {
+    const flag = ((!!b.instFlag || !!b.signature) ? 1 : 0) - ((!!a.instFlag || !!a.signature) ? 1 : 0);
+    if (flag) return flag;
+    const cd = (b.cd || b.baseCd || 0) - (a.cd || a.baseCd || 0);
+    if (cd) return cd;
+    return (b.power || 0) - (a.power || 0);
+  }
+
+  function pickRanked(list, rank) {
+    if (!list || !list.length) return null;
+    return list.slice().sort(rank)[0];
+  }
+
+  function pickEnemyVictim(actor) {
+    const tank = livingHeroes().find(a => a.role === 'tank');
+    let target = getThreatTarget(actor);
+    if (!target) {
+      target = tank || lowest(livingHeroes());
+      if (target) addThreat(actor, target, 500);
+    }
+    if (tank && target && target.uid !== tank.uid) {
+      const tThreat = actor.threat?.[target.uid] || 0;
+      const tankThreat = actor.threat?.[tank.uid] || 0;
+      if (tThreat < tankThreat * 2.2 && Math.random() < 0.72) {
+        target = tank;
+      }
+    }
+    if (actor.isBoss && tank && target?.uid === tank.uid && livingHeroes().length > 1 && Math.random() < 0.08) {
+      const sorted = livingHeroes().slice().sort((a, b) =>
+        (actor.threat?.[b.uid] || 0) - (actor.threat?.[a.uid] || 0));
+      if (sorted[1]) target = sorted[1];
+    }
+    return target;
+  }
+
+  function actDungeonEnemy(actor, usable, foes, friends) {
+    const victim = pickEnemyVictim(actor);
+    const hasTarget = !!(victim && victim.alive);
+
+    if (!isSilenced(actor) && hasTarget) {
+      const tele = pickRanked(usable.filter(enemyAbilityIsTelegraph), telegraphRank);
+      if (tele) {
+        castAbility(actor, tele, tele.castKind === 'buster' ? victim : null);
+        return true;
+      }
+    }
+
+    const sig = pickRanked(usable.filter(enemyAbilityIsSignature), signatureRank);
+    if (sig) {
+      const needTarget = sig.type === 'damage' || sig.type === 'dot' || sig.type === 'debuff';
+      if (!needTarget || hasTarget) {
+        const tgt = sig.type === 'buff' || sig.type === 'shield' ? actor : victim;
+        castAbility(actor, sig, tgt);
+        return true;
+      }
+    }
+
+    if (actor.role === 'healer') {
+      const hurt = lowest(friends.filter(f => !f.isPet)) || lowest(friends);
+      const healAb = usable.find(a => a.type === 'heal' || a.type === 'heal_aoe');
+      if (hurt && hurt.hp / hurt.maxHp < 0.85 && healAb) {
+        castAbility(actor, healAb, abilityTargetRule(healAb) === 'self_only' ? actor : hurt);
+        return true;
+      }
+    }
+    if (actor.role === 'tank') {
+      const agroOnHealer = foes.some(e => {
+        const ft = e.buffs.find(b => b.forceTarget);
+        return !ft || run.party.find(p => p.uid === ft.forceTarget)?.role === 'healer';
+      });
+      const taunt = usable.find(a => a.type === 'taunt');
+      if (taunt && (agroOnHealer || Math.random() < 0.35)) {
+        castAbility(actor, taunt, null);
+        return true;
+      }
+      const sh = usable.find(a => (a.type === 'shield' || a.type === 'cleanse') && abilityTargetRule(a) === 'self_only');
+      if (sh && (actor.hp / actor.maxHp < 0.55 || (actor.stagger || 0) > actor.maxHp * 0.2)) {
+        castAbility(actor, sh, actor);
+        return true;
+      }
+    }
+
+    const aoe = usable.find(a => a.type === 'aoe');
+    if (aoe && foes.length >= 3) {
+      castAbility(actor, aoe, null);
+      return true;
+    }
+
+    if (!hasTarget) return true;
+    const dmgPool = usable.filter(a => (a.type === 'damage' || a.type === 'dot') && !EXECUTE_IDS.has(a.id));
+    const dmg = dmgPool.slice().sort((a, b) => (b.power || 0) - (a.power || 0))[0]
+      || usable.find(a => a.type === 'damage')
+      || usable.find(a => a.type !== 'cast_aoe')
+      || usable[0];
+    if (dmg) castAbility(actor, dmg, victim);
+    return true;
+  }
+
   function aiAct(actor) {
     if (!actor.alive) return;
     if (isStunned(actor)) {
@@ -73,7 +221,14 @@
     }
 
     if (actor.vaultAway) return;
-    const foes = actor.side === 'ally' ? living('enemy').filter(e => !e.vaultAway) : livingHeroes();
+    let foes = actor.side === 'ally' ? living('enemy').filter(e => !e.vaultAway) : livingHeroes();
+    if (typeof fieldSameHall === 'function') {
+      foes = foes.filter(e => fieldSameHall(actor, e));
+    }
+    if (typeof fieldCanReach === 'function' && actor.side === 'enemy' && typeof fieldIsMeleeUnit === 'function' && fieldIsMeleeUnit(actor)) {
+      const open = foes.filter(e => fieldCanReach(actor, e, { type: 'damage', school: 'physical' }));
+      if (open.length) foes = open;
+    }
     const friends = actor.side === 'ally' ? livingHeroes() : living('enemy');
     // Pets: simple auto-attack (режим attackMode: st|aoe — «Отладка»)
     if (actor.isPet) {
@@ -211,6 +366,13 @@
       }
     }
 
+    // Dungeon / pack enemies: kit on CD, not a random melee skip.
+    // Lei Shen keeps the old roll — raid tick owns his pacing.
+    if (actor.side === 'enemy' && !isLeiShenActor(actor)) {
+      actDungeonEnemy(actor, usable, foes, friends);
+      return;
+    }
+
     // Ally healer/DPS AI removed — player picks targets. Enemy healers still auto.
     if (actor.role === 'healer' && actor.side === 'enemy') {
       const hurt = lowest(friends.filter(f => !f.isPet)) || lowest(friends);
@@ -251,27 +413,7 @@
 
     let target = null;
     if (actor.side === 'enemy') {
-      // Threat table + sticky tank: mobs hit the tank far more often
-      const tank = livingHeroes().find(a => a.role === 'tank');
-      target = getThreatTarget(actor);
-      if (!target) {
-        target = tank || lowest(livingHeroes());
-        if (target) addThreat(actor, target, 500);
-      }
-      // Soft bias: even if someone pulled slightly, ~70% still swing tank if alive
-      if (tank && target && target.uid !== tank.uid) {
-        const tThreat = actor.threat?.[target.uid] || 0;
-        const tankThreat = actor.threat?.[tank.uid] || 0;
-        if (tThreat < tankThreat * 2.2 && Math.random() < 0.72) {
-          target = tank;
-        }
-      }
-      // Rare boss glance at 2nd threat only when tank is very stable
-      if (actor.isBoss && tank && target?.uid === tank.uid && livingHeroes().length > 1 && Math.random() < 0.08) {
-        const sorted = livingHeroes().slice().sort((a, b) =>
-          (actor.threat?.[b.uid] || 0) - (actor.threat?.[a.uid] || 0));
-        if (sorted[1]) target = sorted[1];
-      }
+      target = pickEnemyVictim(actor);
     } else {
       // Ally DPS: only used by pets/edge paths — keep simple pick, no auto-DoT spam
       const tod = usable.find(a => a.id === 'touch_death');
