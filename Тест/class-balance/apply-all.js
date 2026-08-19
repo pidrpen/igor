@@ -156,6 +156,7 @@
     tryAdd('monk', global.MONK_BALANCE);
     tryAdd('druid', global.CLASS_BALANCE && global.CLASS_BALANCE.druid);
     tryAdd('engineer', global.ENGINEER_BALANCE || global.ENGINEER_CLASS);
+    tryAdd('demonhunter', global.DEMONHUNTER_BALANCE || global.DEMONHUNTER_DRAFT);
 
     // Dedupe by id (first wins = registry order preference, then first legacy)
     const seen = new Set();
