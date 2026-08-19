@@ -23,12 +23,16 @@
       logs: run.logs.slice(0, 20),
       partyBuild: party.map(p => {
         ensureSec(p);
-        return { classId: p.classId, specId: p.specId, sec: { ...p.sec }, gear: normalizeGear(p.gear) };
+        return {
+          classId: p.classId, specId: p.specId, sec: { ...p.sec }, gear: normalizeGear(p.gear),
+          abilityOrder: Array.isArray(p.abilityOrder) ? p.abilityOrder.slice() : undefined,
+        };
       }),
       party: run.party.map(p => ({
         classId: p.classId, specId: p.specId, hp: p.hp, maxHp: p.maxHp, atk: p.atk, def: p.def, speed: p.speed,
         alive: p.alive, res: p.res, shield: p.shield, sec: p.sec ? { ...p.sec } : defaultSec(),
         gear: normalizeGear(p.gear),
+        abilityOrder: Array.isArray(p.abilityOrder) ? p.abilityOrder.slice() : undefined,
         _baseAtk: p._baseAtk, _baseMaxHp: p._baseMaxHp, _baseDef: p._baseDef, _baseSpeed: p._baseSpeed,
         _baseSecCritRating: p._baseSecCritRating, _baseSecVersRating: p._baseSecVersRating,
         _baseSecMasteryRating: p._baseSecMasteryRating,
@@ -58,7 +62,10 @@
       const payload = {
         party: (party || []).map(p => {
           ensureSec(p);
-          return { classId: p.classId, specId: p.specId, sec: { ...p.sec }, gear: normalizeGear(p.gear) };
+          return {
+            classId: p.classId, specId: p.specId, sec: { ...p.sec }, gear: normalizeGear(p.gear),
+            abilityOrder: Array.isArray(p.abilityOrder) ? p.abilityOrder.slice() : undefined,
+          };
         }),
         dungeonId: document.getElementById('dungeon-select')?.value || null,
         keyLevel: document.getElementById('key-level')?.value || null,
@@ -81,6 +88,7 @@
     if (!data || !Array.isArray(data.party)) return false;
     party = data.party.map(x => {
       const e = { classId: x.classId, specId: x.specId, sec: x.sec ? { ...x.sec } : defaultSec(), gear: normalizeGear(x.gear) };
+      if (Array.isArray(x.abilityOrder) && x.abilityOrder.length) e.abilityOrder = x.abilityOrder.slice();
       ensureSec(e);
       return e;
     }).filter(e => !WOW_MOP || !WOW_MOP.getSpec || WOW_MOP.getSpec(e.classId, e.specId));

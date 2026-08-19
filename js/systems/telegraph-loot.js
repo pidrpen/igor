@@ -357,7 +357,9 @@
 
   /** Ключ постоянного «основного» питомца по классу/спеку (null = нет). */
   function mainPetKeyFor(classId, specId) {
-    if (classId === 'hunter') return 'hunter_pet';
+    if (classId === 'hunter') {
+      return (typeof hunterPetKey === 'function') ? hunterPetKey(specId) : 'hunter_pet';
+    }
     if (classId === 'warlock') return (specId === 'demonology') ? 'felguard' : 'imp';
     // Постоянный вурдалак — только Нечестивость
     if (classId === 'deathknight') return (specId === 'unholy') ? 'ghoul' : null;

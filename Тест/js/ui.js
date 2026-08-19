@@ -35,6 +35,10 @@
     document.getElementById('tab-class').addEventListener('click', () => showClassTab());
     document.getElementById('tab-spec').addEventListener('click', () => { if (pickClass) showSpecTab(); });
     document.getElementById('btn-add').addEventListener('click', addToParty);
+    const heroChk = document.getElementById('chk-hero-party');
+    if (heroChk) {
+      heroChk.addEventListener('change', () => { syncHeroPartySlot(); renderParty(); savePartyProfile(); });
+    }
     document.getElementById('btn-clear-pick').addEventListener('click', () => {
       pickClass = pickSpec = null;
       showClassTab();
@@ -51,6 +55,19 @@
     kl.addEventListener('change', () => { refreshAffixes(); refreshKeystone(); savePartyProfile(); });
     document.getElementById('btn-start').addEventListener('click', startRun);
     try { bindRaidLobby(); } catch (e) { console.error('[raid]', e); }
+    if (!document.getElementById('btn-tavern')) {
+      const startBtn = document.getElementById('btn-start');
+      if (startBtn && startBtn.parentNode) {
+        const slot = document.createElement('div');
+        slot.id = 'igor-hero-lobby-slot';
+        slot.style.marginTop = '.45rem';
+        slot.innerHTML = '<button class="btn" type="button" id="btn-tavern" style="width:100%;padding:.65rem">Таверна</button>' +
+          '<div id="igor-hero-plaque" class="keys-hint" style="margin-top:.35rem"></div>';
+        startBtn.insertAdjacentElement('afterend', slot);
+      }
+    }
+    try { if (typeof igorHeroBootLobby === 'function') igorHeroBootLobby(); } catch (_) {}
+    try { syncHeroPartySlot(); } catch (_) {}
 
     document.getElementById('btn-abandon').addEventListener('click', () => {
       if (confirm('Сдаться?')) endRun(false, 'Вы покинули ключ.');
@@ -201,8 +218,9 @@
     if (e.key === 'p' || e.key === 'P') { togglePause(); return; }
     if (e.key === 's' || e.key === 'S') { cycleSpeed(); return; }
     const n = e.key === '0' ? 9 : parseInt(e.key, 10) - 1;
-    if (n >= 0 && n < actor.abilities.length) {
-      const ab = actor.abilities[n];
+    const abs = (typeof orderedAbilities === 'function') ? orderedAbilities(actor) : (actor.abilities || []);
+    if (n >= 0 && n < abs.length) {
+      const ab = abs[n];
       if (!canPay(actor, ab)) return toast('Нельзя: ' + ab.name);
       const needTarget = abilityNeedsClickTarget(ab);
       const rule = abilityTargetRule(ab);
@@ -478,8 +496,36 @@
     addBtn.disabled = false;
   }
 
+  function heroPartyOn() {
+    const cb = document.getElementById('chk-hero-party');
+    return !!(cb && cb.checked && typeof igorHeroGetActive === 'function' && igorHeroGetActive());
+  }
+  function syncHeroPartySlot() {
+    const cb = document.getElementById('chk-hero-party');
+    const h = (typeof igorHeroGetActive === 'function') ? igorHeroGetActive() : null;
+    if (cb) {
+      cb.disabled = !h;
+      if (!h) cb.checked = false;
+    }
+    if (!heroPartyOn() || !h) return;
+    const prev = party[0] || {};
+    const entry = {
+      classId: h.classId,
+      specId: h.specId,
+      sec: prev.sec ? { ...prev.sec } : defaultSec(),
+      gear: prev.gear ? normalizeGear(prev.gear) : emptyGear(),
+      heroLocked: true,
+    };
+    ensureSec(entry);
+    if (!party.length) party.push(entry);
+    else party[0] = Object.assign({}, party[0], entry);
+  }
   function addToParty() {
     if (!pickClass || !pickSpec) return;
+    if (heroPartyOn() && editSlot === 0) {
+      toast('Слот 1 занят героем таверны');
+      return;
+    }
     if (!isSpecPatched(pickClass, pickSpec)) {
       toast('Спек пока без правок — недоступен');
       return;
@@ -556,7 +602,7 @@
     for (let i = 0; i < getPartySize(); i++) {
       const p = party[i];
       const div = document.createElement('div');
-      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '') + (raidLobby ? ' raid-member' : '');
+      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '') + (raidLobby ? ' raid-member' : '') + ((i === 0 && heroPartyOn()) ? ' hero-locked' : '');
       if (p) {
         ensureSec(p);
         p.gear = normalizeGear(p.gear);
@@ -587,7 +633,7 @@
           <div class="slot-main raid-card">
             ${face}
             <div class="meta">
-              <b>${cls.name} · ${spec.name}</b>
+              <b>${cls.name} · ${spec.name}${(i === 0 && heroPartyOn()) ? ' · герой' : ''}</b>
               <span class="${ROLE_CLASS[spec.role]}">${ROLE_LABEL[spec.role]}${res ? ' · ' + res : ''}</span>
             </div>
             <button type="button" class="btn btn-sm party-gear-btn" data-gear-idx="${i}">Шмот</button>
@@ -658,6 +704,10 @@
           </div>`;
       }
       div.addEventListener('click', () => {
+        if (i === 0 && heroPartyOn()) {
+          toast('Слот 1 занят героем таверны');
+          return;
+        }
         editSlot = i;
         if (p) {
           pickClass = p.classId; pickSpec = p.specId;
@@ -746,6 +796,27 @@
     }
     const res = makeResourceState(cls, spec);
     const sec = ensureSec({ sec: secStats ? { ...secStats } : defaultSec() });
+    const opts = (typeof window !== 'undefined' && window._igorCreateHeroOpts) || null;
+    let isHeroUnit = !!(opts && opts.isHero);
+    let scaleLevel = (opts && opts.scaleLevel != null) ? opts.scaleLevel : null;
+    if (!opts && typeof igorHeroGetActive === 'function') {
+      const active = igorHeroGetActive();
+      if (active && active.classId === classId && active.specId === specId && !window._igorHeroBindUsed) {
+        isHeroUnit = true;
+        scaleLevel = active.level;
+        window._igorHeroBindUsed = true;
+      }
+    }
+    const share = (scaleLevel != null && typeof igorHeroLevelShare === 'function')
+      ? igorHeroLevelShare(scaleLevel)
+      : 1;
+    if (isHeroUnit && scaleLevel != null && typeof igorHeroSecForLevel === 'function') {
+      const lvSec = igorHeroSecForLevel(scaleLevel);
+      sec.critRating = lvSec.critRating;
+      sec.masteryRating = lvSec.masteryRating;
+      sec.versRating = lvSec.versRating;
+      ensureSec({ sec });
+    }
     // Guardian mastery tiny max HP bump (scales with mastery %)
     let hpBonus = 1;
     const mi = masteryInfo(classId, specId);
@@ -753,10 +824,10 @@
       const mp = (sec.masteryRating != null ? sec.masteryRating : SEC_MASTERY_RATING) / SEC_MASTERY_RATING * ((mi.pctAt120 || 35) / 100);
       hpBonus = 1 + mp * 0.12;
     }
-    // Кит спека один на любой ключ. Тяжелеют враги и аффиксы, не герой.
-    const baseMaxHp = Math.round(spec.stats.hp * STAT_SCALE * hpBonus);
-    const baseAtk = Math.round(spec.stats.atk * STAT_SCALE);
-    const baseDef = Math.round(spec.stats.def * STAT_SCALE);
+    // Без героя — текущий кит × STAT_SCALE. С героем — кривая доли; ур.40 = те же spec.stats.
+    const baseMaxHp = Math.round(spec.stats.hp * STAT_SCALE * hpBonus * share);
+    const baseAtk = Math.round(spec.stats.atk * STAT_SCALE * share);
+    const baseDef = Math.round(spec.stats.def * STAT_SCALE * share);
     const baseSpeed = spec.stats.speed;
     const hero = {
       uid: uid(),
@@ -821,15 +892,28 @@
       alive: true,
       res,
       color: cls.color,
-      gear: normalizeGear(gearState),
+      gear: normalizeGear(opts && opts.noGear ? null : gearState),
       ilvl: 0,
     };
+    hero._heroLevel = scaleLevel;
+    hero._isHero = !!isHeroUnit;
+    if (scaleLevel != null && typeof igorHeroFilterAbilities === 'function') {
+      hero.abilities = igorHeroFilterAbilities(hero.abilities, classId, specId, scaleLevel);
+    }
     hero._baseSecCritRating = hero.sec.critRating;
     hero._baseSecVersRating = hero.sec.versRating;
     hero._baseSecMasteryRating = hero.sec.masteryRating;
+    if (isHeroUnit && typeof igorHeroApplyTalents === 'function') {
+      igorHeroApplyTalents(hero);
+    }
     applyGearToHero(hero);
     for (const a of hero.abilities || []) {
       if (a.maxCharges && a.charges == null) a.charges = a.maxCharges;
+    }
+    if (typeof party !== 'undefined' && Array.isArray(party)) {
+      const src = party.find(p => p && p.classId === classId && p.specId === specId
+        && Array.isArray(p.abilityOrder) && p.abilityOrder.length);
+      if (src) hero.abilityOrder = src.abilityOrder.slice();
     }
     return hero;
   }
@@ -857,6 +941,7 @@
 
   function startRun() {
     try {
+      window._igorHeroBindUsed = false;
       savePartyProfile();
       party = (party || []).filter(p => p && WOW_MOP.getSpec(p.classId, p.specId));
       const raid = isRaidLobby();
@@ -881,7 +966,11 @@
         raid: !!raid,
         raidDiff: raid ? (raidDiff === 'heroic' ? 'heroic' : 'normal') : null,
         route: raid ? generateRaidRoute() : generateRoute(dungeon),
-        party: party.map(p => createHero(p.classId, p.specId, keyLevel, p.sec, p.gear)),
+        party: party.map(p => {
+          const h = createHero(p.classId, p.specId, keyLevel, p.sec, p.gear);
+          if (Array.isArray(p.abilityOrder) && p.abilityOrder.length) h.abilityOrder = p.abilityOrder.slice();
+          return h;
+        }),
         _roomArt: {}, // стабильные фоны комнат (rift/ember)
       };
       assignPartyUniqueNames(run.party);
@@ -909,6 +998,7 @@
 
   function continueRun() {
     try {
+      window._igorHeroBindUsed = false;
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return toast('Нет сохранения');
       const data = JSON.parse(raw);
@@ -918,6 +1008,7 @@
       if (!dungeon) return toast('Данж из сейва не найден');
       party = (data.partyBuild || []).map(x => {
         const e = { classId: x.classId, specId: x.specId, sec: x.sec ? { ...x.sec } : defaultSec(), gear: normalizeGear(x.gear) };
+        if (Array.isArray(x.abilityOrder) && x.abilityOrder.length) e.abilityOrder = x.abilityOrder.slice();
         ensureSec(e);
         return e;
       });
@@ -955,6 +1046,7 @@
           h.hp = p.hp; h.maxHp = p.maxHp; h.atk = p.atk; h.def = p.def; h.speed = p.speed;
           h.alive = p.alive; h.shield = p.shield || 0;
           if (p.res) h.res = p.res;
+          if (Array.isArray(p.abilityOrder) && p.abilityOrder.length) h.abilityOrder = p.abilityOrder.slice();
           return h;
         }),
         raid: isRaidSave,
@@ -962,7 +1054,11 @@
         _roomArt: data._roomArt || {},
       };
       if (!run.party.length) {
-        run.party = party.map(p => createHero(p.classId, p.specId, keyLevel, p.sec, p.gear));
+        run.party = party.map(p => {
+          const h = createHero(p.classId, p.specId, keyLevel, p.sec, p.gear);
+          if (Array.isArray(p.abilityOrder) && p.abilityOrder.length) h.abilityOrder = p.abilityOrder.slice();
+          return h;
+        });
       }
       assignPartyUniqueNames(run.party);
       if (run.raid) {
@@ -1550,10 +1646,13 @@
       if (u.role === 'tank' && te.tankHp) hpM *= te.tankHp;
       if (u.role === 'dps' && te.dpsAtk) atkM *= te.dpsAtk;
       const ratio = u.hp / Math.max(1, u.maxHp);
+      const heroShare = (u._heroLevel != null && typeof igorHeroLevelShare === 'function')
+        ? igorHeroLevelShare(u._heroLevel)
+        : 1;
       // Базы БЕЗ шмота и БЕЗ номера ключа; затем applyGearToHero накинет экип
-      u._baseMaxHp = Math.round(spec.stats.hp * hpM * STAT_SCALE);
-      u._baseAtk = Math.round(spec.stats.atk * atkM * STAT_SCALE);
-      u._baseDef = Math.round(spec.stats.def * defM * STAT_SCALE);
+      u._baseMaxHp = Math.round(spec.stats.hp * hpM * STAT_SCALE * heroShare);
+      u._baseAtk = Math.round(spec.stats.atk * atkM * STAT_SCALE * heroShare);
+      u._baseDef = Math.round(spec.stats.def * defM * STAT_SCALE * heroShare);
       u._baseSpeed = (spec.stats.speed || 10) + (te.speedFlat || 0);
       // sec-базы без шмота (если ещё не зафиксированы — из текущего sec «голого»)
       if (u._baseSecCritRating == null) {
@@ -1568,6 +1667,15 @@
       u.def = u._baseDef;
       u.speed = u._baseSpeed;
       u.hp = clamp(Math.round(u.maxHp * ratio), 0, u.maxHp);
+      if (u._isHero && u._heroLevel != null && typeof igorHeroSecForLevel === 'function') {
+        const lvSec = igorHeroSecForLevel(u._heroLevel);
+        u._baseSecCritRating = lvSec.critRating;
+        u._baseSecVersRating = lvSec.versRating;
+        u._baseSecMasteryRating = lvSec.masteryRating;
+      }
+      if (u._isHero && typeof igorHeroApplyStatTalents === 'function') {
+        igorHeroApplyStatTalents(u);
+      }
       if (typeof applyGearToHero === 'function') {
         applyGearToHero(u);
         // после шмота сохранить % HP
@@ -1593,7 +1701,10 @@
    * HP/DEF stay softer — 90% incoming DR keeps them alive.
    */
   const PET_ATK_FROM_OWNER = {
-    hunter_pet: 0.42,   // BM core pet (~45–65% of owner hit)
+    hunter_pet: 0.42,
+    hunter_bear: 0.42,
+    hunter_hawk: 0.48,
+    hunter_raptor: 0.44,
     felguard:   0.40,   // Demo
     ghoul:      0.36,   // Unholy (also Blood/Frost permanent ghoul)
     imp:        0.28,   // Affli / Destro baseline
@@ -1844,7 +1955,10 @@
   function spawnClassPets() {
     if (!combat || !run) return;
     for (const hero of run.party.filter(p => p.alive)) {
-      if (hero.classId === 'hunter') addPet(hero, 'hunter_pet', null);
+      if (hero.classId === 'hunter') {
+        const petKey = (typeof hunterPetKey === 'function') ? hunterPetKey(hero.specId) : 'hunter_pet';
+        addPet(hero, petKey, null);
+      }
       else if (hero.classId === 'warlock') {
         if (hero.specId === 'demonology') addPet(hero, 'felguard', null);
         else if (hero.specId === 'affliction') addPet(hero, 'imp', null);

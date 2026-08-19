@@ -132,20 +132,25 @@
    * Incoming damage mult from vers.
    * versPct is fraction (0.10 = 10%); DR scale ≈ 0.6 of that value (10% vers → −6% dmg).
    */
-  function versInDmgMult(u) {
-    if (!u || u.side !== 'ally') return 1;
+  function versPctWithBuffs(u) {
     const s = getUnitSec(u);
     const rating = Number(s.versRating != null ? s.versRating : 0) || 0;
-    const vp = rating * SEC_VERS_PCT_PER_RATING;
-    return clamp(1 - vp * 0.6, 0.55, 1);
+    let vp = rating * SEC_VERS_PCT_PER_RATING;
+    if (u && u.buffs) {
+      for (const b of u.buffs) {
+        if (b && b.versMod) vp += Number(b.versMod) || 0;
+      }
+    }
+    return clamp(vp, 0, 0.6);
+  }
+  function versInDmgMult(u) {
+    if (!u || u.side !== 'ally') return 1;
+    return clamp(1 - versPctWithBuffs(u) * 0.6, 0.55, 1);
   }
   /** Outgoing heal mult from vers (10% vers → +8% heal). */
   function versHealMult(u) {
     if (!u || u.side !== 'ally') return 1;
-    const s = getUnitSec(u);
-    const rating = Number(s.versRating != null ? s.versRating : 0) || 0;
-    const vp = rating * SEC_VERS_PCT_PER_RATING;
-    return 1 + vp * 0.8;
+    return 1 + versPctWithBuffs(u) * 0.8;
   }
   /**
    * Mastery effect as fraction (0.36 = 36%).

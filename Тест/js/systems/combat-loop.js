@@ -70,8 +70,11 @@
     }
     // Межпулловые «подарки» (привал +15% ATK / авто-lust) отключены — только боевые баффы от скиллов.
     if (run.restBuffBattles) run.restBuffBattles = 0;
-    combat = { type, enemies, pets: [], turnQueue: [], turnIndex: 0, round: 1, over: false, waitingPlayer: false, thunderTimer: 0 };
+    combat = { type, enemies, pets: [], turnQueue: [], turnIndex: 0, round: 1, over: false, waitingPlayer: false, thunderTimer: 0, _afterBusy: false, _animGate: 0 };
+    installAnimAfterAction();
+    try { if (typeof applyPartyClassAuras === 'function') applyPartyClassAuras(); } catch (e) { console.error('[party aura]', e); }
     spawnClassPets();
+    try { if (typeof applyPartyClassAuras === 'function') applyPartyClassAuras(); } catch (e) { console.error('[party aura]', e); }
     try { applyBossMechanics(); } catch (e) { console.error('[boss mech]', e); }
     buildTurnQueue();
     log('Бой: ' + ROOM_META[type].name, 'system');
@@ -84,9 +87,10 @@
   }
   function living(side) {
     if (side === 'ally') {
-      return [...run.party, ...((combat?.pets) || [])].filter(u => u.side === 'ally' && u.alive && u.hp > 0);
+      const pillars = (combat?.enemies || []).filter(u => u && u.side === 'ally' && u.alive && u.hp > 0 && (u.healOnly || u.instRole === 'static_pillar'));
+      return [...run.party, ...((combat?.pets) || []), ...pillars].filter(u => u.side === 'ally' && u.alive && u.hp > 0);
     }
-    return (combat?.enemies || []).filter(u => u.alive && u.hp > 0 && !u.vaultAway);
+    return (combat?.enemies || []).filter(u => u.alive && u.hp > 0 && !u.vaultAway && u.side !== 'ally' && !u.healOnly && u.instRole !== 'static_pillar');
   }
   function livingHeroes() {
     return run.party.filter(u => u.alive && u.hp > 0);
@@ -108,7 +112,7 @@
     return { atk: Math.round(atk), def: Math.round(def), speed };
   }
   function buildTurnQueue() {
-    const units = allUnits().filter(u => u.alive && u.hp > 0 && u.petKey !== 'jade_serpent');
+    const units = allUnits().filter(u => u.alive && u.hp > 0 && u.petKey !== 'jade_serpent' && !u.instObject && !u.healOnly && !u.vaultAway);
     units.sort((a, b) => getEff(b).speed - getEff(a).speed);
     combat.turnQueue = units.map(u => u.uid);
     combat.turnIndex = 0;
@@ -118,10 +122,52 @@
     return allUnits().find(u => u.uid === id) || null;
   }
 
+  function animWaitMs(animMs) {
+    const n = Number(animMs);
+    return Math.min(900, Math.max(280, n > 0 ? n : 350));
+  }
+
+  function installAnimAfterAction() {
+    if (installAnimAfterAction._ok) return;
+    if (typeof afterAction !== 'function') return;
+    installAnimAfterAction._ok = true;
+    const _after = afterAction;
+    afterAction = function () {
+      if (!combat || combat.over) return;
+      if (combat._afterBusy) return;
+      const preWait = !!combat._animPreWait;
+      const aiWait = !!combat._aiAnimWait;
+      combat._animPreWait = false;
+      combat._aiAnimWait = false;
+      const animMs = (typeof takeSkillAnimMs === 'function') ? takeSkillAnimMs() : 0;
+      combat._afterBusy = true;
+      try {
+        _after.apply(this, arguments);
+      } catch (err) {
+        combat._afterBusy = false;
+        throw err;
+      }
+      if (!combat || combat.over) {
+        if (combat) combat._afterBusy = false;
+        return;
+      }
+      if (combat.waitingPlayer) {
+        combat._afterBusy = false;
+        return;
+      }
+      let wait;
+      if (preWait) wait = 0;
+      else if (aiWait) wait = Math.max(typeof aiDelay === 'function' ? aiDelay() : 400, animWaitMs(animMs));
+      else wait = animWaitMs(animMs);
+      scheduleProcessTurn(wait);
+    };
+  }
+
   function scheduleProcessTurn(delay) {
     clearTimeout(aiTimer);
     aiTimer = setTimeout(() => {
       try {
+        if (combat) combat._afterBusy = false;
         if (!paused) processTurn();
       } catch (err) {
         console.error('[processTurn]', err);
@@ -129,6 +175,7 @@
         if (combat && !combat.over) {
           combat.waitingPlayer = false;
           combat._keepPlayerTurn = false;
+          combat._afterBusy = false;
           combat.turnIndex = (combat.turnIndex || 0) + 1;
           scheduleProcessTurn(80);
         }
@@ -137,7 +184,9 @@
   }
 
   function processTurn() {
+    installAnimAfterAction();
     if (!combat || combat.over || run.finished) return;
+    if (combat._afterBusy) return;
     if (combat.vaultLock) {
       scheduleProcessTurn(180);
       return;
@@ -206,16 +255,21 @@
         clearTimeout(aiTimer);
         aiTimer = setTimeout(() => {
           try {
-            if (paused || !combat || combat.over) return;
+            if (paused || !combat || combat.over || combat._afterBusy) return;
+            installAnimAfterAction();
             if (typeof raidAllyAi === 'function') {
               if (!raidAllyAi(actor)) aiAct(actor);
             } else {
               aiAct(actor);
             }
+            combat._aiAnimWait = true;
             afterAction();
           } catch (err) {
             console.error('[raidAi]', err);
-            if (combat) combat._keepPlayerTurn = false;
+            if (combat) {
+              combat._keepPlayerTurn = false;
+              combat._aiAnimWait = true;
+            }
             afterAction();
           }
         }, Math.max(40, Math.round(aiDelay() * 0.55)));
@@ -235,12 +289,17 @@
       clearTimeout(aiTimer);
       aiTimer = setTimeout(() => {
         try {
-          if (paused || !combat || combat.over) return;
+          if (paused || !combat || combat.over || combat._afterBusy) return;
+          installAnimAfterAction();
           aiAct(actor);
+          combat._aiAnimWait = true;
           afterAction();
         } catch (err) {
           console.error('[aiAct]', err);
-          if (combat) combat._keepPlayerTurn = false;
+          if (combat) {
+            combat._keepPlayerTurn = false;
+            combat._aiAnimWait = true;
+          }
           afterAction();
         }
       }, aiDelay());
@@ -352,6 +411,7 @@
       // Expire statuses once per combat round (after the single tick)
       const next = [];
       for (const b of (u.buffs || [])) {
+        if (b && b.aura) { next.push(b); continue; }
         const left = (Number(b.turns) || 1) - 1;
         if (left <= 0) {
           if (b.tempHp) {
@@ -520,18 +580,54 @@
     }
   }
 
+  function runPlayerCast(actor, ability, target) {
+    installAnimAfterAction();
+    if (!combat || combat.over || combat._afterBusy) return;
+    combat.waitingPlayer = false;
+    try {
+      const bar = document.getElementById('ability-bar');
+      if (bar) bar.innerHTML = '';
+      hidePassivePocket();
+    } catch (_) {}
+    try {
+      castAbility(actor, ability, target);
+    } catch (err) {
+      console.error('[cast]', err);
+    }
+    if (!combat || combat.over) return;
+    if (combat._afterBusy) return;
+    const wait = animWaitMs(typeof takeSkillAnimMs === 'function' ? takeSkillAnimMs() : 0);
+    combat._animPreWait = true;
+    combat._afterBusy = true;
+    const gate = (combat._animGate = (combat._animGate || 0) + 1);
+    clearTimeout(aiTimer);
+    aiTimer = setTimeout(() => {
+      try {
+        if (!combat || combat.over || combat._animGate !== gate) return;
+        combat._afterBusy = false;
+        afterAction();
+      } catch (err) {
+        console.error('[afterAction]', err);
+        if (combat && combat._animGate === gate) {
+          combat._afterBusy = false;
+          combat._keepPlayerTurn = false;
+          combat.waitingPlayer = false;
+        }
+        scheduleProcessTurn(80);
+      }
+    }, wait);
+  }
+
   /** Каст с рунами: кратко подсветить, потом выполнить действие. */
   function castWithRuneFlash(actor, ability, target) {
     if (ability && ability.costRunes && actor && actor.res && actor.res.runes) {
       highlightAbilityRunes(actor, ability.costRunes, true);
       setTimeout(() => {
         try { clearRuneHighlight(); } catch (_) {}
-        castAbility(actor, ability, target);
-        afterAction();
+        runPlayerCast(actor, ability, target);
       }, 150);
       return;
     }
-    castAbility(actor, ability, target);
-    afterAction();
+    runPlayerCast(actor, ability, target);
   }
 

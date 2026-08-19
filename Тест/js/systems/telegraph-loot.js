@@ -128,6 +128,7 @@
     run.loot.push(item);
     run.keyPowers = run.keyPowers || {};
     for (const p of run.party) {
+      // Живые atk/hp/def (после applyGearToHero). Не в ability.power и не в голый sec.
       if (item.hpFlat) {
         const ratio = p.hp / Math.max(1, p.maxHp);
         p.maxHp = Math.round(p.maxHp * (1 + item.hpFlat));
@@ -248,6 +249,12 @@
     const grid = document.getElementById('loot-grid');
     const modal = document.getElementById('loot-modal');
     if (!grid || !modal) { if (lootDoneCb) lootDoneCb(); return; }
+    const title = modal.querySelector('h2');
+    if (title) title.textContent = 'Добыча — сила ключа';
+    const hint = modal.querySelector('.hint');
+    if (hint) hint.innerHTML = 'Дополнительно: выбери <b>1 из 3</b> сил ключа (или пропусти).';
+    const skip = document.getElementById('loot-skip');
+    if (skip) skip.onclick = null;
     const pool = LOOT_DRAFT_POOL.slice();
     const picks = [];
     while (picks.length < 3 && pool.length) {
@@ -357,7 +364,9 @@
 
   /** Ключ постоянного «основного» питомца по классу/спеку (null = нет). */
   function mainPetKeyFor(classId, specId) {
-    if (classId === 'hunter') return 'hunter_pet';
+    if (classId === 'hunter') {
+      return (typeof hunterPetKey === 'function') ? hunterPetKey(specId) : 'hunter_pet';
+    }
     if (classId === 'warlock') return (specId === 'demonology') ? 'felguard' : 'imp';
     // Постоянный вурдалак — только Нечестивость
     if (classId === 'deathknight') return (specId === 'unholy') ? 'ghoul' : null;

@@ -71,7 +71,9 @@
     // Межпулловые «подарки» (привал +15% ATK / авто-lust) отключены — только боевые баффы от скиллов.
     if (run.restBuffBattles) run.restBuffBattles = 0;
     combat = { type, enemies, pets: [], turnQueue: [], turnIndex: 0, round: 1, over: false, waitingPlayer: false, thunderTimer: 0 };
+    try { if (typeof applyPartyClassAuras === 'function') applyPartyClassAuras(); } catch (e) { console.error('[party aura]', e); }
     spawnClassPets();
+    try { if (typeof applyPartyClassAuras === 'function') applyPartyClassAuras(); } catch (e) { console.error('[party aura]', e); }
     try { applyBossMechanics(); } catch (e) { console.error('[boss mech]', e); }
     buildTurnQueue();
     log('Бой: ' + ROOM_META[type].name, 'system');
@@ -352,6 +354,7 @@
       // Expire statuses once per combat round (after the single tick)
       const next = [];
       for (const b of (u.buffs || [])) {
+        if (b && b.aura) { next.push(b); continue; }
         const left = (Number(b.turns) || 1) - 1;
         if (left <= 0) {
           if (b.tempHp) {

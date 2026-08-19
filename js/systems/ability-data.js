@@ -1,6 +1,9 @@
 /* systems/ability-data: PET_DEFS, HoT, schools, estimates, applyStatus */
   const PET_DEFS = {
     hunter_pet: { name: 'Питомец', icon: '🐺', hp: 100, atk: 16, def: 5, speed: 13, role: 'dps' },
+    hunter_bear: { name: 'Медведь', icon: '🐻', hp: 130, atk: 15, def: 7, speed: 11, role: 'dps' },
+    hunter_hawk: { name: 'Ястреб', icon: '🦅', hp: 80, atk: 17, def: 3, speed: 15, role: 'dps' },
+    hunter_raptor: { name: 'Ящер', icon: '🦖', hp: 95, atk: 16, def: 5, speed: 14, role: 'dps' },
     felguard:   { name: 'Страж Скверны', icon: '👹', hp: 125, atk: 17, def: 7, speed: 11, role: 'dps' },
     imp:        { name: 'Бес', icon: '👿', hp: 55, atk: 14, def: 2, speed: 14, role: 'dps' },
     water_totem:{ name: 'Водяной тотем', icon: '⛲', hp: 40, atk: 8, def: 2, speed: 10, role: 'healer' },

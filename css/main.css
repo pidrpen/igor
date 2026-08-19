@@ -2022,7 +2022,21 @@
       align-items: stretch;
       transition: border-color .15s, box-shadow .15s;
       box-sizing: border-box;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
     }
+    .ability.dragging {
+      opacity: .45;
+      cursor: grabbing;
+      border-color: var(--gold);
+      box-shadow: 0 0 16px rgba(224,192,96,.45);
+    }
+    .ability.drag-over {
+      border-color: #8ec8ff;
+      box-shadow: 0 0 14px rgba(142,200,255,.4);
+    }
+    .ability-bar.is-reordering .ability { cursor: grabbing; }
     .ability:hover:not(:disabled):not(.is-disabled) {
       border-color: var(--gold); box-shadow: 0 0 14px rgba(224,192,96,.35);
     }

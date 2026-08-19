@@ -21,17 +21,67 @@
     if (ab && ab.curCd > 0) return '<div class="cd-overlay">' + ab.curCd + '</div>';
     return '';
   }
+  function orderedAbilities(u) {
+    const abs = (u && u.abilities) ? u.abilities.slice() : [];
+    const ord = u && u.abilityOrder;
+    if (!ord || !ord.length) return abs;
+    const byId = {};
+    abs.forEach((a) => { if (a && a.id && !byId[a.id]) byId[a.id] = a; });
+    const out = [];
+    const used = new Set();
+    ord.forEach((id) => {
+      if (byId[id] && !used.has(id)) { out.push(byId[id]); used.add(id); }
+    });
+    abs.forEach((a) => { if (a && a.id && !used.has(a.id)) out.push(a); });
+    return out;
+  }
   function showAbilities(actor) {
     const bar = document.getElementById('ability-bar');
     const actions = document.getElementById('combat-actions');
     const scrollY = bar ? bar.scrollTop : 0;
     try { hideAbilityTipFloat(); } catch (_) {}
     try { clearRuneHighlight(); } catch (_) {}
+    if (bar && bar._holdTimer) { clearTimeout(bar._holdTimer); bar._holdTimer = null; }
+    if (bar && bar._holdMove) {
+      window.removeEventListener('pointermove', bar._holdMove);
+      window.removeEventListener('pointerup', bar._holdUp);
+      window.removeEventListener('pointercancel', bar._holdUp);
+      bar._holdMove = bar._holdUp = null;
+    }
     if (bar) bar.innerHTML = '';
     if (actions) actions.innerHTML = '';
     try { renderPassiveTray(actor); } catch (e) { console.error(e); }
     if (!bar) return;
-    actor.abilities.forEach((ab, idx) => {
+    function persistOrder(u, ids) {
+      u.abilityOrder = ids.slice();
+      let idx = -1;
+      if (run && run.party) {
+        idx = run.party.findIndex((p) => p && p.uid === u.uid);
+        if (idx >= 0 && run.party[idx]) run.party[idx].abilityOrder = ids.slice();
+      }
+      if (typeof party !== 'undefined' && Array.isArray(party)) {
+        if (idx >= 0 && party[idx] && party[idx].classId === u.classId) {
+          party[idx].abilityOrder = ids.slice();
+        } else {
+          const lobby = party.find((p) => p && p.classId === u.classId && p.specId === u.specId);
+          if (lobby) lobby.abilityOrder = ids.slice();
+        }
+      }
+      try { if (typeof savePartyProfile === 'function') savePartyProfile(); } catch (_) {}
+    }
+    function reorderAbility(u, fromId, toId) {
+      if (!fromId || !toId || fromId === toId) return;
+      const list = orderedAbilities(u);
+      const from = list.findIndex((a) => a.id === fromId);
+      const to = list.findIndex((a) => a.id === toId);
+      if (from < 0 || to < 0) return;
+      const [moved] = list.splice(from, 1);
+      list.splice(to, 0, moved);
+      persistOrder(u, list.map((a) => a.id));
+      showAbilities(u);
+    }
+    const shown = orderedAbilities(actor);
+    shown.forEach((ab, idx) => {
       const btn = document.createElement('button');
       const can = canPay(actor, ab);
       const hasWideSweep = !!(actor.buffs || []).some(b => b && b.id === 'wide_sweep' && (Number(b.stacks) || 0) > 0);
@@ -147,7 +197,88 @@
         btn.addEventListener('focus', hlOn);
         btn.addEventListener('blur', hlOff);
       }
+      btn.draggable = false;
+      btn.dataset.abid = ab.id;
+      const HOLD_MS = 320;
+      const cancelHoldTimer = () => {
+        if (bar._holdTimer) { clearTimeout(bar._holdTimer); bar._holdTimer = null; }
+      };
+      const dropWindowHold = () => {
+        if (bar._holdMove) {
+          window.removeEventListener('pointermove', bar._holdMove);
+          window.removeEventListener('pointerup', bar._holdUp);
+          window.removeEventListener('pointercancel', bar._holdUp);
+          bar._holdMove = bar._holdUp = null;
+        }
+      };
+      const clearOver = () => {
+        bar.querySelectorAll('.ability.drag-over').forEach((el) => el.classList.remove('drag-over'));
+      };
+      btn.addEventListener('pointerdown', (e) => {
+        if (e.button != null && e.button !== 0) return;
+        bar._didDrag = false;
+        bar._dragArmed = false;
+        bar._holdFrom = ab.id;
+        bar._holdX = e.clientX;
+        bar._holdY = e.clientY;
+        bar._holdPtr = e.pointerId;
+        cancelHoldTimer();
+        dropWindowHold();
+        const onMove = (ev) => {
+          if (ev.pointerId !== bar._holdPtr) return;
+          if (!bar._dragArmed) {
+            const dx = ev.clientX - (bar._holdX || 0);
+            const dy = ev.clientY - (bar._holdY || 0);
+            if (dx * dx + dy * dy > 64) cancelHoldTimer();
+            return;
+          }
+          ev.preventDefault();
+          const el = document.elementFromPoint(ev.clientX, ev.clientY);
+          const over = el && el.closest && el.closest('#ability-bar .ability');
+          bar.querySelectorAll('.ability.drag-over').forEach((x) => {
+            if (x !== over) x.classList.remove('drag-over');
+          });
+          if (over && over !== btn) over.classList.add('drag-over');
+        };
+        const onUp = (ev) => {
+          if (ev.pointerId !== bar._holdPtr) return;
+          dropWindowHold();
+          const fromId = bar._holdFrom;
+          const armed = !!bar._dragArmed;
+          cancelHoldTimer();
+          bar._dragArmed = false;
+          bar._holdFrom = null;
+          btn.classList.remove('dragging');
+          bar.classList.remove('is-reordering');
+          let toId = null;
+          if (armed) {
+            const el = document.elementFromPoint(ev.clientX, ev.clientY);
+            const over = el && el.closest && el.closest('#ability-bar .ability');
+            if (over && over.dataset.abid) toId = over.dataset.abid;
+          }
+          clearOver();
+          try { btn.releasePointerCapture(ev.pointerId); } catch (_) {}
+          if (armed) {
+            bar._didDrag = true;
+            if (fromId && toId && fromId !== toId) reorderAbility(actor, fromId, toId);
+          }
+        };
+        bar._holdMove = onMove;
+        bar._holdUp = onUp;
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onUp);
+        bar._holdTimer = setTimeout(() => {
+          bar._holdTimer = null;
+          bar._dragArmed = true;
+          btn.classList.add('dragging');
+          bar.classList.add('is-reordering');
+          try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+          try { hideAbilityTipFloat(); } catch (_) {}
+        }, HOLD_MS);
+      });
       btn.addEventListener('click', () => {
+        if (bar._didDrag) { bar._didDrag = false; return; }
         hideAbilityTipFloat();
         sfx('click');
         if (btn.classList.contains('is-disabled') || !canPay(actor, ab)) return;
@@ -746,6 +877,11 @@
     if (b.dmgReduce) lines.push('Урон по цели −' + Math.round(Number(b.dmgReduce) * 100) + '%');
     if (b.enemyDmgMod) lines.push('Урон цели −' + Math.round(Number(b.enemyDmgMod) * 100) + '%');
     if (b.atkMod) lines.push((b.atkMod > 0 ? '+' : '') + Math.round(b.atkMod * 100) + '% атаки');
+    if (b.critMod) lines.push((b.critMod > 0 ? '+' : '') + Math.round(Number(b.critMod) * 100) + '% крита');
+    if (b.versMod) lines.push((b.versMod > 0 ? '+' : '') + Math.round(Number(b.versMod) * 100) + '% универсальности');
+    if (b.lifesteal) lines.push(Math.round(Number(b.lifesteal) * 100) + '% нанесённого возвращается');
+    if (b.healTakenMod) lines.push((b.healTakenMod > 0 ? '+' : '') + Math.round(Number(b.healTakenMod) * 100) + '% входящего лечения');
+    if (b.petAtkMod) lines.push((b.petAtkMod > 0 ? '+' : '') + Math.round(Number(b.petAtkMod) * 100) + '% урона питомцам');
     if (b.defMod) lines.push((b.defMod > 0 ? '+' : '') + Math.round(b.defMod * 100) + '% защиты');
     if (b.armorMod) lines.push((Number(b.armorMod) > 0 ? '+' : '') + Math.round(Number(b.armorMod) * 100) + '% брони');
     if (b.abilityCharges != null) lines.push(b.abilityCharges + ' удар' + (b.abilityCharges === 1 ? '' : 'а'));

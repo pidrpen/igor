@@ -2,6 +2,29 @@
   function getSpecPassives(classId, specId, role) {
     const list = [];
     const r = role || (classId && specId && (WOW_MOP.getSpec(classId, specId) || {}).role) || null;
+    if (typeof CLASS_AURA === 'object' && classId && classId !== 'hunter') {
+      const au = CLASS_AURA[classId];
+      if (au && au.tip && (au.atkMod || au.dmgReduce || au.critMod || au.versMod || au.petAtkMod || au.healTakenMod || au.lifesteal)) {
+        list.push({
+          id: au.id,
+          name: au.name,
+          icon: au.icon,
+          short: 'отряд',
+          detail: au.tip + ' Вешается на весь отряд в начале боя. Два одинаковых класса не складывают.',
+        });
+      }
+    }
+    if (classId === 'hunter') {
+      const hk = (typeof hunterPetKey === 'function') ? hunterPetKey(specId) : 'hunter_pet';
+      const names = { hunter_bear: 'Медведь: 20% вампиризма себе, отряду +4% атаки.', hunter_hawk: 'Ястреб: +10% крита питомцу, отряду +5% крита.', hunter_raptor: 'Ящер: +8% унив. питомцу, отряду +5% унив.' };
+      list.push({
+        id: 'hunter_aspect',
+        name: specId === 'marksmanship' ? 'Дух ястреба' : (specId === 'survival' ? 'Дух ящера' : 'Дух зверя'),
+        icon: specId === 'marksmanship' ? '🦅' : (specId === 'survival' ? '🦖' : '🐻'),
+        short: 'питомец',
+        detail: names[hk] || names.hunter_bear,
+      });
+    }
     // Все ДК: как работают руны
     if (classId === 'deathknight' && specId === 'frost') {
       list.push({

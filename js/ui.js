@@ -201,8 +201,9 @@
     if (e.key === 'p' || e.key === 'P') { togglePause(); return; }
     if (e.key === 's' || e.key === 'S') { cycleSpeed(); return; }
     const n = e.key === '0' ? 9 : parseInt(e.key, 10) - 1;
-    if (n >= 0 && n < actor.abilities.length) {
-      const ab = actor.abilities[n];
+    const abs = (typeof orderedAbilities === 'function') ? orderedAbilities(actor) : (actor.abilities || []);
+    if (n >= 0 && n < abs.length) {
+      const ab = abs[n];
       if (!canPay(actor, ab)) return toast('Нельзя: ' + ab.name);
       const needTarget = abilityNeedsClickTarget(ab);
       const rule = abilityTargetRule(ab);
@@ -831,6 +832,11 @@
     for (const a of hero.abilities || []) {
       if (a.maxCharges && a.charges == null) a.charges = a.maxCharges;
     }
+    if (typeof party !== 'undefined' && Array.isArray(party)) {
+      const src = party.find(p => p && p.classId === classId && p.specId === specId
+        && Array.isArray(p.abilityOrder) && p.abilityOrder.length);
+      if (src) hero.abilityOrder = src.abilityOrder.slice();
+    }
     return hero;
   }
 
@@ -881,7 +887,11 @@
         raid: !!raid,
         raidDiff: raid ? (raidDiff === 'heroic' ? 'heroic' : 'normal') : null,
         route: raid ? generateRaidRoute() : generateRoute(dungeon),
-        party: party.map(p => createHero(p.classId, p.specId, keyLevel, p.sec, p.gear)),
+        party: party.map(p => {
+          const h = createHero(p.classId, p.specId, keyLevel, p.sec, p.gear);
+          if (Array.isArray(p.abilityOrder) && p.abilityOrder.length) h.abilityOrder = p.abilityOrder.slice();
+          return h;
+        }),
         _roomArt: {}, // стабильные фоны комнат (rift/ember)
       };
       assignPartyUniqueNames(run.party);
@@ -918,6 +928,7 @@
       if (!dungeon) return toast('Данж из сейва не найден');
       party = (data.partyBuild || []).map(x => {
         const e = { classId: x.classId, specId: x.specId, sec: x.sec ? { ...x.sec } : defaultSec(), gear: normalizeGear(x.gear) };
+        if (Array.isArray(x.abilityOrder) && x.abilityOrder.length) e.abilityOrder = x.abilityOrder.slice();
         ensureSec(e);
         return e;
       });
@@ -955,6 +966,7 @@
           h.hp = p.hp; h.maxHp = p.maxHp; h.atk = p.atk; h.def = p.def; h.speed = p.speed;
           h.alive = p.alive; h.shield = p.shield || 0;
           if (p.res) h.res = p.res;
+          if (Array.isArray(p.abilityOrder) && p.abilityOrder.length) h.abilityOrder = p.abilityOrder.slice();
           return h;
         }),
         raid: isRaidSave,
@@ -962,7 +974,11 @@
         _roomArt: data._roomArt || {},
       };
       if (!run.party.length) {
-        run.party = party.map(p => createHero(p.classId, p.specId, keyLevel, p.sec, p.gear));
+        run.party = party.map(p => {
+          const h = createHero(p.classId, p.specId, keyLevel, p.sec, p.gear);
+          if (Array.isArray(p.abilityOrder) && p.abilityOrder.length) h.abilityOrder = p.abilityOrder.slice();
+          return h;
+        });
       }
       assignPartyUniqueNames(run.party);
       if (run.raid) {
@@ -1591,7 +1607,10 @@
    * HP/DEF stay softer — 90% incoming DR keeps them alive.
    */
   const PET_ATK_FROM_OWNER = {
-    hunter_pet: 0.42,   // BM core pet (~45–65% of owner hit)
+    hunter_pet: 0.42,
+    hunter_bear: 0.42,
+    hunter_hawk: 0.48,
+    hunter_raptor: 0.44,
     felguard:   0.40,   // Demo
     ghoul:      0.36,   // Unholy (also Blood/Frost permanent ghoul)
     imp:        0.28,   // Affli / Destro baseline
@@ -1842,7 +1861,10 @@
   function spawnClassPets() {
     if (!combat || !run) return;
     for (const hero of run.party.filter(p => p.alive)) {
-      if (hero.classId === 'hunter') addPet(hero, 'hunter_pet', null);
+      if (hero.classId === 'hunter') {
+        const petKey = (typeof hunterPetKey === 'function') ? hunterPetKey(hero.specId) : 'hunter_pet';
+        addPet(hero, petKey, null);
+      }
       else if (hero.classId === 'warlock') {
         if (hero.specId === 'demonology') addPet(hero, 'felguard', null);
         else if (hero.specId === 'affliction') addPet(hero, 'imp', null);

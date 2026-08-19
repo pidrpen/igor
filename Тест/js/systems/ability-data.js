@@ -1,6 +1,9 @@
 /* systems/ability-data: PET_DEFS, HoT, schools, estimates, applyStatus */
   const PET_DEFS = {
     hunter_pet: { name: 'Питомец', icon: '🐺', hp: 100, atk: 16, def: 5, speed: 13, role: 'dps' },
+    hunter_bear: { name: 'Медведь', icon: '🐻', hp: 130, atk: 15, def: 7, speed: 11, role: 'dps' },
+    hunter_hawk: { name: 'Ястреб', icon: '🦅', hp: 80, atk: 17, def: 3, speed: 15, role: 'dps' },
+    hunter_raptor: { name: 'Ящер', icon: '🦖', hp: 95, atk: 16, def: 5, speed: 14, role: 'dps' },
     felguard:   { name: 'Страж Скверны', icon: '👹', hp: 125, atk: 17, def: 7, speed: 11, role: 'dps' },
     imp:        { name: 'Бес', icon: '👿', hp: 55, atk: 14, def: 2, speed: 14, role: 'dps' },
     water_totem:{ name: 'Водяной тотем', icon: '⛲', hp: 40, atk: 8, def: 2, speed: 10, role: 'healer' },
@@ -788,8 +791,9 @@
     'Пошатывание': 'Около 35% входящего уходит в пул и тикает по себе. «Очищающий отвар» снимает долю пула в щит «Отвара неуловимости».',
     'Отвар неуловимости': 'Щит: базовая прочность плюс урон, недавно снятый «Очищающим отваром».',
     'Очищающий отвар': 'Снимает часть «Пошатывания». Снятое копится для щита «Отвара неуловимости».',
-    'Огненный шок': 'Дот. Пока висит, «Выброс лавы» гарантированно критует.',
+    'Огненный шок': 'Дот. У Стихий, пока висит, ваш «Выброс лавы» критует. У Совершенствования нужен, чтобы «Кольцо огня» сработало.',
     'Выброс лавы': 'Жирный огненный удар. Если на цели «Огненный шок» — этот удар критует без броска.',
+    'Кольцо огня': 'Урон по всем врагам. Срабатывает только если на выбранной цели висит ваш «Огненный шок».',
     'Смерть и разложение': 'Лужа: свои удары дублируются по целям, которые в ней стоят.',
     'Костяной щит': 'Разовый урон цели и щит на себя.',
     'Неистовое восстановление': 'Хот в процентах запаса здоровья, не плоские т.',
@@ -818,7 +822,7 @@
     'Быстрина': 'Хот шамана. Тик в конце раунда.',
     'Исцеляющий ливень': 'Хот по отряду.',
     'Шок небес': 'Хот после Шока небес в союзника.',
-    'Освящение': 'Дот по земле. Правосудие бьёт сильнее тех, кто стоит в нём.',
+    'Освящение': 'Дот по земле. У Защиты «Правосудие» бьёт тех, кто стоит в нём, на долю своего удара.',
     'Священный огонь': 'Дот Послушания. Кормит «Искупление».',
     'Слово Тьмы: Боль': 'Дот Тьмы.',
     'Прикосновение вампира': 'Дот Тьмы, длиннее Боли.',
@@ -866,6 +870,54 @@
     return leftover.length < 4;
   }
 
+  function ruCount(n, one, few, many) {
+    const t = Math.abs(Math.round(Number(n) || 0));
+    const n10 = t % 10;
+    const n100 = t % 100;
+    let w = many;
+    if (n100 < 11 || n100 > 14) {
+      if (n10 === 1) w = one;
+      else if (n10 >= 2 && n10 <= 4) w = few;
+    }
+    return t + ' ' + w;
+  }
+  function ruTurns(n) { return ruCount(n, 'ход', 'хода', 'ходов'); }
+  function ruRounds(n) { return ruCount(n, 'раунд', 'раунда', 'раундов'); }
+
+  function kitHasId(actor, id) {
+    if (!actor || !id) return false;
+    const list = actor.abilities;
+    return !!(Array.isArray(list) && list.some(a => a && a.id === id));
+  }
+
+  function abilityFlatLabel(ab) {
+    const n = abilityFlatWeight(ab);
+    if (n == null || !(Number(n) > 0)) return '';
+    return n + 'т';
+  }
+
+  function costSecLabel(ab, actor) {
+    const n = Number(ab && ab.costSec) || 0;
+    if (!(n > 0)) return '';
+    const sec = actor && actor.res && actor.res.secondary;
+    const typ = sec && sec.type;
+    const named = {
+      holy_power: 'Энергии Света',
+      combo: 'очков серии',
+      shadow_orbs: 'сфер тьмы',
+      chi: 'ци',
+      soul_shards: 'осколков души',
+      details: 'деталей',
+      steam: 'пара',
+    };
+    if (typ && named[typ]) return n + ' ' + named[typ];
+    if (sec && sec.name) return n + ' ' + sec.name;
+    if (['word_glory', 'light_dawn', 'sot_r', 'templar', 'divine_storm', 'hot_r'].indexOf(ab && ab.id) >= 0) {
+      return n + ' Энергии Света';
+    }
+    return '';
+  }
+
   function describeDataFacts(ab) {
     if (!ab) return [];
     const bits = [];
@@ -874,199 +926,440 @@
       const nm = ad.name || 'периодический урон';
       const fl = ad.flat != null ? Number(ad.flat) : null;
       const tn = Number(ad.turns) || 0;
-      if (fl != null && tn) bits.push('«' + nm + '»: ' + fl + 'т за раунд, ' + tn + ' р.');
-      else if (tn) bits.push('«' + nm + '» на ' + tn + ' р.');
+      if (fl != null && tn) bits.push('«' + nm + '»: ' + fl + 'т за раунд, ' + ruRounds(tn) + '.');
+      else if (fl != null) bits.push('«' + nm + '»: ' + fl + 'т за раунд.');
+      else if (tn) bits.push('«' + nm + '» на ' + ruRounds(tn) + '.');
     }
     const ah = ab.applyHot;
     if (ah) {
       const nm = ah.name || 'периодическое лечение';
+      const tn = Number(ah.turns) || 0;
       if (ah.hpPct != null) {
-        bits.push('«' + nm + '»: ' + Math.round(Number(ah.hpPct) * 100) + '% HP за раунд, ' + (Number(ah.turns) || 0) + ' р.');
+        bits.push('«' + nm + '»: ' + Math.round(Number(ah.hpPct) * 100) + '% HP за раунд, ' + ruRounds(tn) + '.');
       } else if (ah.flat != null) {
-        bits.push('«' + nm + '»: ' + Number(ah.flat) + 'т лечения за раунд, ' + (Number(ah.turns) || 0) + ' р.');
+        bits.push('«' + nm + '»: ' + Number(ah.flat) + 'т лечения за раунд, ' + ruRounds(tn) + '.');
       }
     }
-    if (ab.atkMod) bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% атаки' + (ab.buffTurns ? ' · ' + ab.buffTurns + 'х' : ''));
-    if (ab.petAtkMod) bits.push('+' + Math.round(Number(ab.petAtkMod) * 100) + '% урона питомца' + (ab.buffTurns ? ' · ' + ab.buffTurns + 'х' : ''));
-    if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% входящего' + (ab.buffTurns ? ' · ' + ab.buffTurns + 'х' : ''));
-    if (ab.armorMod && !ab.armorStacksMax) bits.push((Number(ab.armorMod) > 0 ? '+' : '') + Math.round(Number(ab.armorMod) * 100) + '% брони' + (ab.buffTurns ? ' · ' + ab.buffTurns + 'х' : ''));
+    if (ab.atkMod) bits.push('+' + Math.round(Number(ab.atkMod) * 100) + '% атаки' + (ab.buffTurns ? ' · ' + ruTurns(ab.buffTurns) : ''));
+    if (ab.petAtkMod) bits.push('+' + Math.round(Number(ab.petAtkMod) * 100) + '% урона питомца' + (ab.buffTurns ? ' · ' + ruTurns(ab.buffTurns) : ''));
+    if (ab.critMod) bits.push('+' + Math.round(Number(ab.critMod) * 100) + '% крит' + (ab.buffTurns ? ' · ' + ruTurns(ab.buffTurns) : ''));
+    if (ab.critBonus) bits.push('+' + Math.round(Number(ab.critBonus) * 100) + '% к шансу крита');
+    if (ab.dmgReduce) bits.push('−' + Math.round(Number(ab.dmgReduce) * 100) + '% входящего' + (ab.buffTurns ? ' · ' + ruTurns(ab.buffTurns) : ''));
+    if (ab.staggerBonus) bits.push('+' + Math.round(Number(ab.staggerBonus) * 100) + '% пошатывания' + (ab.buffTurns ? ' · ' + ruTurns(ab.buffTurns) : ''));
+    if (ab.armorMod) {
+      let a = (Number(ab.armorMod) > 0 ? '+' : '') + Math.round(Number(ab.armorMod) * 100) + '% брони';
+      if (ab.armorStacksMax) a += ' · до ' + ab.armorStacksMax + ' стаков';
+      if (ab.buffTurns) a += ' · ' + ruTurns(ab.buffTurns);
+      bits.push(a);
+    }
     if (ab.lifesteal) bits.push('вампиризм ' + Math.round(Number(ab.lifesteal) * 100) + '%');
     if (ab.healFromDealt) bits.push('хил ' + Math.round(Number(ab.healFromDealt) * 100) + '% от нанесённого');
-    if (ab.vuln && ab.vuln.amount) {
-      bits.push('цель +' + Math.round(Number(ab.vuln.amount) * 100) + '% урона · ' + (ab.vuln.turns || 3) + 'х');
+    if (ab.healAmp) {
+      bits.push('следующие хилы +' + Math.round(Number(ab.healAmp) * 100) + '%' + (ab.nextHealCharges ? ' ×' + ab.nextHealCharges : ''));
     }
-    if (ab.enemyDmgMod) bits.push('враги −' + Math.round(Number(ab.enemyDmgMod) * 100) + '% урона');
+    if (ab.vuln && ab.vuln.amount) {
+      bits.push('цель +' + Math.round(Number(ab.vuln.amount) * 100) + '% урона · ' + ruTurns(ab.vuln.turns || 3));
+    }
+    if (ab.enemyDmgMod) bits.push('враги −' + Math.round(Number(ab.enemyDmgMod) * 100) + '% урона' + (ab.buffTurns ? ' · ' + ruTurns(ab.buffTurns) : ''));
     if (ab.maxHpPct) bits.push('+' + Math.round(Number(ab.maxHpPct) * 100) + '% запаса HP');
+    if (ab.splashFlat != null && Number.isFinite(Number(ab.splashFlat))) {
+      bits.push(Number(ab.splashFlat) + 'т остальным');
+    }
+    if (ab.cleaveFlat != null && Number.isFinite(Number(ab.cleaveFlat))) {
+      bits.push(Number(ab.cleaveFlat) + 'т соседним');
+    }
+    if (ab.judgmentConsecrateSplash) {
+      bits.push('+' + Math.round(Number(ab.judgmentConsecrateSplash) * 100) + '% по целям под «Освящение»');
+    }
+    if (ab.shieldFromDmg) bits.push(Math.round(Number(ab.shieldFromDmg) * 100) + '% нанесённого урона в щит');
+    if (ab.interruptPrimary) {
+      let s = 'сбивает каст основной цели';
+      if (ab.interruptAoeChance) s += ' · ' + Math.round(Number(ab.interruptAoeChance) * 100) + '% у остальных';
+      bits.push(s);
+    }
+    if (ab.blockChanceAdd) {
+      let s = '+' + Math.round(Number(ab.blockChanceAdd) * 100) + '% шанс блока';
+      if (ab.blockValueAdd) s += ' · +' + Math.round(Number(ab.blockValueAdd) * 100) + '% сила блока';
+      bits.push(s);
+    }
+    if (ab.chainDecay) bits.push('цепочка −' + Math.round(Number(ab.chainDecay) * 100) + '% за скачок');
+    if (String(ab.type || '') === 'debuff' && ab.power && !ab.enemyDmgMod && !ab.vuln) {
+      bits.push('−' + Math.round(Math.abs(Number(ab.power)) * 100) + '% атаки' + (ab.buffTurns ? ' · ' + ruTurns(ab.buffTurns) : ''));
+    }
+    const ccTurns = Number(ab.ccTurns) || (String(ab.type || '') === 'cc' ? Number(ab.buffTurns) : 0);
+    if (ccTurns) bits.push((ab.ccMode === 'silence' ? 'немота ' : 'стан ') + ruTurns(ccTurns));
     const gb = ab.grantSelfBuff;
-    if (gb && gb.name) bits.push('даёт «' + gb.name + '»');
+    if (gb && gb.name) {
+      if (gb.id === 'wide_sweep') {
+        bits.push('даёт «Широкий размах»: следующий «Героический удар» дублируется на остальных (40%)');
+      } else if (gb.id === 'next_aoe') {
+        bits.push('даёт «' + gb.name + '»: следующий одиночный удар дублируется по остальным врагам');
+      } else {
+        bits.push('даёт «' + gb.name + '»');
+      }
+    }
     return bits;
+  }
+
+  function textHasUnitNumber(blob, n, unit) {
+    const num = String(n);
+    const u = String(unit || '').replace(/%/g, '\\%');
+    return new RegExp('(?:^|[^\\d.,])' + num + (u ? '\\s*' + u : '(?!\\d)')).test(blob);
+  }
+
+  function factCovered(text, fact) {
+    const blob = String(text || '').toLowerCase();
+    const raw = String(fact || '');
+    const f = raw.toLowerCase();
+    if (!blob || !f) return false;
+    if (blob.indexOf(f) >= 0) return true;
+    const q = (raw.match(/«([^»]+)»/) || [])[1];
+    const tHits = raw.match(/(\d+(?:\.\d+)?)\s*т/g);
+    const pHits = raw.match(/(\d+)\s*%/g);
+    function allUnits(matches, unit) {
+      if (!matches) return true;
+      return matches.every(m => textHasUnitNumber(blob, m.match(/\d+(?:\.\d+)?/)[0], unit));
+    }
+    if (q && blob.indexOf(q.toLowerCase()) >= 0) {
+      const tOk = allUnits(tHits, 'т');
+      const pOk = allUnits(pHits, '%');
+      const turnHits = raw.match(/(\d+)\s*(?:х|ход|хода|ходов|р\.|раунд|раунда|раундов)/g);
+      let turnOk = true;
+      if (turnHits) {
+        turnOk = turnHits.every(m => {
+          const n = m.match(/\d+/)[0];
+          return textHasUnitNumber(blob, n, 'р')
+            || textHasUnitNumber(blob, n, 'х')
+            || blob.indexOf(n + ' ход') >= 0
+            || blob.indexOf(n + ' раунд') >= 0;
+        });
+      }
+      if (tOk && pOk && turnOk && (tHits || pHits || turnHits)) return true;
+    }
+    if (pHits && allUnits(pHits, '%')) {
+      if (/\+\d+%\s*урон/.test(f) && /урон|уязв/.test(blob)) return true;
+      if (/щит/.test(f) && /щит/.test(blob)) return true;
+      if (/каст|чтени/.test(f) && /каст|чтени/.test(blob)) return true;
+      if (/входящ/.test(f) && /входящ|получаем/.test(blob)) return true;
+      if (/пошат/.test(f) && /пошат/.test(blob)) return true;
+    }
+    if (tHits && allUnits(tHits, 'т') && /остальн|соседн/.test(f) && /остальн|соседн/.test(blob)) return true;
+    return false;
+  }
+
+  function fallbackAction(ab) {
+    const t = String((ab && ab.type) || '').toLowerCase();
+    const fl = abilityFlatLabel(ab);
+    const hits = Math.max(1, Number(ab && ab.hits) || 1);
+    switch (t) {
+      case 'damage':
+        if (hits > 1) {
+          return fl ? (hits + ' удара по выбранной цели по ' + fl + '.') : 'Несколько ударов по выбранной цели.';
+        }
+        return fl ? ('Бьёт выбранного врага на ' + fl + '.') : 'Бьёт выбранного врага.';
+      case 'aoe':
+      case 'cast_aoe':
+        return fl ? ('Бьёт всех врагов на ' + fl + '.') : 'Бьёт всех врагов.';
+      case 'dot':
+        return 'Накладывает периодический урон на цель.';
+      case 'heal':
+        return fl ? ('Исцеляет выбранного союзника на ' + fl + '.') : 'Исцеляет выбранного союзника.';
+      case 'heal_aoe':
+        return fl ? ('Исцеляет весь отряд на ' + fl + '.') : 'Исцеляет весь отряд.';
+      case 'shield':
+        return fl ? ('Накладывает щит на ' + fl + '.') : 'Накладывает щит, поглощающий урон.';
+      case 'buff':
+        return 'Временно усиливает вас или ваших питомцев.';
+      case 'debuff':
+        return 'Ослабляет выбранного врага.';
+      case 'taunt':
+        return 'Перетягивает внимание врагов на вас.';
+      case 'interrupt':
+        return 'Сбивает чтение заклинания и накладывает немоту.';
+      case 'cc':
+        return ab.ccMode === 'silence' ? 'Накладывает немоту.' : 'Оглушает цель.';
+      case 'cleanse':
+        return 'Снимает часть накопленного пошатывания.';
+      case 'dispel':
+        return 'Снимает вредный эффект с союзника.';
+      case 'purge':
+        return 'Снимает усиление с врага.';
+      case 'summon':
+        return 'Призывает питомца или механизм на время.';
+      default:
+        return typeLabel(t) || 'Особая способность.';
+    }
+  }
+
+  function describeHealOne(ab, actor, aoe) {
+    const fl = abilityFlatLabel(ab);
+    let s = aoe ? 'Исцеляет весь отряд' : 'Исцеляет выбранного союзника';
+    if (fl) s += ' на ' + fl;
+    s += '.';
+    const cs = costSecLabel(ab, actor);
+    if (cs) s += ' ' + cs + '.';
+    return s;
+  }
+
+  function describeHitOne(ab, aoe) {
+    const fl = abilityFlatLabel(ab);
+    const hits = Math.max(1, Number(ab && ab.hits) || 1);
+    let s;
+    if (aoe) s = 'Бьёт всех врагов';
+    else if (hits > 1) s = hits + ' удара по выбранной цели';
+    else s = 'Бьёт выбранного врага';
+    if (fl) s += (hits > 1 && !aoe) ? (' по ' + fl) : (' на ' + fl);
+    s += '.';
+    return s;
   }
 
   /**
    * Игровое описание способности (как работает) — для тултипа на иконке.
-   * Цифры урона кнопки справа в карточке; цифры дотов/баффов — здесь.
+   * Цифры кнопки можно повторить, если иначе фраза пустая. DoT/HoT/vuln — с единицами.
    */
   function abilityDescribe(ab, actor) {
     if (!ab) return '';
     const id = ab.id || '';
     const t = String(ab.type || '').toLowerCase();
-    // Особые id с известной механикой
     const byId = {
-      purifying: 'Снимает часть пошатывания. Очищенный урон копится для «Отвара неуловимости».',
-      elusive: 'Даёт щит: базовая прочность плюс урон, недавно снятый «Очищающим отваром».',
+      purifying: function (a) {
+        const pct = a.purifyPct != null ? Math.round(Number(a.purifyPct) * 100) : 25;
+        return 'Снимает ' + pct + '% пошатывания. Очищенный урон копится для «Отвара неуловимости».';
+      },
+      elusive: function (a) {
+        const fl = abilityFlatLabel(a);
+        return 'Даёт щит: база' + (fl ? ' ' + fl : '') + ' плюс урон, недавно снятый «Очищающим отваром».';
+      },
       guard: 'Ставит личный щит, поглощающий входящий урон.',
-      fort_brew: 'Снижает получаемый урон и усиливает пошатывание на несколько ходов.',
+      fort_brew: function (a) {
+        const bits = [];
+        if (a.dmgReduce) bits.push('снижает получаемый урон на ' + Math.round(Number(a.dmgReduce) * 100) + '%');
+        if (a.staggerBonus) bits.push('усиливает пошатывание на ' + Math.round(Number(a.staggerBonus) * 100) + '%');
+        let s = bits.length
+          ? (bits[0].charAt(0).toUpperCase() + bits[0].slice(1) + (bits[1] ? ' и ' + bits[1] : '') + '.')
+          : 'Снижает получаемый урон и усиливает пошатывание.';
+        if (a.buffTurns) s += ' ' + ruTurns(a.buffTurns) + '.';
+        return s;
+      },
       provoke: 'Перетягивает внимание врагов на вас.',
       taunt: 'Перетягивает внимание врагов на вас.',
       debug_mode: 'Переключает режим атаки основного питомца: одна цель или по области. Можно использовать раз за ход.',
-      wrench_heal: 'Лечит союзника за счет питомца: снимает половину запаса здоровья основного питомца и передаёт лечение цели.',
+      wrench_heal: 'Снимает 50% текущего HP основного питомца. Лечит цель на 10% её запаса HP.',
       pet_rez: 'Возвращает основного питомца в бой, если он погиб.',
       party_stun: 'Оглушает цель на ход и сбивает чтение заклинания.',
       party_dispel: 'Снимает с союзника вредный магический эффект или стек «Взрывного».',
       party_purge: 'Снимает с врага усиление или ярость.',
       kick: 'Прерывает чтение заклинания врага и накладывает немоту.',
-      hot_w: 'Удар по врагу с 35% здоровья или ниже. Не завершает ваш ход.',
-      avengers: 'Щит летит по врагам. Сбивает чтение у основной цели; у остальных — с шансом. Часть урона становится щитом.',
-      judgment: 'Судит врага. Если на других есть «Освящение», они получают долю урона Правосудия.',
-      sot_r: 'Бьёт щитом: 80т по выбранной цели и 30т по остальным. Накладывает «Щит света» (+10% брони, 4 хода, до 2 стаков). 3 Энергии Света.',
-      spirit_link: 'Тотем на 3 хода: −10% входящего урона отряду. Каждые 2 удара по отряду выравнивает здоровье по %.',
-      word_glory: 'Сильное исцеление одной цели за Энергию Света (СТ).',
-      light_dawn: 'Исцеляет всю группу (АОЕ) за Энергию Света.',
-      holy_radiance: 'Исцеляет всю группу (АОЕ).',
-      holy_light: 'Сильное исцеление одной цели (СТ).',
-      flash: 'Быстрое исцеление одной цели (СТ).',
-      ms: 'Удар по выбранной цели. Накладывает «Кровотечение».',
-      colossus: 'Ломает броню цели и накладывает «Кровотечение».',
-      heroic: 'Удар по выбранной цели. Накладывает «Кровотечение». Под «Широким размахом» дублируется на остальных врагов с силой 40%.',
-      reck: '+35% атаки на следующие 2 удара. Не завершает ваш ход.',
-      fireball: 'Удар по выбранной цели. Крит вешает «Раскалённую глыбу»: следующая «Огненная глыба» стоит 10 маны и бьёт 90т.',
-      pyroblast: 'Тяжёлый удар. Обычно 50 маны. Под «Раскалённой глыбой» — 10 маны и 90т, окно снимается.',
-      flamestrike: 'Урон по всем врагам. 33% шанс повесить «Раскалённый столб»: следующий «Огненный шар» критует.',
-      frostbolt: 'Удар по выбранной цели. 20% шанс повесить «Копьё — область»: следующее «Ледяное копьё» бьёт всех врагов.',
-      ice_lance: 'Удар по выбранной цели. Под «Копьё — область» бьёт всех врагов, окно снимается.',
-      lv: 'Удар по выбранной цели. Если на цели «Огненный шок» — этот удар критует без броска.',
-      flame_shock: 'Прямой удар и дот. Пока висит «Огненный шок», «Выброс лавы» критует.',
-      malefic: 'Удар. +10% за каждый свой дот на этой цели.',
-      haunt: 'Удар за осколок. +15% за каждый свой дот на этой цели.',
-      jade_serpent: 'Призывает «Нефритовая змея» на 3 раунда. Змея не стоит в очереди: после хода каждого героя и моба лечит выбранного «Успокаивающим туманом» на 3т и бьёт последнюю цель хозяина на 3т. Не завершает ваш ход.',
-      soothing: 'Без змеи — 3т выбранному союзнику. Со змеёй не тратит ход и только выбирает, кого змея будет лечить.',
-      niuzao: 'Призывает Нюцзао на 3 раунда. Не завершает ваш ход.',
-      slice: 'Даёт 1 стак «Нарезка»: следующий одиночный удар дублируется по остальным врагам.',
+      hot_w: function (a) {
+        let s = 'Добивание: бьёт врага с 35% здоровья или ниже.';
+        if (a.genSec) s += ' +' + a.genSec + ' Энергии Света.';
+        return s;
+      },
+      avengers: function (a) {
+        const fl = abilityFlatLabel(a);
+        let s = 'Щит летит по врагам' + (fl ? ' (' + fl + ')' : '') + '.';
+        if (a.interruptPrimary) {
+          s += ' Сбивает чтение у основной цели';
+          if (a.interruptAoeChance) s += '; у остальных — ' + Math.round(Number(a.interruptAoeChance) * 100) + '% шанс';
+          s += '.';
+        }
+        if (a.shieldFromDmg) s += ' ' + Math.round(Number(a.shieldFromDmg) * 100) + '% нанесённого урона становится щитом.';
+        return s;
+      },
+      judgment: function (a) {
+        let s = describeHitOne(a, false);
+        if (a.judgmentConsecrateSplash) {
+          s += ' Если на других врагах есть «Освящение», они получают ' + Math.round(Number(a.judgmentConsecrateSplash) * 100) + '% урона Правосудия.';
+        }
+        return s;
+      },
+      sot_r: function (a, act) {
+        const fl = abilityFlatLabel(a);
+        const sp = a.splashFlat != null ? Number(a.splashFlat) : null;
+        let s = 'Бьёт щитом';
+        if (fl) s += ': ' + fl + ' по выбранной цели';
+        if (sp != null) s += (fl ? ' и ' : ': ') + sp + 'т по остальным';
+        s += '. Накладывает «Щит света» (+10% брони, 4 хода, до 2 стаков).';
+        const cs = costSecLabel(a, act);
+        if (cs) s += ' ' + cs + '.';
+        return s;
+      },
+      spirit_link: function (a) {
+        const fl = abilityFlatLabel(a);
+        const dr = a.dmgReduce != null ? Math.round(Number(a.dmgReduce) * 100) : 10;
+        const tn = Number(a.buffTurns) || 3;
+        let s = '';
+        if (fl) s += 'Исцеляет отряд на ' + fl + '. ';
+        s += 'Тотем на ' + ruTurns(tn) + ': −' + dr + '% входящего урона отряду. Каждые 2 удара по отряду выравнивает здоровье по %.';
+        return s;
+      },
+      word_glory: function (a, act) { return describeHealOne(a, act, false); },
+      light_dawn: function (a, act) { return describeHealOne(a, act, true); },
+      holy_radiance: function (a, act) { return describeHealOne(a, act, true); },
+      holy_light: function (a, act) { return describeHealOne(a, act, false); },
+      flash: function (a, act) { return describeHealOne(a, act, false); },
+      holy_shock: function (a) {
+        const fl = abilityFlatLabel(a);
+        let s = 'Можно направить во врага (урон) или в союзника (исцеление)';
+        if (fl) s += ': ' + fl;
+        s += '.';
+        if (a.genSec) s += ' +' + a.genSec + ' Энергии Света.';
+        return s;
+      },
+      crusader: function (a) {
+        let s = describeHitOne(a, false);
+        if (a.genSec) s += ' +' + a.genSec + ' Энергии Света.';
+        return s;
+      },
+      ms: function (a) {
+        return describeHitOne(a, false) + ' Накладывает «Кровотечение».';
+      },
+      colossus: function (a) {
+        let s = describeHitOne(a, false);
+        if (a.vuln && a.vuln.amount) {
+          s += ' Цель получает +' + Math.round(Number(a.vuln.amount) * 100) + '% урона ' + ruTurns(a.vuln.turns || 3) + '.';
+        }
+        s += ' Накладывает «Кровотечение».';
+        return s;
+      },
+      heroic: function (a) {
+        return describeHitOne(a, false) + ' Накладывает «Кровотечение». Под «Широким размахом» дублируется на остальных врагов с силой 40%.';
+      },
+      reck: function (a) {
+        const pct = Math.round((Number(a.power) || Number(a.atkMod) || 0.35) * 100);
+        const n = Math.max(1, Number(a.abilityCharges) || 2);
+        const w = n === 1 ? 'удар' : (n < 5 ? 'удара' : 'ударов');
+        return '+' + pct + '% атаки на следующие ' + n + ' ' + w + '.';
+      },
+      fireball: function (a) {
+        return describeHitOne(a, false) + ' Крит вешает «Раскалённую глыбу»: следующая «Огненная глыба» стоит 10 маны и бьёт 90т.';
+      },
+      pyroblast: function (a) {
+        const fl = abilityFlatLabel(a);
+        const mana = Number(a.cost) || 50;
+        return 'Тяжёлый удар' + (fl ? ' на ' + fl : '') + '. Обычно ' + mana + ' маны. Под «Раскалённой глыбой» — 10 маны и 90т, окно снимается.';
+      },
+      flamestrike: function (a) {
+        return describeHitOne(a, true) + ' 33% шанс повесить «Раскалённый столб»: следующий «Огненный шар» критует.';
+      },
+      frostbolt: function (a) {
+        return describeHitOne(a, false) + ' 20% шанс повесить «Копьё — область»: следующее «Ледяное копьё» бьёт всех врагов.';
+      },
+      ice_lance: function (a) {
+        return describeHitOne(a, false) + ' Под «Копьё — область» бьёт всех врагов, окно снимается.';
+      },
+      lv: function (a) {
+        return describeHitOne(a, false) + ' Если на цели ваш «Огненный шок» — этот удар критует без броска.';
+      },
+      flame_shock: function (a, act) {
+        const fl = abilityFlatLabel(a);
+        let s = fl
+          ? ('Прямой удар на ' + fl + ' и дот «Огненный шок».')
+          : 'Накладывает «Огненный шок».';
+        const sp = act && act.specId;
+        const hasLv = sp === 'elemental' || kitHasId(act, 'lv');
+        const hasNova = sp === 'enhancement' || kitHasId(act, 'fire_nova');
+        if (hasLv) s += ' Пока висит, ваш «Выброс лавы» критует без броска.';
+        else if (hasNova) s += ' Нужен, чтобы «Кольцо огня» сработало.';
+        return s;
+      },
+      fire_nova: function (a) {
+        return describeHitOne(a, true) + ' Срабатывает только если на выбранной цели висит ваш «Огненный шок».';
+      },
+      unleash: function (a, act) {
+        if (a.type === 'heal' || a.healAmp) return describeHealOne(a, act, false);
+        const pct = Math.round((Number(a.power) || Number(a.atkMod) || 0.15) * 100);
+        const n = Math.max(1, Number(a.abilityCharges) || 2);
+        return '+' + pct + '% на следующие ' + n + ' удара.';
+      },
+      malefic: function (a) {
+        return describeHitOne(a, false) + ' +10% за каждый свой дот на этой цели.';
+      },
+      haunt: function (a) {
+        return describeHitOne(a, false) + ' +15% за каждый свой дот на этой цели.';
+      },
+      jade_serpent: 'Призывает «Нефритовая змея» на 3 раунда. Змея не стоит в очереди: после хода каждого героя и моба лечит выбранного «Успокаивающим туманом» на 3т и бьёт последнюю цель хозяина на 3т.',
+      soothing: function (a) {
+        const fl = abilityFlatLabel(a) || '3т';
+        return 'Без змеи — ' + fl + ' выбранному союзнику. Со змеёй не тратит ход и только выбирает, кого змея будет лечить.';
+      },
+      niuzao: 'Призывает Нюцзао на 3 раунда.',
+      slice: function (a) {
+        const nm = (a.grantSelfBuff && a.grantSelfBuff.name) || 'Нарезка';
+        return 'Даёт 1 стак «' + nm + '»: следующий одиночный удар дублируется по остальным врагам.';
+      },
+      penance: function (a) {
+        const fl = abilityFlatLabel(a);
+        let s = 'Союзник или враг';
+        if (fl) s += ': ' + fl;
+        s += '. Во врага кормит «Искупление».';
+        return s;
+      },
     };
-    if (byId[id]) {
-      let s = byId[id];
-      if (ab.freeAction && !/не заверш|без хода|не тратит ход/.test(s.toLowerCase())) s += ' Не завершает ваш ход.';
-      const extra = describeDataFacts(ab).filter(f => s.indexOf(f) < 0);
-      if (extra.length) s += ' ' + extra.join(' ');
-      return s;
-    }
-    // Arms Вихрь: grantSelfBuff wide_sweep (у Неистовства — обычный AoE)
-    if (id === 'whirlwind' && ab.grantSelfBuff && ab.grantSelfBuff.id === 'wide_sweep') {
-      return 'Урон по всем врагам. Даёт 1 стак «Широкий размах»: следующий «Героический удар» дублируется на остальных (40%).';
-    }
 
-    const raw = (ab.desc && String(ab.desc).trim()) || '';
     const parts = [];
-    if (raw && raw.length > 2 && !descLooksBare(raw)) parts.push(raw);
+    const specFn = byId[id];
+    let head = '';
+    if (typeof specFn === 'function') head = specFn(ab, actor) || '';
+    else if (typeof specFn === 'string') head = specFn;
 
-    if (!parts.length) {
-      switch (t) {
-        case 'damage':
-          parts.push(ab.hits > 1 ? 'Несколько ударов по выбранной цели.' : 'Удар по выбранной цели.');
-          break;
-        case 'aoe':
-        case 'cast_aoe':
-          parts.push('Урон по всем врагам.');
-          break;
-        case 'dot':
-          parts.push('Накладывает периодический урон на цель.');
-          break;
-        case 'heal':
-          parts.push(ab.id === 'wrench_heal' ? '' : 'Исцеляет выбранного союзника.');
-          break;
-        case 'heal_aoe':
-          parts.push('Исцеляет весь отряд.');
-          break;
-        case 'shield':
-          parts.push('Накладывает щит, поглощающий урон.');
-          break;
-        case 'buff':
-          parts.push('Временно усиливает вас или ваших питомцев.');
-          break;
-        case 'debuff':
-          parts.push('Ослабляет выбранного врага.');
-          break;
-        case 'taunt':
-          parts.push('Перетягивает внимание врагов на вас.');
-          break;
-        case 'interrupt':
-          parts.push('Сбивает чтение заклинания и накладывает немоту.');
-          break;
-        case 'cc':
-          parts.push(ab.ccMode === 'silence' ? 'Накладывает немоту.' : 'Оглушает цель.');
-          break;
-        case 'cleanse':
-          parts.push('Снимает часть накопленного пошатывания.');
-          break;
-        case 'dispel':
-          parts.push('Снимает вредный эффект с союзника.');
-          break;
-        case 'purge':
-          parts.push('Снимает усиление с врага.');
-          break;
-        case 'summon':
-          parts.push('Призывает питомца или механизм на время.');
-          break;
-        default:
-          parts.push(typeLabel(t) || 'Особая способность.');
+    if (!head && id === 'whirlwind' && ab.grantSelfBuff && ab.grantSelfBuff.id === 'wide_sweep') {
+      head = describeHitOne(ab, true) + ' Даёт 1 стак «Широкий размах»: следующий «Героический удар» дублируется на остальных (40%).';
+    }
+
+    if (head) {
+      parts.push(head);
+    } else {
+      const raw = (ab.desc && String(ab.desc).trim()) || '';
+      if (raw && raw.length > 2 && !descLooksBare(raw)) parts.push(raw);
+      if (!parts.length) {
+        const factsEarly = describeDataFacts(ab);
+        if (!((t === 'buff' || t === 'debuff') && factsEarly.length)) {
+          parts.push(fallbackAction(ab));
+        }
       }
     }
 
-    const blob = parts.join(' ').toLowerCase();
     for (const f of describeDataFacts(ab)) {
-      const low = f.toLowerCase();
-      if (blob.indexOf(low) >= 0) continue;
-      const q = (f.match(/«([^»]+)»/) || [])[1];
-      if (q && blob.indexOf(q.toLowerCase()) >= 0 && /\d+\s*т/.test(blob)) continue;
+      if (factCovered(parts.join(' '), f)) continue;
       parts.push(f);
     }
-    if (ab.grantSelfBuff && ab.grantSelfBuff.id === 'wide_sweep' && !/широкий размах|героический/.test(blob)) {
-      parts.push('Даёт 1 стак «Широкий размах»: следующий «Героический удар» дублируется на остальных (40%).');
-    }
-    if (ab.holyShock && !/враг|союзник|шок/.test(blob)) {
+    let blob = parts.join(' ').toLowerCase();
+
+    if (ab.holyShock && !/враг|союзник/.test(blob)) {
       parts.push('Можно направить во врага (урон) или в союзника (исцеление).');
     }
-    if (ab.lifesteal && !/вампир|похищ|возвращ/.test(blob)) {
-      parts.push('Часть урона возвращается как исцеление.');
+    if (ab.chainPrimary && !/сначала выбранн|цепоч/.test(blob)) {
+      parts.push('Сначала выбранная цель, дальше по % HP.');
     }
-    if (ab.vuln && !/уязв|брон|слаб/.test(blob)) {
-      parts.push('Цель на время получает больше урона.');
+    if (ab.abilityCharges && !/следующ|след\./.test(blob)) {
+      const pct = Math.round((Number(ab.power) || Number(ab.atkMod) || 0) * 100);
+      const n = Math.max(1, Number(ab.abilityCharges) || 2);
+      if (pct) {
+        const w = n === 1 ? 'удар' : (n < 5 ? 'удара' : 'ударов');
+        parts.push('+' + pct + '% на следующие ' + n + ' ' + w + '.');
+      }
     }
-    if (ab.cleaveFlat != null && !/бок|сосед|рассев/.test(blob)) {
-      parts.push('Задевает врагов рядом с целью.');
+    if (typeof EXECUTE_IDS !== 'undefined' && EXECUTE_IDS.has(id) && !/35%|35 %/.test(blob)) {
+      parts.push('Только при ≤35% HP цели.');
     }
-    if (ab.enemyDmgMod && !/слаб|урон враг/.test(blob)) {
-      parts.push('Ослабляет урон врагов.');
+    if (ab.oncePerTurn && !/раз за ход|один раз/.test(blob)) {
+      parts.push('Один раз за ход.');
     }
-    if ((ab.dmgReduce || ab.staggerBonus) && t === 'buff' && !/снижа|пошат|защит/.test(blob)) {
-      if (ab.dmgReduce) parts.push('Снижает получаемый урон.');
-      if (ab.staggerBonus) parts.push('Усиливает пошатывание.');
-    }
-    if (ab.blockChanceAdd && !/блок/.test(blob)) {
-      parts.push('Повышает шанс блока.');
-    }
-    if (PET_SUMMONS[id] && t !== 'summon' && !/призыв|питом/.test(blob)) {
+    if (PET_SUMMONS[id] && t !== 'summon' && !/призыв|питом|элементал|волк|змея|нюцзао|сюэнь/.test(blob)) {
       parts.push('Также призывает питомца.');
     }
+    blob = parts.join(' ').toLowerCase();
     if (ab.freeAction && !/не заверш|без хода|не тратит ход/.test(blob)) {
       parts.push('Не завершает ваш ход.');
     }
+    blob = parts.join(' ').toLowerCase();
     if (ab.maxCharges && !/заряд/.test(blob)) {
-      parts.push('Имеет несколько зарядов.');
+      parts.push(ab.maxCharges + ' заряда.');
     }
     const comboRes = actor && actor.res && actor.res.secondary && actor.res.secondary.type === 'combo';
     if (comboRes && typeof FINISHER_IDS !== 'undefined' && FINISHER_IDS.has(id)
-        && !/при 5 очк|серии|серия 0\.22/.test(blob)) {
+        && !/при 5 очк|0\.22\s*\/\s*0\.42/.test(blob)) {
       parts.push('Цифра на кнопке — при 5 очках серии (0.22 / 0.42 / 0.68 / 1.05 / 1.55).');
     }
 

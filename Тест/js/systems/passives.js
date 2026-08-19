@@ -2,6 +2,29 @@
   function getSpecPassives(classId, specId, role) {
     const list = [];
     const r = role || (classId && specId && (WOW_MOP.getSpec(classId, specId) || {}).role) || null;
+    if (typeof CLASS_AURA === 'object' && classId && classId !== 'hunter') {
+      const au = CLASS_AURA[classId];
+      if (au && au.tip && (au.atkMod || au.dmgReduce || au.critMod || au.versMod || au.petAtkMod || au.healTakenMod || au.lifesteal)) {
+        list.push({
+          id: au.id,
+          name: au.name,
+          icon: au.icon,
+          short: 'отряд',
+          detail: au.tip + ' Вешается на весь отряд в начале боя. Два одинаковых класса не складывают.',
+        });
+      }
+    }
+    if (classId === 'hunter') {
+      const hk = (typeof hunterPetKey === 'function') ? hunterPetKey(specId) : 'hunter_pet';
+      const names = { hunter_bear: 'Медведь: 20% вампиризма себе, отряду +4% атаки.', hunter_hawk: 'Ястреб: +10% крита питомцу, отряду +5% крита.', hunter_raptor: 'Ящер: +8% унив. питомцу, отряду +5% унив.' };
+      list.push({
+        id: 'hunter_aspect',
+        name: specId === 'marksmanship' ? 'Дух ястреба' : (specId === 'survival' ? 'Дух ящера' : 'Дух зверя'),
+        icon: specId === 'marksmanship' ? '🦅' : (specId === 'survival' ? '🦖' : '🐻'),
+        short: 'питомец',
+        detail: names[hk] || names.hunter_bear,
+      });
+    }
     // Все ДК: как работают руны
     if (classId === 'deathknight' && specId === 'frost') {
       list.push({
@@ -33,6 +56,13 @@
     }
     // Хмелевар
     if (classId === 'monk' && specId === 'brewmaster') {
+      list.push({
+        id: 'brew_stagger',
+        name: 'Пошатывание',
+        icon: '🥴',
+        short: '35% в пул',
+        detail: 'Около 35% входящего урона уходит в пул «Пошатывание» и тикает по себе (25% пула за раунд). «Очищающий отвар» снимает долю пула в щит «Отвара неуловимости». Под «Отваром железной шкуры» в пул уходит больше (до 75%).',
+      });
       list.push({
         id: 'brew_mastery_dodge',
         name: 'Неуловимый боец',
@@ -131,6 +161,16 @@
         icon: '🗡️',
         short: '20% со стрелы',
         detail: 'С «Ледяной стрелы» 20% шанс повесить «Копьё — область»: следующее «Ледяное копьё» бьёт всех врагов. Окно снимается после копья.',
+      });
+    }
+    // Шаман стихии
+    if (classId === 'shaman' && specId === 'elemental') {
+      list.push({
+        id: 'lava_shock_crit',
+        name: 'Выброс по шоку',
+        icon: '🌋',
+        short: 'крит по шоку',
+        detail: 'Пока на цели ваш «Огненный шок», «Выброс лавы» критует без броска.',
       });
     }
     // Шаман исцеление
@@ -354,8 +394,10 @@
       ? containerEl.getBoundingClientRect()
       : { left: pad, top: pad, right: vw - pad, bottom: vh - pad, width: vw - pad * 2, height: vh - pad * 2 };
 
-    // Ширина: не шире контейнера / экрана
-    const maxW = Math.max(140, Math.min(bounds.width - pad * 2, containerEl ? bounds.width - pad * 2 : Math.min(300, vw * 0.8)));
+    const isAbilityTip = !!(tip && tip.classList.contains('ability-tip-float'));
+    const widthCap = isAbilityTip ? Math.min(560, vw * 0.92) : Math.min(300, vw * 0.8);
+    // Ширина: не шире контейнера / экрана (у подсказки способности шире — полный abilityDescribe)
+    const maxW = Math.max(140, Math.min(bounds.width - pad * 2, containerEl ? bounds.width - pad * 2 : widthCap));
     tip.style.boxSizing = 'border-box';
     tip.style.maxWidth = Math.round(maxW) + 'px';
     tip.style.width = 'auto';
@@ -364,6 +406,12 @@
     tip.style.whiteSpace = 'normal';
     tip.style.overflowWrap = 'anywhere';
     tip.style.wordBreak = 'break-word';
+    if (isAbilityTip) {
+      const maxH = Math.max(140, Math.min(vh - pad * 2, Math.round(vh * 0.72)));
+      tip.style.maxHeight = Math.round(maxH) + 'px';
+      tip.style.overflowX = 'hidden';
+      tip.style.overflowY = 'auto';
+    }
 
     // Переизмерить после maxWidth
     let tw = tip.offsetWidth || Math.min(240, maxW);

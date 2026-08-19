@@ -301,6 +301,19 @@
     updateBossFrame();
     updateVignette();
     meterOnDamage(attacker, target, dmg, ctx || null);
+    if (dmg > 0 && attacker && target && target.side === 'enemy' && attacker.alive) {
+      let steal = 0;
+      if (attacker.buffs) {
+        for (const b of attacker.buffs) {
+          if (b && b.lifesteal) steal += Number(b.lifesteal) || 0;
+        }
+      }
+      if (steal > 0) {
+        const h = Math.max(1, Math.round(dmg * Math.min(0.6, steal)));
+        attacker.hp = Math.min(attacker.maxHp, attacker.hp + h);
+        try { floatText(attacker.uid, '+' + fmt(h), 'heal'); } catch (_) {}
+      }
+    }
     if (dmg > 0 && attacker && target && target.side === 'enemy') {
       try { maybeFeedAtonement(attacker, dmg, ctx || null); } catch (_) {}
       try { maybeHavocCleave(attacker, target, dmg, ctx || null); } catch (_) {}

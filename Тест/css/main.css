@@ -1195,6 +1195,20 @@
     .skill-fx-layer {
       position: fixed; inset: 0; pointer-events: none; z-index: 70; overflow: hidden;
     }
+    .skill-glyph {
+      position: fixed; z-index: 73; pointer-events: none;
+      font-size: 28px; line-height: 1;
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(0 0 8px rgba(240,193,75,.7));
+      will-change: transform, opacity;
+    }
+    .skill-glyph.fly { font-size: 26px; }
+    .skill-glyph.pop { animation: skillGlyphPop .5s ease-out forwards; }
+    @keyframes skillGlyphPop {
+      0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+      35% { transform: translate(-50%, -50%) scale(1.35); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(.85) translateY(-12px); opacity: 0; }
+    }
     .skill-projectile {
       position: fixed; z-index: 72; width: 14px; height: 14px; border-radius: 50%;
       pointer-events: none; will-change: transform, opacity;
@@ -2046,7 +2060,21 @@
       align-items: stretch;
       transition: border-color .15s, box-shadow .15s;
       box-sizing: border-box;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
     }
+    .ability.dragging {
+      opacity: .45;
+      cursor: grabbing;
+      border-color: var(--gold);
+      box-shadow: 0 0 16px rgba(224,192,96,.45);
+    }
+    .ability.drag-over {
+      border-color: #8ec8ff;
+      box-shadow: 0 0 14px rgba(142,200,255,.4);
+    }
+    .ability-bar.is-reordering .ability { cursor: grabbing; }
     .ability:hover:not(:disabled):not(.is-disabled) {
       border-color: var(--gold); box-shadow: 0 0 14px rgba(224,192,96,.35);
     }
@@ -2098,60 +2126,87 @@
       z-index: 2;
       transition: border-color .12s, box-shadow .12s;
     }
+    .ability .a-ico-px {
+      width: 28px;
+      height: 28px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      pointer-events: none;
+    }
     .ability .a-ico:hover,
     .ability .a-ico:focus {
       border-color: color-mix(in oklab, var(--gold) 55%, #6a6040);
       box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 25%, transparent);
       outline: none;
     }
-    /* Тултип описания скилла / пассивки (fixed, поверх UI) */
+    /* Тултип описания скилла (hover на .a-ico / .sl-ico): широкий, с переносом, поверх бара */
     .ability-tip-float {
       position: fixed;
-      z-index: 9999;
-      min-width: 200px;
-      max-width: min(320px, 82vw);
-      padding: .55rem .65rem;
+      z-index: 12000;
+      min-width: min(280px, 88vw);
+      max-width: min(560px, 92vw);
+      max-height: min(72vh, 520px);
+      width: max-content;
+      box-sizing: border-box;
+      padding: .7rem .85rem .75rem;
       border-radius: 8px;
       border: 1px solid color-mix(in oklab, var(--gold) 36%, var(--border));
       background: color-mix(in oklab, #12151a 97%, #000);
-      box-shadow: 0 12px 32px rgba(0,0,0,.6);
+      box-shadow: 0 14px 36px rgba(0,0,0,.65);
       text-align: left;
       pointer-events: auto;
       color: var(--text);
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
     .ability-tip-float.hidden { display: none !important; }
     .ability-tip-float .tip-ref {
       color: var(--gold-bright);
       border-bottom: 1px dotted color-mix(in oklab, var(--gold) 70%, #fff);
       cursor: help;
-      white-space: nowrap;
+      white-space: normal;
     }
     .ability-tip-float .pt-gloss {
-      margin-top: .4rem;
-      padding-top: .35rem;
+      margin-top: .45rem;
+      padding-top: .4rem;
       border-top: 1px solid color-mix(in oklab, var(--gold) 28%, var(--border));
-      font-size: .7rem;
-      line-height: 1.4;
+      font-size: .76rem;
+      line-height: 1.45;
       color: #d8d0c0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .ability-tip-float .pt-gloss.hidden { display: none; }
     .ability-tip-float .pt-gloss-name {
       font-weight: 700;
       color: var(--gold-bright);
       margin-bottom: .15rem;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
     .ability-tip-float .pt-name {
       font-family: var(--font-display);
-      font-size: .78rem;
+      font-size: .9rem;
       font-weight: 700;
       color: var(--gold-bright);
-      margin-bottom: .25rem;
+      margin-bottom: .3rem;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .ability-tip-float .pt-detail {
-      font-size: .74rem;
-      line-height: 1.45;
+      font-size: .84rem;
+      line-height: 1.5;
       color: var(--text);
       font-weight: 500;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .ability .a-body {
       grid-column: 2;
