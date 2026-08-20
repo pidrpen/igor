@@ -5,6 +5,7 @@
   let raidDifficulty = 'normal'; // 'normal' | 'heroic'
   let raidAutoAllies = true;
   let raidPlayerUid = null;
+  let autoPlayPick = null;
 
   const RAID_DUNGEON = {
     id: 'throne',
@@ -480,26 +481,58 @@
     toast('Собран рейд 10: 2 танка · 2 хила · 6 бойцов');
   }
 
+  function partyAutoTitle() {
+    return (run && run.raid) ? 'Авто-рейд' : 'Авто-ключ';
+  }
+
+  function syncPartyAutoHud() {
+    const auto = document.getElementById('btn-raid-auto');
+    if (!auto || !run) return;
+    auto.classList.remove('hidden');
+    auto.classList.toggle('on', !!raidAutoAllies);
+    auto.textContent = partyAutoTitle() + (raidAutoAllies ? ': вкл' : ': выкл');
+    const allyTitle = document.querySelector('#ally-row')?.previousElementSibling;
+    if (allyTitle && raidAutoAllies) {
+      allyTitle.textContent = run.raid
+        ? 'Рейд (клик — взять управление)'
+        : 'Отряд (клик — взять следующий ход)';
+    }
+  }
+
+  function pickAutoPlayerUid() {
+    if (!run || !run.party) return null;
+    const alive = run.party.filter(p => p && p.alive);
+    if (!alive.length) return null;
+    if (run.raid) {
+      return (alive.find(p => p.role === 'tank') || alive[0]).uid;
+    }
+    if (autoPlayPick) {
+      const m = alive.find(p => p.classId === autoPlayPick.classId && p.specId === autoPlayPick.specId);
+      if (m) return m.uid;
+    }
+    return (alive.find(p => p.role === 'dps') || alive[0]).uid;
+  }
+
   function shouldRaidAuto(actor) {
-    if (!isRaidRun() || !actor || actor.side !== 'ally' || actor.isPet) return false;
+    if (!run || !actor || actor.side !== 'ally' || actor.isPet) return false;
     if (!raidAutoAllies) return false;
     if (!raidPlayerUid || !run.party.some(p => p.uid === raidPlayerUid && p.alive)) {
-      const tank = run.party.find(p => p.role === 'tank' && p.alive);
-      raidPlayerUid = tank?.uid || run.party.find(p => p.alive)?.uid || null;
+      raidPlayerUid = pickAutoPlayerUid();
     }
     return actor.uid !== raidPlayerUid;
   }
 
   function setRaidFocus(hero) {
-    if (!isRaidRun() || !hero || hero.side !== 'ally' || hero.isPet) return;
+    if (!run || !hero || hero.side !== 'ally' || hero.isPet) return;
     if (!hero.alive) return toast('Мёртв');
     raidPlayerUid = hero.uid;
-    toast('Управляете: ' + (hero.fullName || hero.name));
+    autoPlayPick = { classId: hero.classId, specId: hero.specId };
+    toast('Играете: ' + (hero.fullName || hero.name));
     try { renderCombat(); } catch (_) {}
   }
 
   function raidFocusClass(u) {
-    if (!isRaidRun() || !u || u.side !== 'ally' || u.isPet) return '';
+    if (!run || !raidAutoAllies || !u || u.side !== 'ally' || u.isPet) return '';
     return u.uid === raidPlayerUid ? ' raid-focus' : '';
   }
 
@@ -549,19 +582,20 @@
       if (btn) btn.textContent = 'Скрыть интерфейс';
     });
     const auto = document.getElementById('btn-raid-auto');
-    if (auto) {
+    if (auto && auto.dataset.bound !== '1') {
+      auto.dataset.bound = '1';
       auto.addEventListener('click', () => {
         raidAutoAllies = !raidAutoAllies;
-        auto.classList.toggle('on', raidAutoAllies);
-        auto.textContent = raidAutoAllies ? 'Авто-рейд: вкл' : 'Авто-рейд: выкл';
+        try { syncPartyAutoHud(); } catch (_) {}
         toast(raidAutoAllies
-          ? 'Союзники ходят сами. Клик по герою — взять управление'
-          : 'Вы ходите всеми десятью');
+          ? 'Союзники ходят сами. Клик по герою — взять следующий ход'
+          : (run && run.raid ? 'Вы ходите всеми десятью' : 'Вы ходите всем отрядом'));
       });
     }
   }
 
   function raidHudPatch() {
+    try { syncPartyAutoHud(); } catch (_) {}
     if (!isRaidRun()) return;
     const forces = document.getElementById('hud-forces');
     if (forces) {
@@ -574,12 +608,6 @@
       const pct = boss ? clamp(boss.hp / Math.max(1, boss.maxHp) * 100, 0, 100) : 0;
       ff.style.width = pct + '%';
       ff.style.background = 'linear-gradient(90deg, #2a6a9a, #7ad0ff)';
-    }
-    const auto = document.getElementById('btn-raid-auto');
-    if (auto) {
-      auto.classList.remove('hidden');
-      auto.classList.toggle('on', raidAutoAllies);
-      auto.textContent = raidAutoAllies ? 'Авто-рейд: вкл' : 'Авто-рейд: выкл';
     }
     const allyTitle = document.querySelector('#ally-row')?.previousElementSibling;
     if (allyTitle) allyTitle.textContent = 'Рейд (клик — взять управление)';

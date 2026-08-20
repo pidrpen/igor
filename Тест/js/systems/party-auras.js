@@ -116,6 +116,14 @@
       || spec.petAtkMod || spec.lifesteal || spec.healTakenMod);
   }
 
+  function classDisplayName(id) {
+    try {
+      var c = (typeof WOW_MOP !== 'undefined' && WOW_MOP.getClass) ? WOW_MOP.getClass(id) : null;
+      if (c && c.name) return c.name;
+    } catch (_) {}
+    return id || '';
+  }
+
   function applyAuraTo(unit, spec) {
     if (!unit || !spec || !spec.id || !auraHasEffect(spec)) return;
     if (typeof applyStatus !== 'function') return;
@@ -134,6 +142,9 @@
       tip: spec.tip || '',
       aura: true,
       dispellable: false,
+      fromName: spec.fromName || '',
+      fromClass: spec.fromClass || '',
+      fromClassName: spec.fromClassName || '',
     });
   }
 
@@ -146,7 +157,7 @@
       var spec = (h.classId === 'hunter') ? hunterKit(h.specId).aura : CLASS_AURA[h.classId];
       if (!spec || !spec.id || seen[spec.id] || !auraHasEffect(spec)) return;
       seen[spec.id] = true;
-      specs.push(spec);
+      specs.push({ spec: spec, src: h });
     });
     var targets = heroes.slice();
     if (typeof combat !== 'undefined' && combat && combat.pets) {
@@ -154,8 +165,13 @@
         if (pet && pet.alive) targets.push(pet);
       });
     }
-    specs.forEach(function (spec) {
-      targets.forEach(function (u) { applyAuraTo(u, spec); });
+    specs.forEach(function (row) {
+      var stamped = Object.assign({}, row.spec, {
+        fromName: row.src.fullName || row.src.name || '',
+        fromClass: row.src.classId || '',
+        fromClassName: classDisplayName(row.src.classId),
+      });
+      targets.forEach(function (u) { applyAuraTo(u, stamped); });
     });
     if (typeof combat !== 'undefined' && combat && combat.pets) {
       combat.pets.forEach(function (pet) {
@@ -167,7 +183,29 @@
     }
   }
 
+  function listPartyClassAuras() {
+    if (!run || !run.party) return [];
+    var out = [];
+    var seen = {};
+    run.party.forEach(function (h) {
+      if (!h || !h.alive || h.isPet) return;
+      var spec = (h.classId === 'hunter') ? hunterKit(h.specId).aura : CLASS_AURA[h.classId];
+      if (!spec || !spec.id || seen[spec.id] || !auraHasEffect(spec)) return;
+      seen[spec.id] = true;
+      out.push({
+        id: spec.id,
+        name: spec.name,
+        icon: spec.icon,
+        detail: spec.tip || '',
+        fromName: h.fullName || h.name || '',
+        className: classDisplayName(h.classId),
+      });
+    });
+    return out;
+  }
+
   G.CLASS_AURA = CLASS_AURA;
   G.hunterPetKey = hunterPetKey;
   G.applyPartyClassAuras = applyPartyClassAuras;
+  G.listPartyClassAuras = listPartyClassAuras;
 })(typeof window !== 'undefined' ? window : this);

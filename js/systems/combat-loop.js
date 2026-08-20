@@ -204,7 +204,7 @@
         document.getElementById('ability-bar').innerHTML = '';
         try { hidePassivePocket(); } catch (_) {}
         document.getElementById('combat-actions').innerHTML =
-          `<span style="color:var(--muted)">Авто-рейд · ${actor.fullName || actor.name}…</span>`;
+          `<span style="color:var(--muted)">Авто · ${actor.fullName || actor.name}…</span>`;
         clearTimeout(aiTimer);
         aiTimer = setTimeout(() => {
           try {

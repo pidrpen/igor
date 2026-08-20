@@ -489,6 +489,7 @@
     const prevGear = (editSlot != null && party[editSlot]?.gear) ? normalizeGear(party[editSlot].gear) : emptyGear();
     const entry = { classId: pickClass, specId: pickSpec, sec: prevSec, gear: prevGear };
     ensureSec(entry);
+    autoPlayPick = { classId: pickClass, specId: pickSpec };
     if (editSlot != null && editSlot < party.length) {
       party[editSlot] = entry;
       editSlot = null;
@@ -895,7 +896,11 @@
         _roomArt: {}, // стабильные фоны комнат (rift/ember)
       };
       assignPartyUniqueNames(run.party);
-      raidPlayerUid = run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid || null;
+      raidPlayerUid = (typeof pickAutoPlayerUid === 'function')
+        ? pickAutoPlayerUid()
+        : (run.raid
+          ? (run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid)
+          : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid));
       raidAutoAllies = true;
       resetRecount();
       beginRunScreen();
@@ -907,6 +912,7 @@
       } else {
         log(`Ключ +${keyLevel}: ${dungeon.name}. Маршрут с развилками · нужно ⚔ ${FORCES_TARGET}% сил (на карте ~${FORCES_MAP_BUDGET}%).` +
           (keyLevel >= 9 ? ' Потолок без шмоток — +8. Выше стена.' : (keyLevel >= 8 ? ' +8 — потолок без шмоток.' : '')), 'system');
+        log('Авто-ключ: союзники ходят сами. Клик по герою — взять его следующий ход. Кнопка сверху выключает авто.', 'system');
       }
       log(`Отряд: ${run.party.map(p => p.fullName).join(', ')}`, 'system');
       updateHud(); renderPath(); renderPowers(); enterRoom();
@@ -981,9 +987,13 @@
         });
       }
       assignPartyUniqueNames(run.party);
+      raidPlayerUid = (typeof pickAutoPlayerUid === 'function')
+        ? pickAutoPlayerUid()
+        : (run.raid
+          ? (run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid)
+          : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid));
+      raidAutoAllies = true;
       if (run.raid) {
-        raidPlayerUid = run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid || null;
-        raidAutoAllies = true;
         if (!run.route?.nodes || data.dungeonId === 'throne') {
           if (!run.route?.nodes) run.route = generateRaidRoute();
         }
@@ -1158,9 +1168,8 @@
     startCombat(type);
     if (run.raid) {
       try { showRaidBriefing(); } catch (_) {}
-      const auto = document.getElementById('btn-raid-auto');
-      if (auto) auto.classList.remove('hidden');
     }
+    try { if (typeof syncPartyAutoHud === 'function') syncPartyAutoHud(); } catch (_) {}
   }
 
   /** Пропуск комнаты привала без хила/баффа (темп: пачка → пачка). */

@@ -537,6 +537,22 @@
               dot: tick, fromUid: actor.uid, periodic: true,
               school: ad.school || ability.school || 'physical',
             });
+            if (hasFlatZero && tick > 0 && enemy.alive) {
+              const dealtDot = dealTrue(enemy, tick, actor, 'dot', {
+                school: ad.school || ability.school || 'physical',
+                abilityName: ad.name || ability.name,
+                isDot: true,
+              });
+              const bid = 'dot_' + (ad.id || ability.id);
+              const buff = (enemy.buffs || []).find(b => b && b.id === bid && b.fromUid === actor.uid);
+              if (buff) {
+                buff._tickedRound = (typeof combat !== 'undefined' && combat) ? combat.round : 0;
+                buff.turns = Math.max(0, (Number(buff.turns) || 1) - 1);
+              }
+              if (dealtDot > 0) {
+                log(`${actor.name}: ${ability.name} → ${enemy.name} (−${fmt(dealtDot)})`, cls);
+              }
+            }
           }
           if (ability.enemyDmgMod && enemy.alive) {
             applyStatus(enemy, {

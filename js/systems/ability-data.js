@@ -94,7 +94,7 @@
   };
 
   function aiDelay() {
-    return Math.max(80, Math.round(400 / gameSpeed));
+    return Math.max(50, Math.round(160 / gameSpeed));
   }
   function sfx(kind) {
     if (!soundOn) return;
@@ -130,7 +130,8 @@
   const floatStacks = new Map(); // uid -> next index
 
   function floatAnchor(unitUid) {
-    const unit = unitEl(unitUid);
+    let unit = typeof unitEl === 'function' ? unitEl(unitUid) : null;
+    if (!unit) unit = document.querySelector('[data-uid="' + unitUid + '"]');
     if (!unit) return null;
     // Prefer portrait circle; fall back to pet face / whole card
     const port = unit.querySelector('.portrait, .art-wrap.pet-face') || unit;

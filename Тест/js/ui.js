@@ -66,28 +66,12 @@
         startBtn.insertAdjacentElement('afterend', slot);
       }
     }
-    if (!document.getElementById('btn-field-trial')) {
-      const tavernBtn = document.getElementById('btn-tavern') || document.getElementById('btn-start');
-      if (tavernBtn && tavernBtn.parentNode) {
-        const fb = document.createElement('button');
-        fb.className = 'btn';
-        fb.type = 'button';
-        fb.id = 'btn-field-trial';
-        fb.style.cssText = 'width:100%;padding:.65rem;margin-top:.45rem';
-        fb.textContent = 'Поле: линии и два зала';
-        fb.addEventListener('click', () => {
-          if (typeof fieldStartTrial === 'function') fieldStartTrial();
-        });
-        const slot = document.getElementById('igor-hero-lobby-slot') || tavernBtn.parentNode;
-        slot.appendChild(fb);
-      }
-    }
+    const oldFieldBtn = document.getElementById('btn-field-trial');
+    if (oldFieldBtn) oldFieldBtn.remove();
     try { if (typeof igorHeroBootLobby === 'function') igorHeroBootLobby(); } catch (_) {}
     try { syncHeroPartySlot(); } catch (_) {}
 
-    document.getElementById('btn-abandon').addEventListener('click', () => {
-      if (confirm('Сдаться?')) endRun(false, 'Вы покинули ключ.');
-    });
+    bindAbandonButton();
     document.getElementById('btn-lobby').addEventListener('click', backToLobby);
     document.getElementById('rest-heal')?.addEventListener('click', () => doRest('heal'));
     document.getElementById('rest-buff')?.addEventListener('click', () => doRest('buff'));
@@ -182,6 +166,7 @@
     }
     renderParty();
     renderBalancePanel();
+    try { renderDivergePanel(); } catch (_) {}
     try { syncRaidLobbyUi(); } catch (_) {}
     refreshAffixes();
     refreshKeystone();
@@ -550,6 +535,7 @@
     const prevGear = (editSlot != null && party[editSlot]?.gear) ? normalizeGear(party[editSlot].gear) : emptyGear();
     const entry = { classId: pickClass, specId: pickSpec, sec: prevSec, gear: prevGear };
     ensureSec(entry);
+    autoPlayPick = { classId: pickClass, specId: pickSpec };
     if (editSlot != null && editSlot < party.length) {
       party[editSlot] = entry;
       editSlot = null;
@@ -935,11 +921,29 @@
   }
 
   // ── Run ──
+  function bindAbandonButton() {
+    const btn = document.getElementById('btn-abandon');
+    if (!btn) return;
+    if (btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    btn.type = 'button';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!run || run.finished) {
+        toast('Заход уже закончен');
+        return;
+      }
+      endRun(false, run.raid ? 'Вы покинули рейд.' : 'Вы покинули ключ.');
+    });
+  }
+
   function beginRunScreen() {
     document.getElementById('lobby').classList.add('hidden');
     document.getElementById('run-screen').classList.remove('hidden');
     document.getElementById('end-modal').classList.add('hidden');
     document.body.classList.toggle('raid-run', !!(run && run.raid));
+    try { bindAbandonButton(); } catch (_) {}
     paused = false;
     const b = document.getElementById('btn-pause');
     if (b) b.textContent = 'Пауза';
@@ -990,7 +994,11 @@
         _roomArt: {}, // стабильные фоны комнат (rift/ember)
       };
       assignPartyUniqueNames(run.party);
-      raidPlayerUid = run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid || null;
+      raidPlayerUid = (typeof pickAutoPlayerUid === 'function')
+        ? pickAutoPlayerUid()
+        : (run.raid
+          ? (run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid)
+          : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid));
       raidAutoAllies = true;
       resetRecount();
       beginRunScreen();
@@ -1002,6 +1010,7 @@
       } else {
         log(`Ключ +${keyLevel}: ${dungeon.name}. Маршрут с развилками · нужно ⚔ ${FORCES_TARGET}% сил (на карте ~${FORCES_MAP_BUDGET}%).` +
           (keyLevel >= 9 ? ' Потолок без шмоток — +8. Выше стена.' : (keyLevel >= 8 ? ' +8 — потолок без шмоток.' : '')), 'system');
+        log('Авто-ключ: союзники ходят сами. Клик по герою — взять его следующий ход. Кнопка сверху выключает авто.', 'system');
       }
       log(`Отряд: ${run.party.map(p => p.fullName).join(', ')}`, 'system');
       updateHud(); renderPath(); renderPowers(); enterRoom();
@@ -1077,9 +1086,13 @@
         });
       }
       assignPartyUniqueNames(run.party);
+      raidPlayerUid = (typeof pickAutoPlayerUid === 'function')
+        ? pickAutoPlayerUid()
+        : (run.raid
+          ? (run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid)
+          : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid));
+      raidAutoAllies = true;
       if (run.raid) {
-        raidPlayerUid = run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid || null;
-        raidAutoAllies = true;
         if (!run.route?.nodes || data.dungeonId === 'throne') {
           if (!run.route?.nodes) run.route = generateRaidRoute();
         }
@@ -1254,9 +1267,8 @@
     startCombat(type);
     if (run.raid) {
       try { showRaidBriefing(); } catch (_) {}
-      const auto = document.getElementById('btn-raid-auto');
-      if (auto) auto.classList.remove('hidden');
     }
+    try { if (typeof syncPartyAutoHud === 'function') syncPartyAutoHud(); } catch (_) {}
   }
 
   /** Пропуск комнаты привала без хила/баффа (темп: пачка → пачка). */
@@ -2001,40 +2013,45 @@
   function endRun(win, msg) {
     if (!run || run.finished) return;
     run.finished = true;
-    clearInterval(timerInterval);
-    clearTimeout(aiTimer);
+    try { clearInterval(timerInterval); } catch (_) {}
+    try { clearTimeout(aiTimer); } catch (_) {}
     combat = null;
-    // Keep recount data for reference until lobby; hide floating panel over end modal
-    showRecountPanel(false);
+    try { showRecountPanel(false); } catch (_) {}
     try { hidePassivePocket(); } catch (_) {}
-    const score = win ? scoreLabel() : 'Провал';
-    pushHistory({
-      key: run.keyLevel,
-      dungeon: run.dungeon.name,
-      score,
-      deaths: run.deaths,
-      win,
-      forces: Math.round(run.forces || 0),
-    });
-    // best key
+    const score = win ? (typeof scoreLabel === 'function' ? scoreLabel() : 'Готово') : 'Провал';
+    try {
+      pushHistory({
+        key: run.keyLevel,
+        dungeon: run.dungeon && run.dungeon.name,
+        score,
+        deaths: run.deaths,
+        win,
+        forces: Math.round(run.forces || 0),
+      });
+    } catch (_) {}
     try {
       const best = +(localStorage.getItem('mythicKeyBest') || 0);
       if (win && run.keyLevel > best) localStorage.setItem('mythicKeyBest', String(run.keyLevel));
     } catch (_) {}
-    clearSave();
-    document.getElementById('talent-modal').classList.add('hidden');
-    document.getElementById('rest-modal').classList.add('hidden');
-    const box = document.getElementById('end-box');
-    box.className = 'modal end-modal ' + (win ? 'win' : 'lose');
-    document.getElementById('end-title').textContent = win
-      ? (run.raid ? `Рейд закрыт · ${score}!` : (run.fieldTrial ? `Поле закрыто · ${score}!` : `Ключ закрыт · ${score}!`))
-      : (run.raid ? 'Рейд провален' : (run.fieldTrial ? 'Поле провалено' : 'Ключ провален'));
+    try { clearSave(); } catch (_) {}
+    try { document.getElementById('talent-modal')?.classList.add('hidden'); } catch (_) {}
+    try { document.getElementById('rest-modal')?.classList.add('hidden'); } catch (_) {}
     try { document.body.classList.remove('has-field', 'field-split'); } catch (_) {}
-    const lootStr = (run.loot || []).map(l => l.icon + ' ' + l.name).join(', ') || 'нет';
-    document.getElementById('end-msg').textContent = msg + `\nДобыча: ${lootStr}`;
-    document.getElementById('end-modal').classList.remove('hidden');
-    sfx(win ? 'win' : 'lose');
-    if (win) spawnConfetti();
+    const box = document.getElementById('end-box');
+    if (box) box.className = 'modal end-modal ' + (win ? 'win' : 'lose');
+    const title = document.getElementById('end-title');
+    if (title) {
+      title.textContent = win
+        ? (run.raid ? `Рейд закрыт · ${score}!` : `Ключ закрыт · ${score}!`)
+        : (run.raid ? 'Рейд провален' : 'Ключ провален');
+    }
+    const lootStr = (run.loot || []).map(l => (l.icon || '') + ' ' + (l.name || '')).join(', ') || 'нет';
+    const endMsg = document.getElementById('end-msg');
+    if (endMsg) endMsg.textContent = (msg || '') + `\nДобыча: ${lootStr}`;
+    const modal = document.getElementById('end-modal');
+    if (modal) modal.classList.remove('hidden');
+    try { sfx(win ? 'win' : 'lose'); } catch (_) {}
+    try { if (win) spawnConfetti(); } catch (_) {}
     document.getElementById('vignette')?.classList.remove('on');
     applyDungeonTheme(null);
   }

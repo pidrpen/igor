@@ -1270,51 +1270,28 @@
       layer.appendChild(p);
       setTimeout(() => p.remove(), 650);
     };
-    const glyph = (ability && ability.icon) ? String(ability.icon) : '';
-    const spawnGlyphPop = (x, y) => {
-      if (!glyph) return;
-      const g = document.createElement('div');
-      g.className = 'skill-glyph pop';
-      g.textContent = glyph;
-      g.style.left = x + 'px';
-      g.style.top = y + 'px';
-      layer.appendChild(g);
-      setTimeout(() => g.remove(), 520);
+    const drawnSchool = (school && school !== 'none') ? school : (style || 'physical');
+    const spawnDrawnHit = (x, y, impact) => {
+      laterRm(shamEl(layer, 'fx-hit school-' + drawnSchool + (impact && impact !== 'hit' ? ' impact-' + impact : ''), x, y), 720);
+      const n = impact === 'explode' ? 9 : (impact === 'splash' ? 7 : 5);
+      shamSparks(layer, 'fx-spark school-' + drawnSchool, x, y, n, impact === 'explode' ? 30 : 18, 580);
+      if (drawnSchool === 'heal' || type === 'heal' || type === 'heal_aoe' || type === 'shield') {
+        const plus = shamEl(layer, 'chain-plus school-heal', x, y - 8);
+        plus.textContent = '+';
+        laterRm(plus, 700);
+      }
     };
     const spawnProjectile = (to, onHit) => {
-      const proj = document.createElement('div');
-      if (glyph) {
-        proj.className = 'skill-glyph fly' + (school ? ' school-' + school : '');
-        proj.textContent = glyph;
-      } else {
-        proj.className = 'skill-projectile' + (school ? ' school-' + school : '');
-      }
-      proj.style.left = from.x + 'px';
-      proj.style.top = from.y + 'px';
       const dx = to.x - from.x, dy = to.y - from.y;
       const ang = Math.atan2(dy, dx) * 180 / Math.PI;
-      proj.style.setProperty('--ang', ang + 'deg');
-      layer.appendChild(proj);
-      // trail: jab-style geometric line along flight path
-      const trail = document.createElement('div');
-      trail.className = 'skill-slash' + (school && school !== 'physical' ? ' ' + school : '');
-      trail.style.left = from.x + 'px';
-      trail.style.top = from.y + 'px';
-      trail.style.setProperty('--slash-rot', ang + 'deg');
-      trail.style.opacity = '0.7';
-      layer.appendChild(trail);
-      setTimeout(() => trail.remove(), 780);
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const dur = clamp(dist / 520, 0.42, 0.85); // slower flight
-      proj.animate([
-        { transform: 'translate(-50%, -50%) scale(.45)', opacity: 0.15 },
-        { transform: `translate(calc(-50% + ${dx * 0.45}px), calc(-50% + ${dy * 0.45}px)) scale(1.2)`, opacity: 1, offset: 0.5 },
-        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.85)`, opacity: 1 },
+      const dist = Math.hypot(dx, dy);
+      const dur = clamp(dist / 520, 0.42, 0.85);
+      const el = shamEl(layer, 'fx-orb school-' + drawnSchool, from.x, from.y);
+      el.animate([
+        { transform: 'translate(-50%,-50%) rotate(' + ang + 'deg) scale(.5)', opacity: 0.25 },
+        { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) rotate(' + ang + 'deg) scale(1)', opacity: 1 },
       ], { duration: dur * 1000, easing: 'cubic-bezier(.18,.75,.22,1)', fill: 'forwards' });
-      setTimeout(() => {
-        if (onHit) onHit();
-        proj.remove();
-      }, dur * 1000);
+      setTimeout(() => { el.remove(); if (onHit) onHit(); }, dur * 1000);
       return Math.round(dur * 1000);
     };
     const hitPulse = (t) => {
@@ -1384,7 +1361,7 @@
           const to = unitCenter(t.uid);
           if (!to) return;
           if (fx.motion === 'swirl') spawnSwirl(to.x, to.y);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
         }, 120 + i * 90);
       });
@@ -1417,62 +1394,62 @@
       setTimeout(() => {
         if (motion === 'beam' || type === 'heal' || type === 'shield') {
           spawnBeam(from.x, from.y, to.x, to.y);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;
         }
         if (motion === 'chain') {
           spawnBeam(from.x, from.y, to.x, to.y);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;
         }
         if (motion === 'slash' || motion === 'slam') {
           spawnSlash(to.x, to.y);
           if (motion === 'slam') spawnRing(to.x, to.y, true);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;
         }
         if (motion === 'arc') {
           spawnArc(to.x, to.y);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;
         }
         if (motion === 'pierce') {
           spawnPierce(from.x, from.y, to.x, to.y);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;
         }
         if (motion === 'orbit') {
           spawnOrbit(to.x, to.y);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           if (type === 'dot') spawnRing(to.x, to.y);
           hitPulse(t);
           return;
         }
         if (motion === 'nova') {
           spawnRing(to.x, to.y, true);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;
         }
         if (motion === 'rain') {
           spawnRain(to.x, to.y, 6);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;
         }
         if (motion === 'swirl') {
           spawnSwirl(to.x, to.y);
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;
         }
         spawnProjectile(to, () => {
-          spawnGlyphPop(to.x, to.y);
+          spawnDrawnHit(to.x, to.y, fx.impact);
           if (type === 'dot') spawnRing(to.x, to.y);
           hitPulse(t);
         });

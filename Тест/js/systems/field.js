@@ -1,6 +1,10 @@
-/* systems/field: поле 3 линии × 2 ряда, шаг карточки, раскол залов. Только Тест. */
+/* systems/field: поле 3 линии × 2 ряда. С 5.4.9.10В в ключе и рейде выключено.
+ * Пользователь имел в виду раскол пачек на разные экраны, не шаг влево/вправо на одном поле.
+ */
 (function (G) {
   'use strict';
+
+  var FIELD_LIVE = false;
 
   var LANES = ['L', 'C', 'R'];
   var LANE_NAME = { L: 'лево', C: 'центр', R: 'право' };
@@ -34,6 +38,7 @@
   }
 
   function fieldActive() {
+    if (!FIELD_LIVE) return false;
     return !!(typeof combat !== 'undefined' && combat && combat.field && combat.field.on !== false);
   }
 
@@ -205,6 +210,11 @@
   }
 
   function fieldOnCombatStart() {
+    if (!FIELD_LIVE) {
+      try { document.body.classList.remove('has-field', 'field-split'); } catch (_) {}
+      if (typeof combat !== 'undefined' && combat && combat.field) combat.field.on = false;
+      return;
+    }
     if (typeof combat === 'undefined' || !combat) return;
     var st = fieldState();
     st.on = true;
@@ -592,6 +602,14 @@
   }
 
   function fieldStartTrial() {
+    if (!FIELD_LIVE) {
+      try { toast('Поле снято: шаг по линиям в ключе и рейде убран.'); } catch (_) {}
+      return;
+    }
+    fieldStartTrialLive();
+  }
+
+  function fieldStartTrialLive() {
     if (typeof createHero !== 'function' || typeof beginRunScreen !== 'function') {
       try { toast('Бой ещё не готов'); } catch (_) {}
       return;

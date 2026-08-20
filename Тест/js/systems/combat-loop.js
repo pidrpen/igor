@@ -125,7 +125,9 @@
 
   function animWaitMs(animMs) {
     const n = Number(animMs);
-    return Math.min(900, Math.max(280, n > 0 ? n : 350));
+    const spd = (typeof gameSpeed === 'number' && gameSpeed > 0) ? gameSpeed : 1;
+    const raw = (n > 0 ? n : 160) * 0.42 / spd;
+    return Math.min(280, Math.max(40, Math.round(raw)));
   }
 
   function installAnimAfterAction() {
@@ -158,7 +160,7 @@
       }
       let wait;
       if (preWait) wait = 0;
-      else if (aiWait) wait = Math.max(typeof aiDelay === 'function' ? aiDelay() : 400, animWaitMs(animMs));
+      else if (aiWait) wait = animWaitMs(animMs);
       else wait = animWaitMs(animMs);
       scheduleProcessTurn(wait);
     };
@@ -254,7 +256,7 @@
         document.getElementById('ability-bar').innerHTML = '';
         try { hidePassivePocket(); } catch (_) {}
         document.getElementById('combat-actions').innerHTML =
-          `<span style="color:var(--muted)">Авто-рейд · ${actor.fullName || actor.name}…</span>`;
+          `<span style="color:var(--muted)">Авто · ${actor.fullName || actor.name}…</span>`;
         clearTimeout(aiTimer);
         aiTimer = setTimeout(() => {
           try {

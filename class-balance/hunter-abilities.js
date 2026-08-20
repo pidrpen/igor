@@ -192,8 +192,8 @@
         abilities: [
           A({
             id: 'chimera', n: 'Выстрел химеры', en: 'Chimera Shot', i: '🐲',
-            c: 40, cd: 2, t: 'damage', fl: 28, school: 'nature',
-            d: 'Сигнатура · 28т · 40 конц. · КД 2', sid: 53209,
+            c: 40, cd: 2, t: 'damage', fl: 32, school: 'nature',
+            d: 'Сигнатура · 32т · 40 конц. · КД 2', sid: 53209,
           }),
           A({
             id: 'steady', n: 'Верный выстрел', en: 'Steady Shot', i: '➡️',
@@ -202,8 +202,8 @@
           }),
           A({
             id: 'aimed', n: 'Прицельный выстрел', en: 'Aimed Shot', i: '🎯',
-            c: 45, t: 'damage', fl: 34, school: 'physical',
-            d: 'Дорогой dump · 34т · 45 конц.', sid: 19434,
+            c: 45, t: 'damage', fl: 38, school: 'physical',
+            d: 'Дорогой dump · 38т · 45 конц.', sid: 19434,
           }),
           A({
             id: 'arcane', n: 'Чародейский выстрел', en: 'Arcane Shot', i: '💜',
@@ -222,8 +222,8 @@
           }),
           A({
             id: 'barrage', n: 'Шквал', en: 'Barrage', i: '🎇',
-            c: 30, cd: 3, t: 'aoe', fl: 18, hits: 2, school: 'physical',
-            d: 'AoE-бёрст · 18т×2 · 30 конц. · КД 3', sid: 120360,
+            c: 30, cd: 3, t: 'aoe', fl: 14, hits: 2, school: 'physical',
+            d: 'AoE-бёрст · 14т×2 · 30 конц. · КД 3', sid: 120360,
           }),
           A({
             id: 'rapid', n: 'Быстрая стрельба', en: 'Rapid Fire', i: '💨',
@@ -256,7 +256,7 @@
             id: 'explosive', n: 'Разрывной выстрел', en: 'Explosive Shot', i: '💣',
             c: 25, cd: 2, t: 'damage', fl: 24, school: 'fire',
             applyDot: { flat: 4, turns: 3, name: 'Разрывной заряд', icon: '💥', id: 'explosive', school: 'fire' },
-            d: 'Сигнатура · 24т + 4т×3 · 25 конц. · КД 1', sid: 53301,
+            d: 'Сигнатура · 24т + 4т×3 · 25 конц. · КД 2', sid: 53301,
           }),
           A({
             id: 'cobra', n: 'Выстрел кобры', en: 'Cobra Shot', i: '🐍',
@@ -276,8 +276,8 @@
           }),
           A({
             id: 'multi', n: 'Залп', en: 'Multi-Shot', i: '🏹',
-            c: 35, t: 'aoe', fl: 15, school: 'physical',
-            d: 'AoE · 15т · 35 конц.', sid: 2643,
+            c: 35, t: 'aoe', fl: 13, school: 'physical',
+            d: 'AoE · 13т · 35 конц.', sid: 2643,
           }),
           A({
             id: 'serpent', n: 'Укус змеи', en: 'Serpent Sting', i: '🐍',
@@ -292,9 +292,9 @@
           }),
           A({
             id: 'explosive_trap', n: 'Взрывная ловушка', en: 'Explosive Trap', i: '🔥',
-            c: 20, cd: 3, t: 'aoe', fl: 12, school: 'fire',
-            applyDot: { flat: 4, turns: 3, name: 'Ожог ловушки', icon: '🔥', id: 'explosive_trap', school: 'fire' },
-            d: 'AoE · 12т + ожог 4т×3 · 20 конц. · КД 3', sid: 13813,
+            c: 20, cd: 3, t: 'aoe', fl: 10, school: 'fire',
+            applyDot: { flat: 3, turns: 3, name: 'Ожог ловушки', icon: '🔥', id: 'explosive_trap', school: 'fire' },
+            d: 'AoE · 10т + ожог 3т×3 · 20 конц. · КД 3', sid: 13813,
           }),
           A({
             id: 'rapid', n: 'Быстрая стрельба', en: 'Rapid Fire', i: '💨',
@@ -402,11 +402,11 @@
       marksmanship: {
         generators: [{ id: 'steady', gen: 18, flat: 11 }],
         spenders: [
-          { id: 'chimera', cost: 40, flat: 28, cd: 2, signature: true },
-          { id: 'aimed', cost: 45, flat: 34, signature: true },
+          { id: 'chimera', cost: 40, flat: 32, cd: 2, signature: true },
+          { id: 'aimed', cost: 45, flat: 38, signature: true },
           { id: 'arcane', cost: 25, flat: 20 },
           { id: 'multi', cost: 35, flat: 14, aoe: true },
-          { id: 'barrage', cost: 30, flat: 18, hits: 2, aoe: true, cd: 3 },
+          { id: 'barrage', cost: 30, flat: 14, hits: 2, aoe: true, cd: 3 },
           { id: 'serpent', cost: 20, flat: 8, applyDot: '5×4' },
           { id: 'kill_shot', cost: 15, flat: 40, execute: true, freeAction: true },
         ],
@@ -419,8 +419,8 @@
           { id: 'explosive', cost: 25, flat: 24, cd: 2, applyDot: '4×3', signature: true },
           { id: 'black_arrow', cost: 30, flat: 14, cd: 3, applyDot: '6×4', signature: true },
           { id: 'arcane', cost: 25, flat: 20 },
-          { id: 'multi', cost: 35, flat: 15, aoe: true },
-          { id: 'explosive_trap', cost: 20, flat: 12, aoe: true, applyDot: '4×3' },
+          { id: 'multi', cost: 35, flat: 13, aoe: true },
+          { id: 'explosive_trap', cost: 20, flat: 10, aoe: true, applyDot: '3×3' },
           { id: 'serpent', cost: 20, flat: 8, applyDot: '5×4' },
           { id: 'kill_shot', cost: 15, flat: 40, execute: true, freeAction: true },
         ],

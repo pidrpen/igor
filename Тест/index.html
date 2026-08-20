@@ -8,23 +8,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
   <script src="wow-mop-data.js?v=5.4.9"></script>
-  <script src="class-balance/warrior-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/paladin-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/hunter-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/rogue-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/priest-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/deathknight-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/shaman-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/mage-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/warlock-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/monk-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/druid-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/engineer-abilities.js?v=5.4.9-hour"></script>
-  <script src="class-balance/demonhunter-abilities.js?v=5.4.9-dh"></script>
+  <script src="class-balance/warrior-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/paladin-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/hunter-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/rogue-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/priest-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/deathknight-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/shaman-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/mage-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/warlock-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/monk-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/druid-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/engineer-abilities.js?v=5.4.9.11В"></script>
+  <script src="class-balance/demonhunter-abilities.js?v=5.4.9.11В"></script>
   <script src="class-balance/cheat-abilities.js?v=5.4.8.38-cheat"></script>
-  <script src="class-balance/apply-all.js?v=5.4.9.08В"></script>
-  <link rel="stylesheet" href="css/main.css?v=5.4.9.06" />
-  <link rel="stylesheet" href="css/theme-controls.css?v=5.4.8.34-shamfx2" />
+  <script src="class-balance/apply-all.js?v=5.4.9.11В"></script>
+  <link rel="stylesheet" href="css/main.css?v=5.4.9.10В" />
+  <link rel="stylesheet" href="css/theme-controls.css?v=5.4.9.12В" />
   <link rel="stylesheet" href="css/test-room.css?v=5.4.9.08" />
 </head>
 <body>
@@ -33,6 +33,17 @@
     <div class="lobby-hero"><h1>Мифик-ключ</h1><div class="badge-row"><span class="week-badge">Туманы Пандарии</span><span class="week-badge" id="lobby-patch-badge">патч 5.4.8</span><span class="week-badge">🧪 тест</span><a class="week-badge test-build-link" href="../index.html" title="Основная сборка">← Основная игра</a></div></div>
     <p class="subtitle">Классы и специализации <b style="color:var(--text)">эпохи Туманов Пандарии</b>. Выбери класс → специализацию. Ресурсы: ярость, энергия, руны, фокус, мана, ци…</p>
     <div class="lobby-wrap">
+      <div class="lobby-journals">
+      <div class="card diverge-panel" id="diverge-panel">
+        <div class="section-title">Расхождение с основой</div>
+        <div class="balance-ver">
+          <span class="ver-badge" id="diverge-sub">не залито</span>
+          <span class="ver-sub">только Тест</span>
+        </div>
+        <p class="diverge-note" id="diverge-note">Чем Тест отличается от основы, и уехало ли при переливе.</p>
+        <div class="balance-filter" id="diverge-filter" aria-label="Фильтр по заливу"></div>
+        <div class="diverge-scroll" id="diverge-list"></div>
+      </div>
       <div class="card balance-panel" id="balance-panel">
         <div class="section-title">Баланс классов <span class="beta-pill" title="Тестовая ветка — нестабильно">β Бета</span></div>
         <div class="balance-ver">
@@ -43,6 +54,7 @@
         <div class="balance-filter" id="balance-filter" aria-label="Фильтр по классу"></div>
         <div class="balance-filter balance-filter-spec hidden" id="balance-filter-spec" aria-label="Фильтр по специализации"></div>
         <div class="balance-scroll" id="balance-history"></div>
+      </div>
       </div>
       <div class="card lobby-builder">
         <div class="section-title">Сборка персонажа</div>
@@ -477,12 +489,12 @@
         <div id="log"></div>
       </aside>
     </div>
-    <div id="passive-pocket" class="passive-pocket collapsed hidden" aria-label="Пассивные способности">
-      <button type="button" class="passive-pocket-toggle" id="passive-pocket-toggle" title="Пассивные способности">
-        <span class="passive-pocket-title">✨ Пассивные способности</span>
+    <div id="passive-pocket" class="passive-pocket hidden" aria-label="Пассивные бафы">
+      <button type="button" class="passive-pocket-toggle" id="passive-pocket-toggle" title="Пассивные бафы">
+        <span class="passive-pocket-title">Пассивные бафы</span>
         <span class="passive-pocket-chevron" id="passive-pocket-chevron">▼</span>
       </button>
-      <div class="passive-pocket-panel" id="passive-tray" role="region" aria-label="Список пассивок">
+      <div class="passive-pocket-panel" id="passive-tray" role="region" aria-label="Список пассивных бафов">
         <div class="passive-pocket-scroll" id="passive-list"></div>
         <div class="passive-pocket-tip hidden" id="passive-pocket-tip" role="tooltip" aria-live="polite"></div>
       </div>
@@ -595,8 +607,9 @@
   <div class="skill-fx-layer" id="skill-fx-layer"></div>
   <script src="js/state.js?v=5.4.9-dh"></script>
   <script src="js/core.js?v=5.4.9-dh"></script>
-  <script src="js/ui/balance-panel.js?v=5.4.9.08В"></script>
-  <script src="js/ui/fx.js?v=5.4.9.04"></script>
+  <script src="js/ui/balance-panel.js?v=5.4.9.14В"></script>
+  <script src="js/ui/diverge-panel.js?v=5.4.9.12В"></script>
+  <script src="js/ui/fx.js?v=5.4.9.12В"></script>
   <script src="js/ui/skill-fx-warrior.js?v=5.4.9-fx"></script>
   <script src="js/ui/skill-fx-paladin.js?v=5.4.9-fx"></script>
   <script src="js/ui/skill-fx-hunter.js?v=5.4.9-fx"></script>
@@ -612,28 +625,28 @@
   <script src="js/ui/skill-fx-demonhunter.js?v=5.4.9-fx"></script>
   <script src="js/enemies.js?v=5.4.9-faces"></script>
   <script src="js/route.js?v=5.4.9-inst"></script>
-  <script src="js/raid.js?v=5.4.9.07"></script>
+  <script src="js/raid.js?v=5.4.9.14В"></script>
   <script src="js/gear.js?v=5.4.9-hour"></script>
   <script src="js/shop/shop-sets.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop-trinkets-data.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop.js?v=5.4.8.34-gear6"></script>
   <script src="js/systems/telegraph-loot.js?v=5.4.9.06"></script>
   <script src="js/systems/stats.js?v=5.4.9.06"></script>
-  <script src="js/systems/passives.js?v=5.4.9.06"></script>
+  <script src="js/systems/passives.js?v=5.4.9.10В"></script>
   <script src="js/systems/meter.js?v=5.4.8.34"></script>
-  <script src="js/systems/ability-data.js?v=5.4.9.06"></script>
-  <script src="js/systems/party-auras.js?v=5.4.9.06"></script>
-  <script src="js/systems/field.js?v=5.4.9.07"></script>
+  <script src="js/systems/ability-data.js?v=5.4.9.14В"></script>
+  <script src="js/systems/party-auras.js?v=5.4.9.10В"></script>
+  <script src="js/systems/field.js?v=5.4.9.10В"></script>
   <script src="js/systems/resources.js?v=5.4.9-runes3"></script>
-  <script src="js/systems/combat-loop.js?v=5.4.9.07"></script>
-  <script src="js/ui/combat-ui.js?v=5.4.9.07"></script>
-  <script src="js/systems/abilities.js?v=5.4.9.07"></script>
+  <script src="js/systems/combat-loop.js?v=5.4.9.13В"></script>
+  <script src="js/ui/combat-ui.js?v=5.4.9.14В"></script>
+  <script src="js/systems/abilities.js?v=5.4.9.14В"></script>
   <script src="js/systems/damage.js?v=5.4.9.07"></script>
   <script src="js/systems/ai.js?v=5.4.9.07"></script>
-  <script src="js/systems/party-ai.js?v=5.4.9.07"></script>
+  <script src="js/systems/party-ai.js?v=5.4.9.13В"></script>
   <script src="js/systems/combat-flow.js?v=5.4.9-hour"></script>
   <script src="js/save.js?v=5.4.9.06"></script>
-  <script src="js/ui.js?v=5.4.9.07"></script>
+  <script src="js/ui.js?v=5.4.9.14В"></script>
   <script src="js/dungeon-inst.js?v=5.4.9-faces"></script>
   <script src="js/leveling/curve.js?v=5.4.9-phlock"></script>
   <script src="js/leveling/hero-save.js?v=5.4.9-phlock"></script>

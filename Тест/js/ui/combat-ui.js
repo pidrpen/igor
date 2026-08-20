@@ -519,7 +519,7 @@
         && typeof tryAssignRaidSoak === 'function' && tryAssignRaidSoak(unit)) {
       return;
     }
-    if (run?.raid && unit?.side === 'ally' && !unit.isPet && !unit.healOnly && !unit.instObject && !pendingTarget) {
+    if (raidAutoAllies && combat?.waitingPlayer && unit?.side === 'ally' && !unit.isPet && !unit.healOnly && !unit.instObject && !pendingTarget) {
       if (typeof setRaidFocus === 'function') setRaidFocus(unit);
       return;
     }
@@ -652,10 +652,16 @@
     return `<div class="pet-row">${pets.map(p => petPortraitHtml(p, actor)).join('')}</div>`;
   }
 
+  function isClassAuraBuff(b) {
+    if (!b) return false;
+    if (b.aura === true) return true;
+    return String(b.id || '').indexOf('aura_') === 0;
+  }
+
   function unitHasAuras(u) {
     if (!u) return false;
     if (u.thunderMark) return true;
-    return (u.buffs || []).some(b => b && (b.turns == null || Number(b.turns) > 0));
+    return (u.buffs || []).some(b => b && !isClassAuraBuff(b) && (b.turns == null || Number(b.turns) > 0));
   }
 
   function stackHtml(u, actor, withPets) {
@@ -1034,6 +1040,7 @@
     const seen = new Set();
     const push = (b) => {
       if (!b || !b.id) return;
+      if (isClassAuraBuff(b)) return;
       const key = String(b.id) + '@' + String(b.fromUid || '');
       if (seen.has(key)) return;
       seen.add(key);
