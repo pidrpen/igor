@@ -60,6 +60,10 @@
   }
   function saveRun() {
     try {
+      if (run && run.party && typeof igorHeroStashFromUnit === 'function') {
+        const u = run.party.find(p => p && p._isHero);
+        if (u) igorHeroStashFromUnit(u);
+      }
       const data = serializeRun();
       if (data) localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch (_) { /* ignore */ }
@@ -76,6 +80,7 @@
 
   function savePartyProfile() {
     try {
+      if (typeof igorHeroStashGear === 'function') igorHeroStashGear();
       const prev = loadPartyProfile() || {};
       const payload = { ...prev };
       payload.party = (party || []).map(persistLobbyMember).filter(Boolean);
@@ -186,6 +191,8 @@
     // Прокачка: чужой ящик. Пишем только если приехал; не удаляем.
     if (data.igorHero != null) {
       try { localStorage.setItem(HERO_KEY, JSON.stringify(data.igorHero)); } catch (_) {}
+      try { if (typeof igorHeroBootLobby === 'function') igorHeroBootLobby(); } catch (_) {}
+      try { if (typeof igorHeroApplyGearToParty === 'function') igorHeroApplyGearToParty(); } catch (_) {}
     }
     // Active run
     if (data.run) {
@@ -230,7 +237,7 @@
       try {
         const data = JSON.parse(String(reader.result || ''));
         applyFullSave(data);
-        toast(data.run ? 'Импорт: отряд + активный ключ' : 'Импорт: отряд и история');
+        toast(data.run ? 'Импорт: отряд + таверна + ключ' : 'Импорт: отряд, таверна и история');
       } catch (e) {
         console.error(e);
         toast('Файл сейва повреждён или не подходит');

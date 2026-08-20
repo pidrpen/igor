@@ -76,9 +76,23 @@
     const gearCrit = Math.round((+gs.crit || 0) * (typeof GEAR_CRIT_PER_POINT !== 'undefined' ? GEAR_CRIT_PER_POINT : 1));
     const gearVers = Math.round((+gs.vers || 0) * (typeof GEAR_VERS_PER_POINT !== 'undefined' ? GEAR_VERS_PER_POINT : 1));
     const gearMast = Math.round((+gs.mastery || 0) * (typeof GEAR_MASTERY_PER_POINT !== 'undefined' ? GEAR_MASTERY_PER_POINT : 1));
-    const critRating = Math.max(0, Math.round(Number(base.critRating) || 0) + gearCrit);
-    const versRating = Math.max(0, Math.round(Number(base.versRating) || 0) + gearVers);
-    const masteryRating = Math.max(0, Math.round(Number(base.masteryRating) || 0) + gearMast);
+    let baseCrit = Math.round(Number(base.critRating) || 0);
+    let baseVers = Math.round(Number(base.versRating) || 0);
+    let baseMast = Math.round(Number(base.masteryRating) || 0);
+    let honestM = 1;
+    try {
+      if (typeof igorHeroHonestCleared === 'function' && entry && igorHeroHonestCleared(entry.classId, entry.specId)) {
+        honestM = (typeof igorHeroHonestStatMult === 'function') ? igorHeroHonestStatMult() : 1.10;
+      }
+    } catch (_) {}
+    if (honestM !== 1) {
+      baseCrit = Math.round(baseCrit * honestM);
+      baseVers = Math.round(baseVers * honestM);
+      baseMast = Math.round(baseMast * honestM);
+    }
+    const critRating = Math.max(0, baseCrit + gearCrit);
+    const versRating = Math.max(0, baseVers + gearVers);
+    const masteryRating = Math.max(0, baseMast + gearMast);
     return {
       critRating,
       versRating,
@@ -87,9 +101,9 @@
       versPct: clamp(versRating * SEC_VERS_PCT_PER_RATING, 0, 0.6),
       _gearBonus: { crit: gearCrit, vers: gearVers, mastery: gearMast },
       _base: {
-        critRating: Math.round(Number(base.critRating) || 0),
-        versRating: Math.round(Number(base.versRating) || 0),
-        masteryRating: Math.round(Number(base.masteryRating) || 0),
+        critRating: baseCrit,
+        versRating: baseVers,
+        masteryRating: baseMast,
       },
     };
   }

@@ -258,6 +258,17 @@
         detail: 'Способности с расходом ярости накапливают ярость боя — каждый стак усиливает урон. Способность без расхода ярости сбрасывает стаки. Видно на портрете.',
       });
     }
+    try {
+      if (typeof igorHeroHonestCleared === 'function' && igorHeroHonestCleared(classId, specId)) {
+        list.push({
+          id: 'honest_cleared',
+          name: 'Честно прокачен',
+          icon: '🕯️',
+          short: '+10%',
+          detail: 'Таверна, ур. 40. +10% к здоровью, атаке, защите, скорости, критическому удару, искусности и универсальности.',
+        });
+      }
+    } catch (_) {}
     return list;
   }
   function getUnitPassives(u) {

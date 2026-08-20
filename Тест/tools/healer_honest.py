@@ -58,7 +58,7 @@ def ab_fa(a):
 
 
 class Fight:
-    def __init__(self, kit, aoe):
+    def __init__(self, kit, aoe, horizon=HORIZON):
         self.kit = kit
         self.key = kit["key"]
         self.aoe = aoe
@@ -91,22 +91,34 @@ class Fight:
         self.serpent = 0
         self.pet = 0
         self.turn = 0
+        self.horizon = horizon
+        self.mana_log = []
+        self.oom_turn = None
+        self.idle_mana_turn = None
 
-    def ready(self, aid):
+    def ready(self, aid, ignore_mana=False):
         a = self.by.get(aid)
         if not a:
             return False
         if self.cds.get(aid, 0) > 0:
             return False
-        cost = num(a.get("c"))
-        if self.tea > 0 and (a.get("t") or "") in ("heal", "heal_aoe"):
-            cost = 0
-        if self.mana + 1e-6 < cost:
-            return False
         cs = num(a.get("cs"))
         if cs and self.es + 1e-6 < cs:
             return False
+        cost = num(a.get("c"))
+        if self.tea > 0 and (a.get("t") or "") in ("heal", "heal_aoe"):
+            cost = 0
+        if not ignore_mana and self.mana + 1e-6 < cost:
+            return False
         return True
+
+    def mana_cost(self, aid):
+        a = self.by.get(aid)
+        if not a:
+            return 0.0
+        if self.tea > 0 and (a.get("t") or "") in ("heal", "heal_aoe"):
+            return 0.0
+        return num(a.get("c"))
 
     def pay(self, aid):
         a = self.by[aid]
@@ -336,6 +348,14 @@ class Fight:
         elif aid == "jade_lotus":
             dealt = atk * 30 / FLAT * self.crit_mult()
             self.echo_lotus(dealt)
+        elif aid == "jab":
+            dealt = atk * 15 / FLAT * self.crit_mult()
+            self.echo_lotus(dealt)
+        elif aid == "sck":
+            hit = atk * 10 / FLAT * self.crit_mult()
+            n_foes = 5 if self.aoe else 1
+            for _ in range(n_foes):
+                self.echo_lotus(hit)
         elif aid == "reju":
             tgt = 0 if not self.aoe else self._spread_hot_target()
             self.heal_ally(tgt, atk * 12 / FLAT)
@@ -448,24 +468,33 @@ class Fight:
                     return "smite"
             return None
         if k == "paladin:holy":
+            # В бою нельзя только бить Ударом воина Света и сливать ЭС по КД:
+            # кого-то одного надо закрывать Вспышкой / Светом небес за ману.
             if not aoe:
                 if self.es + 1e-6 >= 3 and self.ready("word_glory"):
                     return "word_glory"
                 if self.ready("holy_shock"):
                     return "holy_shock"
-                if self.es < 3 and self.ready("crusader"):
-                    return "crusader"
+                if self.ready("flash"):
+                    return "flash"
                 if self.ready("holy_light"):
                     return "holy_light"
+                if self.ready("crusader"):
+                    return "crusader"
             else:
+                # пятеро ранены — то одного спасаем простым хилом, то пачку
+                if self.es + 1e-6 >= 3 and self.ready("word_glory"):
+                    return "word_glory"
+                if self.turn % 2 == 0 and self.ready("flash"):
+                    return "flash"
                 if self.es + 1e-6 >= 2 and self.ready("light_dawn"):
                     return "light_dawn"
                 if self.ready("holy_shock"):
                     return "holy_shock"
-                if self.es < 2 and self.ready("crusader"):
-                    return "crusader"
                 if self.ready("holy_radiance"):
                     return "holy_radiance"
+                if self.ready("crusader"):
+                    return "crusader"
             return None
         if k == "priest:holy":
             if not aoe:
@@ -491,6 +520,8 @@ class Fight:
                     return "enveloping"
                 if self.ready("jade_lotus"):
                     return "jade_lotus"
+                if self.ready("jab"):
+                    return "jab"
                 if self.ready("surging"):
                     return "surging"
             else:
@@ -500,8 +531,12 @@ class Fight:
                     return "revival"
                 if self.ready("uft"):
                     return "uft"
+                if self.ready("sck"):
+                    return "sck"
                 if self.ready("jade_lotus"):
                     return "jade_lotus"
+                if self.ready("jab"):
+                    return "jab"
             return None
         if k == "druid:restoration":
             if not aoe:
@@ -539,9 +574,22 @@ class Fight:
             return None
         return None
 
+    def want_main(self):
+        """Первая кнопка по смыслу, даже если маны нет (КД и Энергия Света — да)."""
+        saved = self.ready
+
+        def ready_no_mana(aid, ignore_mana=False):
+            return saved(aid, ignore_mana=True)
+
+        self.ready = ready_no_mana
+        try:
+            return self.pick_main()
+        finally:
+            self.ready = saved
+
     def run(self):
         self.hf = []
-        for t in range(HORIZON):
+        for t in range(self.horizon):
             self.turn = t
             self.tick_start()
             self.tick_hf()
@@ -551,12 +599,26 @@ class Fight:
                 fa = self.pick_fa()
                 if not fa:
                     break
+                # FA с маной: Архангел 0, чай 0, змея 0, Гнев 0; Исчадие 14, Высвободить 6
+                if self.mana + 1e-6 < self.mana_cost(fa):
+                    if self.oom_turn is None:
+                        self.oom_turn = t + 1
+                    break
                 self.cast(fa, fa=True)
+            want = self.want_main()
             main = self.pick_main()
+            if want and not main and self.mana + 1e-6 < self.mana_cost(want):
+                if self.oom_turn is None:
+                    self.oom_turn = t + 1
             if main:
                 self.cast(main, fa=False)
             else:
                 self.log.append(f"х{t + 1} простой")
+                if want and self.idle_mana_turn is None and self.mana + 1e-6 < self.mana_cost(want):
+                    self.idle_mana_turn = t + 1
+            self.mana_log.append(round(self.mana, 1))
+            if self.mana <= 0.05 and self.oom_turn is None:
+                self.oom_turn = t + 1
         return {
             "heal_st": round(self.st, 1),
             "heal_aoe": round(self.aoe_sum, 1),
@@ -568,9 +630,13 @@ class Fight:
             "atk": self.atk,
             "def": self.kit["stats"]["def"],
             "dr": 0.0,
+            "mana_log": self.mana_log,
+            "oom_turn": self.oom_turn,
+            "idle_mana_turn": self.idle_mana_turn,
+            "regen": self.regen,
         }
 
 
-def simulate_healer_honest(kit, n_targets):
+def simulate_healer_honest(kit, n_targets, horizon=HORIZON):
     aoe = n_targets >= 5
-    return Fight(kit, aoe=aoe).run()
+    return Fight(kit, aoe=aoe, horizon=horizon).run()

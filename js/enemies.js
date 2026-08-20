@@ -164,14 +164,14 @@
         mech: { id: 'tide_inst' },
         phases: [
           { at: 1, name: 'Глубины', abilities: [
-            { id: 't', name: 'Щупальце', cost: 0, cd: 0, type: 'damage', power: 1.2 },
-            { id: 'cast', name: 'Приливный удар', cost: 12, cd: 2, type: 'cast_aoe', power: 0.82, castKind: 'kick', castPrio: 3 },
-            { id: 's', name: 'Шквал', cost: 12, cd: 2, type: 'aoe', power: 0.65 },
+            { id: 't', name: 'Щупальце', cost: 0, cd: 0, type: 'damage', power: 1.2, school: 'physical' },
+            { id: 'cast', name: 'Приливный удар', cost: 12, cd: 2, type: 'cast_aoe', power: 0.82, castKind: 'kick', castPrio: 3, school: 'frost', instFlag: 'tide_hymn' },
+            { id: 's', name: 'Шквал', cost: 12, cd: 2, type: 'aoe', power: 0.65, school: 'frost', instFlag: 'tide_squall' },
           ]},
           { at: 0.6, name: 'Наводнение', abilities: [
-            { id: 't', name: 'Щупальце', cost: 0, cd: 0, type: 'damage', power: 1.3 },
-            { id: 'cast', name: 'Водоворот', cost: 12, cd: 2, type: 'cast_aoe', power: 0.9, castKind: 'aoe', castPrio: 3 },
-            { id: 's', name: 'Шквал', cost: 10, cd: 1, type: 'aoe', power: 0.72 },
+            { id: 't', name: 'Щупальце', cost: 0, cd: 0, type: 'damage', power: 1.3, school: 'physical' },
+            { id: 'cast', name: 'Водоворот', cost: 12, cd: 2, type: 'cast_aoe', power: 0.9, castKind: 'aoe', castPrio: 3, school: 'frost', instFlag: 'tide_whirl' },
+            { id: 's', name: 'Шквал', cost: 10, cd: 1, type: 'aoe', power: 0.72, school: 'frost', instFlag: 'tide_squall' },
           ]},
           { at: 0.3, name: 'Бездна', abilities: [
             { id: 'c', name: 'Сокрушение', cost: 0, cd: 0, type: 'aoe', power: 0.85 },
@@ -183,58 +183,54 @@
         mech: { id: 'jade_inst' },
         phases: [
           { at: 1, name: 'Сомнение', abilities: [
-            { id: 'bolt', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 1.25 },
-            { id: 'cast', name: 'Волна сомнения', cost: 12, cd: 2, type: 'cast_aoe', power: 0.85, castKind: 'kick', castPrio: 3 },
+            { id: 'bolt', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 1.25, school: 'shadow' },
+            { id: 'cast', name: 'Волна сомнения', cost: 12, cd: 2, type: 'cast_aoe', power: 0.85, castKind: 'kick', castPrio: 3, school: 'shadow', instFlag: 'jade_wave' },
           ]},
-          { at: 0.55, name: 'Трещина', abilities: [
-            { id: 'bolt', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 1.3 },
-            { id: 'adds', name: 'Воплощения', cost: 10, cd: 3, type: 'summon', power: 1 },
-            { id: 'cast', name: 'Шёпот ша', cost: 12, cd: 2, type: 'cast_aoe', power: 0.9, castKind: 'kick', castPrio: 4 },
+          { at: 0.70, name: 'Трещина', abilities: [
+            { id: 'bolt', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 1.3, school: 'shadow' },
+            { id: 'cast', name: 'Шёпот ша', cost: 12, cd: 2, type: 'cast_aoe', power: 0.9, castKind: 'kick', castPrio: 4, school: 'shadow', instFlag: 'jade_sha_whisper' },
           ]},
-          { at: 0.25, name: 'Разлом', abilities: [
-            { id: 'bolt', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 1.4 },
-            { id: 'adds', name: 'Воплощения', cost: 10, cd: 2, type: 'summon', power: 1 },
-            { id: 'cast', name: 'Взрыв ша', cost: 14, cd: 2, type: 'cast_aoe', power: 1.0, castKind: 'aoe', castPrio: 4 },
-            { id: 'buster', name: 'Удар сомнения', cost: 12, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'buster', castPrio: 2 },
+          { at: 0.35, name: 'Разлом', abilities: [
+            { id: 'bolt', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 1.4, school: 'shadow' },
+            { id: 'cast', name: 'Взрыв ша', cost: 14, cd: 2, type: 'cast_aoe', power: 1.0, castKind: 'aoe', castPrio: 4, school: 'shadow', instFlag: 'jade_burst' },
+            { id: 'buster', name: 'Удар сомнения', cost: 12, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'buster', castPrio: 2, school: 'shadow', instFlag: 'jade_doubt_strike' },
           ]},
         ]},
       rift: { id: 'bz', name: 'Пожиратель Разлома', icon: '🌑', role: 'dps', hp: 590, atk: 22, def: 7, speed: 11, mana: 55,
         mech: { id: 'rift_inst' },
         phases: [
-          { at: 1, name: 'Трещина', abilities: [
-            { id: 'bolt', name: 'Луч хаоса', cost: 0, cd: 0, type: 'damage', power: 1.25 },
-            { id: 'cast', name: 'Искажение пространства', cost: 12, cd: 2, type: 'cast_aoe', power: 0.88, castKind: 'kick', castPrio: 3 },
+          { at: 1, name: 'Сбой кнопок', abilities: [
+            { id: 'bolt', name: 'Луч хаоса', cost: 0, cd: 0, type: 'damage', power: 1.25, school: 'shadow' },
+            { id: 'cast', name: 'Искажение пространства', cost: 12, cd: 2, type: 'cast_aoe', power: 0.88, castKind: 'kick', castPrio: 3, school: 'shadow', instFlag: 'rift_warp' },
           ]},
-          { at: 0.55, name: 'Поглощение', abilities: [
-            { id: 'bolt', name: 'Луч хаоса', cost: 0, cd: 0, type: 'damage', power: 1.35 },
-            { id: 'adds', name: 'Фрагменты', cost: 10, cd: 3, type: 'summon', power: 1 },
-            { id: 'cast', name: 'Волна разлома', cost: 12, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 4 },
+          { at: 0.60, name: 'Съеденный клик', abilities: [
+            { id: 'bolt', name: 'Луч хаоса', cost: 0, cd: 0, type: 'damage', power: 1.35, school: 'shadow' },
+            { id: 'cast', name: 'Волна разлома', cost: 12, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 4, school: 'shadow', instFlag: 'rift_wave' },
           ]},
-          { at: 0.25, name: 'Коллапс', abilities: [
-            { id: 'bolt', name: 'Луч хаоса', cost: 0, cd: 0, type: 'damage', power: 1.45 },
-            { id: 'adds', name: 'Фрагменты', cost: 10, cd: 2, type: 'summon', power: 1 },
-            { id: 'cast', name: 'Взрыв пустоты', cost: 14, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'aoe', castPrio: 4 },
-            { id: 'buster', name: 'Поглощение', cost: 12, cd: 2, type: 'cast_aoe', power: 1.2, castKind: 'buster', castPrio: 2 },
+          { at: 0.30, name: 'Двойная дыра', abilities: [
+            { id: 'bolt', name: 'Луч хаоса', cost: 0, cd: 0, type: 'damage', power: 1.45, school: 'shadow' },
+            { id: 'cast', name: 'Взрыв пустоты', cost: 14, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'aoe', castPrio: 4, school: 'shadow', instFlag: 'rift_void' },
+            { id: 'abs', name: 'Поглощение', cost: 12, cd: 2, type: 'cast_aoe', power: 0.01, castKind: 'kick', castPrio: 3, school: 'shadow', instFlag: 'rift_absorb' },
           ]},
         ]},
       ember: { id: 'sp', name: 'Угольный Титан', icon: '🪨', role: 'tank', hp: 600, atk: 21, def: 11, speed: 7, mana: 45,
         mech: { id: 'ember_inst' },
         phases: [
           { at: 1, name: 'Тлеющие угли', abilities: [
-            { id: 'slam', name: 'Удар угля', cost: 0, cd: 0, type: 'damage', power: 1.25 },
-            { id: 'cast', name: 'Искра пепла', cost: 12, cd: 2, type: 'cast_aoe', power: 0.88, castKind: 'kick', castPrio: 3 },
-            { id: 'aoe', name: 'Зольный вихрь', cost: 12, cd: 2, type: 'aoe', power: 0.65 },
+            { id: 'slam', name: 'Удар угля', cost: 0, cd: 0, type: 'damage', power: 1.25, school: 'fire' },
+            { id: 'cast', name: 'Искра пепла', cost: 12, cd: 2, type: 'cast_aoe', power: 0.88, castKind: 'kick', castPrio: 3, school: 'fire', instFlag: 'ember_spark' },
+            { id: 'aoe', name: 'Зольный вихрь', cost: 12, cd: 2, type: 'aoe', power: 0.65, school: 'fire' },
           ]},
           { at: 0.55, name: 'Раскалённый корпус', abilities: [
-            { id: 'slam', name: 'Удар угля', cost: 0, cd: 0, type: 'damage', power: 1.4 },
-            { id: 'buster', name: 'Обвал жара', cost: 14, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'buster', castPrio: 2 },
-            { id: 'aoe', name: 'Зольный вихрь', cost: 10, cd: 2, type: 'aoe', power: 0.75 },
+            { id: 'slam', name: 'Удар угля', cost: 0, cd: 0, type: 'damage', power: 1.4, school: 'fire' },
+            { id: 'buster', name: 'Обвал жара', cost: 14, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'buster', castPrio: 2, school: 'fire', instFlag: 'ember_slam' },
+            { id: 'aoe', name: 'Зольный вихрь', cost: 10, cd: 2, type: 'aoe', power: 0.75, school: 'fire' },
           ]},
           { at: 0.25, name: 'Пепельный трон', abilities: [
-            { id: 'slam', name: 'Удар угля', cost: 0, cd: 0, type: 'damage', power: 1.5 },
+            { id: 'slam', name: 'Удар угля', cost: 0, cd: 0, type: 'damage', power: 1.5, school: 'fire' },
             { id: 'adds', name: 'Угольки', cost: 10, cd: 2, type: 'summon', power: 1 },
-            { id: 'cast', name: 'Извержение', cost: 14, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'aoe', castPrio: 4 },
-            { id: 'buster', name: 'Обвал жара', cost: 12, cd: 2, type: 'cast_aoe', power: 1.2, castKind: 'buster', castPrio: 2 },
+            { id: 'cast', name: 'Извержение', cost: 14, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'aoe', castPrio: 4, school: 'fire', instFlag: 'ember_erupt' },
+            { id: 'buster', name: 'Обвал жара', cost: 12, cd: 2, type: 'cast_aoe', power: 1.2, castKind: 'buster', castPrio: 2, school: 'fire', instFlag: 'ember_slam' },
           ]},
         ]},
     },
@@ -757,23 +753,13 @@
     const mt = (typeof currentMainTank === 'function' ? currentMainTank(boss) : tanks[0]) || heroes[0];
     const ratio = boss.hp / Math.max(1, boss.maxHp);
 
-    if (ratio <= 0.75 && !boss._vaultInter && typeof beginRaidVault === 'function') {
-      boss._vaultInter = true;
-      beginRaidVault(boss);
-      return;
-    }
-
+    // Одна фаза за раз: большой удар не спавнит провал и столбы в одном тике.
+    if (ratio <= 0.75 && typeof queueRaidPhase === 'function') queueRaidPhase('vault');
     if (combat.vault && !combat.vault.dropped) {
       if (typeof tickRaidVaultCast === 'function') tickRaidVaultCast(boss);
       return;
     }
-
-    if (ratio <= 0.50 && !boss._catacombs && typeof beginRaidCatacombs === 'function'
-        && (!combat.vault || combat.vault.dropped)) {
-      boss._catacombs = true;
-      beginRaidCatacombs(boss);
-      return;
-    }
+    if (ratio <= 0.50 && typeof queueRaidPhase === 'function') queueRaidPhase('pillars');
 
     if (combat.catacombs && combat.catacombs.active && combat.catacombs.stage !== 'field' && !combat.catacombs.youDone) {
       return;
@@ -784,10 +770,6 @@
       return;
     }
 
-    if (ratio <= 0.20 && !boss._pillars && typeof spawnRaidPillars === 'function'
-        && (!combat.catacombs || combat.catacombs.stage === 'field')) {
-      spawnRaidPillars(boss);
-    }
     if (typeof tickRaidPillars === 'function') tickRaidPillars(boss);
 
     // Tank swap: overload stacks on current MT

@@ -100,8 +100,45 @@
   function rarityMult(r) {
     return { common: 1, uncommon: 1.12, rare: 1.28, epic: 1.48 }[r] || 1;
   }
-  function pickWeighted(list, rnd) {
-    return list[Math.floor(rnd() * list.length)];
+  const GEAR_ROLE_BIAS = {
+    tank: {
+      prefixes: ['sturdy', 'hardy', 'guardian'],
+      suffixes: ['bear', 'boar', 'owl'],
+      prim: { atk: 0.8, hp: 1.35, def: 1.4 },
+      sec: { vers: 1.75, mastery: 0.95, crit: 0.7 },
+    },
+    healer: {
+      prefixes: ['wise', 'keen', 'hardy'],
+      suffixes: ['eagle', 'tiger', 'owl'],
+      prim: { atk: 0.72, hp: 1.12, def: 1.0 },
+      sec: { mastery: 1.65, crit: 1.4, vers: 1.05 },
+    },
+    dps: {
+      prefixes: ['sharp', 'keen', 'brutal'],
+      suffixes: ['tiger', 'eagle', 'serpent'],
+      prim: { atk: 1.22, hp: 1.0, def: 0.9 },
+      sec: { crit: 1.55, mastery: 1.35, vers: 0.85 },
+    },
+  };
+  function gearRoleLabel(role) {
+    return ({ tank: 'танк', healer: 'целитель', dps: 'боец' })[role] || '';
+  }
+  function pickWeighted(list, rnd, weightFn) {
+    if (!list || !list.length) return null;
+    if (typeof weightFn !== 'function') return list[Math.floor(rnd() * list.length)];
+    let sum = 0;
+    const ws = list.map(x => {
+      const w = Math.max(0, Number(weightFn(x)) || 0);
+      sum += w;
+      return w;
+    });
+    if (sum <= 0) return list[Math.floor(rnd() * list.length)];
+    let r = rnd() * sum;
+    for (let i = 0; i < list.length; i++) {
+      r -= ws[i];
+      if (r <= 0) return list[i];
+    }
+    return list[list.length - 1];
   }
   function mulberry32(a) {
     return function () {
@@ -119,45 +156,52 @@
     const rnd = mulberry32(seed >>> 0);
     const ilvl = opts.ilvl || keyToIlvl(keyLevel) + Math.floor(rnd() * 5) - 1;
     const rarity = opts.rarity || rarityForIlvl(ilvl, rnd());
-    const prefix = pickWeighted(GEAR_PREFIXES, rnd);
-    const suffix = pickWeighted(GEAR_SUFFIXES, rnd);
+    const roleBias = opts.role || 'any';
+    const bias = GEAR_ROLE_BIAS[roleBias] || null;
+    const prefix = pickWeighted(GEAR_PREFIXES, rnd, p => {
+      if (!bias) return 1;
+      return bias.prefixes.includes(p.id) ? 6 : 1;
+    });
+    const suffix = pickWeighted(GEAR_SUFFIXES, rnd, s => {
+      if (!bias) return 1;
+      return bias.suffixes.includes(s.id) ? 6 : 1;
+    });
     const rm = rarityMult(rarity);
-    // Бюджет: полный сет +2 ~+10–15% базы, +8 ~+20–30%, +15 ~+40–50% (см. applyGearToHero)
     const budget = Math.max(6, Math.round(ilvl * 0.48 * rm));
 
-    // Primary split by slot weights
     const wAtk = slot.wAtk * (prefix.weights.atk || 1) * (suffix.weights.atk || 1);
     const wHp = slot.wHp * (prefix.weights.hp || 1) * (suffix.weights.hp || 1);
     const wDef = slot.wDef * (prefix.weights.def || 1) * (suffix.weights.def || 1);
     const wSum = wAtk + wHp + wDef || 1;
     let atk = Math.round(budget * 0.50 * (wAtk / wSum));
-    // HP-очки на вещи: в бою * STAT_SCALE * GEAR_HP_MULT → в «т» ≈ hp * GEAR_HP_MULT
     let hp = Math.round(budget * 3.2 * (wHp / wSum));
     let def = Math.round(budget * 0.30 * (wDef / wSum));
 
-    // Secondary budget (крит/иск/унив/скор) — умеренно; рейтинг = очко * GEAR_*_PER_POINT
-    const secBudget = Math.max(1, Math.round(ilvl * 0.14 * rm));
-    const secKeys = ['crit', 'mastery', 'vers', 'speed'];
-    // bias from prefix/suffix
-    const secW = { crit: 1, mastery: 1, vers: 1, speed: 0.75 };
+    const secFloor = opts.lootDraft ? 8 : 4;
+    const secMul = opts.lootDraft ? 0.30 : 0.24;
+    const secBudget = Math.max(secFloor, Math.round(ilvl * secMul * rm));
+    const secKeys = ['crit', 'mastery', 'vers'];
+    const secW = { crit: 1, mastery: 1, vers: 1 };
     for (const k of secKeys) {
       secW[k] *= (prefix.weights[k] || 1) * (suffix.weights[k] || 1);
+      if (bias && bias.sec[k]) secW[k] *= bias.sec[k];
     }
-    // two secondaries usually
     const order = secKeys.slice().sort((a, b) => secW[b] - secW[a] || rnd() - 0.5);
     const s1 = order[0], s2 = order[1];
-    const split = 0.55 + rnd() * 0.3;
+    const split = 0.58 + rnd() * 0.18;
     const stats = {
       atk: Math.max(0, atk),
       hp: Math.max(0, hp),
       def: Math.max(0, def),
       crit: 0, mastery: 0, vers: 0, speed: 0,
     };
-    stats[s1] = Math.max(1, Math.round(secBudget * split));
-    stats[s2] = Math.max(0, secBudget - stats[s1]);
+    stats[s1] = Math.max(2, Math.round(secBudget * split));
+    stats[s2] = Math.max(1, secBudget - stats[s1]);
+    if ((prefix.weights.speed || 1) > 1 || (suffix.weights.speed || 1) > 1) {
+      stats.speed = Math.max(1, Math.round(secBudget * 0.18));
+    }
     if (slotId === 'weapon') stats.atk = Math.max(stats.atk, Math.round(budget * 0.42));
     if (slotId === 'trinket') {
-      // trinkets lean secondary slightly
       stats.atk = Math.round(stats.atk * 0.8);
       stats.hp = Math.round(stats.hp * 0.7);
       stats[s1] = Math.round(stats[s1] * 1.15);
@@ -166,26 +210,17 @@
 
     const icons = GEAR_ICONS[slotId] || ['📦'];
     const icon = icons[Math.floor(rnd() * icons.length)];
-    const roleBias = opts.role || 'any';
-    if (roleBias === 'tank') {
-      stats.hp = Math.round(stats.hp * 1.35);
-      stats.def = Math.round(stats.def * 1.4);
-      stats.atk = Math.round(stats.atk * 0.8);
-      stats.vers = Math.max(stats.vers, Math.round(secBudget * 0.25));
-    } else if (roleBias === 'healer') {
-      stats.mastery = Math.max(stats.mastery, Math.round(secBudget * 0.35));
-      stats.vers = Math.max(stats.vers, Math.round(secBudget * 0.2));
-      stats.crit = Math.max(stats.crit, Math.round(secBudget * 0.15));
-      stats.atk = Math.round(stats.atk * 0.72);
-      stats.hp = Math.round(stats.hp * 1.1);
-    } else if (roleBias === 'dps') {
-      stats.atk = Math.round(stats.atk * 1.22);
-      stats.crit = Math.max(stats.crit, Math.round(secBudget * 0.3));
-      stats.mastery = Math.max(stats.mastery, Math.round(secBudget * 0.15));
+    if (bias) {
+      stats.atk = Math.round(stats.atk * bias.prim.atk);
+      stats.hp = Math.round(stats.hp * bias.prim.hp);
+      stats.def = Math.round(stats.def * bias.prim.def);
     }
+    stats.critRating = stats.crit;
+    stats.versRating = stats.vers;
+    stats.masteryRating = stats.mastery;
 
     const name = `${prefix.name} ${slot.name.toLowerCase()} ${suffix.name}`;
-    return {
+    const out = {
       uid: gearUid(),
       slot: slotId,
       name,
@@ -198,31 +233,78 @@
       suffixId: suffix.id,
       seed,
     };
+    if (opts.classId) out.classId = opts.classId;
+    if (opts.specId) out.specId = opts.specId;
+    return out;
   }
 
-  function formatGearStats(it) {
+  function readGearStat(s, key, ratingKey) {
+    if (!s) return 0;
+    if (s[key] != null && s[key] !== '') return Math.max(0, Math.round(Number(s[key]) || 0));
+    if (ratingKey && s[ratingKey] != null && s[ratingKey] !== '') {
+      return Math.max(0, Math.round(Number(s[ratingKey]) || 0));
+    }
+    return 0;
+  }
+  function fmtGearPct(n) {
+    const x = Math.round(Number(n) * 10) / 10;
+    return (Math.abs(x % 1) < 0.05 ? x.toFixed(0) : x.toFixed(1)) + '%';
+  }
+  function formatGearStats(it, sep) {
     if (!it?.stats) return '';
     const s = it.stats;
     const parts = [];
-    // Primary: показываем вклад в бою (в «т»), не сырые очки — иначе «+156 HP» выглядит как +156т
+    const join = sep == null ? ' · ' : sep;
     const atkM = typeof GEAR_ATK_MULT !== 'undefined' ? GEAR_ATK_MULT : 0.05;
     const defM = typeof GEAR_DEF_MULT !== 'undefined' ? GEAR_DEF_MULT : 0.045;
     const hpM = typeof GEAR_HP_MULT !== 'undefined' ? GEAR_HP_MULT : 0.10;
     const scale = typeof STAT_SCALE !== 'undefined' ? STAT_SCALE : 1000;
+    const cMul = typeof GEAR_CRIT_PER_POINT !== 'undefined' ? GEAR_CRIT_PER_POINT : 1;
+    const vMul = typeof GEAR_VERS_PER_POINT !== 'undefined' ? GEAR_VERS_PER_POINT : 1;
+    const mMul = typeof GEAR_MASTERY_PER_POINT !== 'undefined' ? GEAR_MASTERY_PER_POINT : 1;
+    const combatVal = (raw, mult) => Math.round((+raw || 0) * scale * mult);
     const combatFmt = (raw, mult) => {
-      const combat = Math.round((+raw || 0) * scale * mult);
+      const combat = combatVal(raw, mult);
       if (typeof fmt === 'function') return fmt(combat);
-      if (combat >= 1000) return (combat / 1000).toFixed(combat >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'т';
-      return String(combat);
+      const t = combat / 1000;
+      if (Math.abs(t) >= 10) return Math.round(t) + 'т';
+      return (Math.round(t * 10) / 10).toFixed(1).replace(/\.0$/, '') + 'т';
     };
-    if (s.atk) parts.push(`+${combatFmt(s.atk, atkM)} атака`);
-    if (s.hp) parts.push(`+${combatFmt(s.hp, hpM)} здоровье`);
-    if (s.def) parts.push(`+${combatFmt(s.def, defM)} защита`);
-    if (s.crit) parts.push(`+${s.crit} крит`);
-    if (s.mastery) parts.push(`+${s.mastery} иск.`);
-    if (s.vers) parts.push(`+${s.vers} унив.`);
-    if (s.speed) parts.push(`+${s.speed} скор.`);
-    return parts.join(' · ');
+    const atk = readGearStat(s, 'atk');
+    const hp = readGearStat(s, 'hp');
+    const def = readGearStat(s, 'def');
+    const critPts = readGearStat(s, 'crit', 'critRating');
+    const mastPts = readGearStat(s, 'mastery', 'masteryRating');
+    const versPts = readGearStat(s, 'vers', 'versRating');
+    const speedPts = readGearStat(s, 'speed');
+    if (atk && combatVal(atk, atkM) >= 100) parts.push(`+${combatFmt(atk, atkM)} атака`);
+    if (hp && combatVal(hp, hpM) >= 100) parts.push(`+${combatFmt(hp, hpM)} здоровье`);
+    if (def && combatVal(def, defM) >= 100) parts.push(`+${combatFmt(def, defM)} защита`);
+    if (critPts) {
+      const rating = Math.round(critPts * cMul);
+      const pct = (rating / (typeof SEC_CRIT_RATING !== 'undefined' ? SEC_CRIT_RATING : 100))
+        * (typeof SEC_CRIT_DEFAULT !== 'undefined' ? SEC_CRIT_DEFAULT : 0.18) * 100;
+      parts.push(`+${rating} рейтинг крита (~+${fmtGearPct(pct)})`);
+    }
+    if (mastPts) {
+      const rating = Math.round(mastPts * mMul);
+      let line = `+${rating} рейтинг искусности`;
+      const cls = it.classId, spec = it.specId;
+      if (cls && spec && typeof masteryInfo === 'function') {
+        const info = masteryInfo(cls, spec);
+        const ref = typeof SEC_MASTERY_RATING !== 'undefined' ? SEC_MASTERY_RATING : 120;
+        const pctAt = Number(info.pctAt120 != null ? info.pctAt120 : 36) || 36;
+        line += ` (~+${fmtGearPct((rating / ref) * pctAt)})`;
+      }
+      parts.push(line);
+    }
+    if (versPts) {
+      const rating = Math.round(versPts * vMul);
+      const pct = rating * (typeof SEC_VERS_PCT_PER_RATING !== 'undefined' ? SEC_VERS_PCT_PER_RATING : 0.005) * 100;
+      parts.push(`+${rating} рейтинг унив. (~+${fmtGearPct(pct)})`);
+    }
+    if (speedPts) parts.push(`+${speedPts} скор. (очередь)`);
+    return parts.join(join);
   }
   function rarityLabel(r) {
     return ({ common: 'обычный', uncommon: 'необычный', rare: 'редкий', epic: 'эпический' })[r] || r || '';
@@ -297,6 +379,25 @@
 
     // debug helper for UI
     hero._gearBonus = { atk: atkBonus, def: defBonus, hp: hpBonus, gs };
+  }
+
+  function applyRunLootToHero(hero) {
+    if (!hero || typeof run === 'undefined' || !run || !Array.isArray(run.loot)) return;
+    for (const item of run.loot) {
+      if (!item) continue;
+      if (item.atkMult) hero.atk = Math.round(hero.atk * (1 + Number(item.atkMult)));
+      if (item.defFlat) hero.def = Math.round(hero.def * (1 + Number(item.defFlat)));
+      if (item.speedFlat) hero.speed = Math.max(1, Number(hero.speed) + Number(item.speedFlat));
+      if (item.hpFlat) {
+        const r = hero.hp / Math.max(1, hero.maxHp);
+        hero.maxHp = Math.round(hero.maxHp * (1 + Number(item.hpFlat)));
+        hero.hp = clamp(Math.round(hero.maxHp * r), hero.alive === false ? 0 : 1, hero.maxHp);
+      }
+    }
+  }
+  function applyLiveGearToHero(hero) {
+    applyGearToHero(hero);
+    applyRunLootToHero(hero);
   }
 
   function equipItemOnGear(gear, item, preferReplace) {
@@ -480,7 +581,7 @@
       row.onclick = () => {
         const slot = row.getAttribute('data-unequip');
         target.gear = unequipSlot(target.gear, slot);
-        if (gearModalMode === 'run') applyGearToHero(target);
+        if (gearModalMode === 'run') applyLiveGearToHero(target);
         syncGearToLobbyIfNeeded(target);
         savePartyProfile();
         if (run) saveRun();
@@ -522,7 +623,7 @@
         row.onclick = () => {
           const uid = row.getAttribute('data-shared-uid');
           target.gear = equipFromSharedBag(target.gear, uid);
-          if (gearModalMode === 'run') applyGearToHero(target);
+          if (gearModalMode === 'run') applyLiveGearToHero(target);
           syncGearToLobbyIfNeeded(target);
           savePartyProfile();
           if (run) saveRun();
@@ -535,7 +636,7 @@
         row.onclick = () => {
           const i = +row.getAttribute('data-bag');
           target.gear = equipFromBag(target.gear, i);
-          if (gearModalMode === 'run') applyGearToHero(target);
+          if (gearModalMode === 'run') applyLiveGearToHero(target);
           syncGearToLobbyIfNeeded(target);
           savePartyProfile();
           if (run) saveRun();
@@ -568,7 +669,7 @@
       // fallback: bag of first
       if (run?.party?.[0]) {
         run.party[0].gear = equipItemOnGear(run.party[0].gear, item, true);
-        applyGearToHero(run.party[0]);
+        applyLiveGearToHero(run.party[0]);
         if (party[0]) party[0].gear = normalizeGear(run.party[0].gear);
       }
       if (gearAssignCb) gearAssignCb();
@@ -595,7 +696,7 @@
         const h = run.party[i];
         if (!h || !pendingGearItem) return;
         h.gear = equipItemOnGear(h.gear, pendingGearItem, true);
-        applyGearToHero(h);
+        applyLiveGearToHero(h);
         if (party[i]) party[i].gear = normalizeGear(h.gear);
         savePartyProfile();
         saveRun();
@@ -620,25 +721,40 @@
     lootDoneCb = null; // gear uses own flow
     if (!grid || !modal) { if (typeof done === 'function') done(); return; }
     const keyLevel = run?.keyLevel || 5;
+    const node = typeof currentRouteNode === 'function' ? currentRouteNode() : null;
+    const roomType = node?.type || 'elite';
+    const ilvlBonus = roomType === 'final' ? 4 : roomType === 'boss' ? 2 : 0;
+    const members = (run?.party || []).slice();
     const picks = [];
     const usedSlots = new Set();
     for (let n = 0; n < 3; n++) {
       let slot = GEAR_SLOT_IDS[Math.floor(Math.random() * GEAR_SLOT_IDS.length)];
-      // prefer unique slots in the 3
       let guard = 0;
       while (usedSlots.has(slot) && guard++ < 8) {
         slot = GEAR_SLOT_IDS[Math.floor(Math.random() * GEAR_SLOT_IDS.length)];
       }
       usedSlots.add(slot);
-      picks.push(generateGearItem({ keyLevel, slot, seed: Math.floor(Math.random() * 1e9) + n * 17 }));
+      const who = members.length ? members[n % members.length] : null;
+      const role = who?.role || 'dps';
+      picks.push(generateGearItem({
+        keyLevel,
+        slot,
+        role,
+        lootDraft: true,
+        classId: who?.classId,
+        specId: who?.specId,
+        ilvl: keyToIlvl(keyLevel) + ilvlBonus + Math.floor(Math.random() * 5) - 1,
+        seed: Math.floor(Math.random() * 1e9) + n * 17,
+      }));
     }
     grid.innerHTML = '';
     picks.forEach(item => {
       const div = document.createElement('div');
       div.className = 'loot-card';
+      const roleTxt = gearRoleLabel(item.role);
       div.innerHTML = `<div class="lc-title rarity-${item.rarity}">${item.icon} ${item.name}</div>
-        <div class="lc-meta">${GEAR_SLOT_MAP[item.slot]?.name || item.slot} · ур. <b>${item.ilvl}</b> · ${rarityLabel(item.rarity)}</div>
-        <div class="lc-stats">${formatGearStats(item)}</div>`;
+        <div class="lc-meta">${GEAR_SLOT_MAP[item.slot]?.name || item.slot} · ур. <b>${item.ilvl}</b> · ${rarityLabel(item.rarity)}${roleTxt ? ' · ' + roleTxt : ''}</div>
+        <div class="lc-stats">${formatGearStats(item, '<br>')}</div>`;
       div.onclick = () => {
         modal.classList.add('hidden');
         openGearAssign(item, typeof done === 'function' ? done : null);

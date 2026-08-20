@@ -46,10 +46,11 @@ PASSIVE = {
         "block": 0.0,
         "parry": 0.20,  # Кровяной клинок
         "armor": 0.0,
-        "mastery_in": max(0.55, 1.0 - 0.36 * 0.85),  # Кровавый щит
-        "mastery_shield": 1.0 + 0.36 * 0.5,
+        "mastery_in": 1.0,  # иск. больше не режет входящий
+        "mastery_shield": 1.0,  # Костяной щит без иск.
         "mastery_avengers": 1.0,
         "dodge_base": 0.0,
+        "ds_shield": 0.20 * (1.0 + 0.36),  # щит крови от реального хила
     },
     "monk:brewmaster": {
         "block": 0.0,
@@ -525,7 +526,9 @@ class Fight:
         if aid == "death_strike":
             pct = 0.15 if self.sid == "blood" else 0.10
             amt = self.max_hp * pct + self.taken_last2() * 0.25
-            self.heal(amt)
+            got = self.heal(amt)
+            if self.sid == "blood" and got > 0:
+                self.shield += got * num(self.pas.get("ds_shield"), 0.20)
         if ab_type(a) == "heal":
             self.heal(hit_t(a, self.atk) * CRIT_OUT)
         ah = a.get("applyHot") if isinstance(a.get("applyHot"), dict) else None

@@ -1,4 +1,33 @@
 /* ui: lobby, party, rooms, end screen, boot */
+  function igorHonestCleared(classId, specId) {
+    try {
+      if (typeof igorHeroHonestCleared === 'function') return !!igorHeroHonestCleared(classId, specId);
+    } catch (_) {}
+    return false;
+  }
+  function syncHonestNote(el, on) {
+    if (!el) return;
+    let n = el.querySelector('.honest-cleared-note');
+    if (on && !n) {
+      n = document.createElement('div');
+      n.className = 'lock-note honest-cleared-note';
+      n.textContent = 'Честно прокачен';
+      el.appendChild(n);
+    } else if (!on && n) n.remove();
+  }
+  function refreshHonestPickCards() {
+    document.querySelectorAll('#class-grid .pick-card').forEach(el => {
+      const on = igorHonestCleared(el.dataset.id);
+      el.classList.toggle('honest-cleared', !!on);
+      syncHonestNote(el, on);
+    });
+    const clsId = typeof pickClass !== 'undefined' ? pickClass : null;
+    document.querySelectorAll('#spec-grid .pick-card').forEach(el => {
+      const on = !!(clsId && igorHonestCleared(clsId, el.dataset.id));
+      el.classList.toggle('honest-cleared', on);
+      syncHonestNote(el, on);
+    });
+  }
   function initLobby() {
     // Проставить school всем скиллам классов (данные + class-balance)
     try { stampAllAbilitySchools(); } catch (e) { console.warn('[school]', e); }
@@ -8,13 +37,15 @@
       const hasTestSpec = unlocked && (c.specs || []).some(s => isTestSpec(c.id, s.id));
       const roles = classRoleList(c);
       const lockCls = unlocked ? '' : ' locked';
+      const honestOn = igorHonestCleared(c.id);
       const note = !unlocked
         ? '<div class="lock-note">без правок</div>'
-        : (hasTestSpec ? '<div class="lock-note test-build-note">Тест</div>' : '');
+        : ((hasTestSpec ? '<div class="lock-note test-build-note">Тест</div>' : '') +
+           (honestOn ? '<div class="lock-note honest-cleared-note">Честно прокачен</div>' : ''));
       return `
-      <div class="pick-card${lockCls}${hasTestSpec ? ' test-build-card' : ''}" data-id="${c.id}" data-locked="${unlocked ? '0' : '1'}"
+      <div class="pick-card${lockCls}${hasTestSpec ? ' test-build-card' : ''}${honestOn ? ' honest-cleared' : ''}" data-id="${c.id}" data-locked="${unlocked ? '0' : '1'}"
            style="--cc:${CLASS_CSS[c.id] || c.color};border-color:${c.color}66"
-           title="${unlocked ? (hasTestSpec ? c.name + ' — тестовая ветка' : c.name) : c.name + ' — пока без правок'}">
+           title="${unlocked ? (honestOn ? c.name + ' — честно прокачен' : (hasTestSpec ? c.name + ' — тестовая ветка' : c.name)) : c.name + ' — пока без правок'}">
         ${artHtml(ASSETS.classP(c.id), c.icon, 'medallion', `--cc:${CLASS_CSS[c.id] || c.color}`)}
         <div class="nm">${c.name}</div>
         <div class="sub">${c.resource.icon} ${c.resource.name}</div>
@@ -70,6 +101,7 @@
     if (oldFieldBtn) oldFieldBtn.remove();
     try { if (typeof igorHeroBootLobby === 'function') igorHeroBootLobby(); } catch (_) {}
     try { syncHeroPartySlot(); } catch (_) {}
+    try { refreshHonestPickCards(); } catch (_) {}
 
     bindAbandonButton();
     document.getElementById('btn-lobby').addEventListener('click', backToLobby);
@@ -291,13 +323,15 @@
       const unlocked = isSpecPatched(cls.id, s.id);
       const testOnly = isTestSpec(cls.id, s.id);
       const lockCls = unlocked ? '' : ' locked';
+      const honestOn = igorHonestCleared(cls.id, s.id);
       const note = !unlocked
         ? '<div class="lock-note">без правок</div>'
-        : (testOnly ? '<div class="lock-note test-build-note">Тест</div>' : '');
+        : ((testOnly ? '<div class="lock-note test-build-note">Тест</div>' : '') +
+           (honestOn ? '<div class="lock-note honest-cleared-note">Честно прокачен</div>' : ''));
       return `
-      <div class="pick-card spec-card${lockCls}${testOnly ? ' test-build-card' : ''}" data-id="${s.id}" data-locked="${unlocked ? '0' : '1'}"
+      <div class="pick-card spec-card${lockCls}${testOnly ? ' test-build-card' : ''}${honestOn ? ' honest-cleared' : ''}" data-id="${s.id}" data-locked="${unlocked ? '0' : '1'}"
            style="--role-c:${ROLE_CSS[s.role]};--cc:${(typeof classAccentColor === 'function' ? classAccentColor(cls.id, s.id) : (CLASS_CSS[cls.id] || cls.color))}"
-           title="${unlocked ? (testOnly ? s.name + ' — Тест' : s.name) : s.name + ' — пока без правок'}">
+           title="${unlocked ? (honestOn ? s.name + ' — честно прокачен' : (testOnly ? s.name + ' — Тест' : s.name)) : s.name + ' — пока без правок'}">
         ${artHtml(ASSETS.specP(cls.id, s.id), s.icon || cls.icon, 'medallion', `--cc:${(typeof classAccentColor === 'function' ? classAccentColor(cls.id, s.id) : (ROLE_CSS[s.role] || CLASS_CSS[cls.id] || cls.color))}`)}
         <div class="nm">${s.name}${testOnly ? ' <span class="test-spec-tag">Тест</span>' : ''}</div>
         <div class="spec-role-line ${ROLE_CLASS[s.role]}">Роль в группе: ${ROLE_LABEL[s.role]}</div>
@@ -397,15 +431,19 @@
     } catch (_) { /* ignore */ }
     html += `<div style="margin:.35rem 0 .25rem;color:var(--gold-bright);font-weight:700">Скиллы (${spec.abilities.length})</div>`;
     // Фейковый актор для estimateAbility (базовые статы спека)
+    const scale = (typeof STAT_SCALE !== 'undefined' ? STAT_SCALE : 1000);
+    const honestM = (igorHonestCleared(pickClass, pickSpec) && typeof igorHeroHonestStatMult === 'function')
+      ? igorHeroHonestStatMult()
+      : (igorHonestCleared(pickClass, pickSpec) ? 1.10 : 1);
     const previewActor = {
       classId: pickClass,
       specId: pickSpec,
       role: spec.role,
       side: 'ally',
-      atk: Math.round((spec.stats?.atk || 15) * (typeof STAT_SCALE !== 'undefined' ? STAT_SCALE : 1000)),
-      def: Math.round((spec.stats?.def || 5) * (typeof STAT_SCALE !== 'undefined' ? STAT_SCALE : 1000)),
-      maxHp: Math.round((spec.stats?.hp || 100) * (typeof STAT_SCALE !== 'undefined' ? STAT_SCALE : 1000)),
-      hp: Math.round((spec.stats?.hp || 100) * (typeof STAT_SCALE !== 'undefined' ? STAT_SCALE : 1000)),
+      atk: Math.round((spec.stats?.atk || 15) * scale * honestM),
+      def: Math.round((spec.stats?.def || 5) * scale * honestM),
+      maxHp: Math.round((spec.stats?.hp || 100) * scale * honestM),
+      hp: Math.round((spec.stats?.hp || 100) * scale * honestM),
       buffs: [],
       res: {
         primary: { ...primary, current: primary.max || 100, max: primary.max || 100 },
@@ -509,17 +547,24 @@
       if (!h) cb.checked = false;
     }
     if (!heroPartyOn() || !h) return;
+    if (typeof igorHeroStashGear === 'function') igorHeroStashGear();
     const prev = party[0] || {};
+    const same = prev.classId === h.classId && prev.specId === h.specId;
+    const heroGear = (typeof igorHeroPersistGear === 'function') ? igorHeroPersistGear(h.gear) : (h.gear || emptyGear());
+    const eq = heroGear && heroGear.equipped ? heroGear.equipped : {};
+    const hasHeroGear = Object.keys(eq).some(k => eq[k]) || (Array.isArray(heroGear.bag) && heroGear.bag.length);
     const entry = {
       classId: h.classId,
       specId: h.specId,
       sec: prev.sec ? { ...prev.sec } : defaultSec(),
-      gear: prev.gear ? normalizeGear(prev.gear) : emptyGear(),
+      gear: (!hasHeroGear && same && prev.gear) ? normalizeGear(prev.gear) : heroGear,
       heroLocked: true,
     };
     ensureSec(entry);
     if (!party.length) party.push(entry);
     else party[0] = Object.assign({}, party[0], entry);
+    autoPlayPick = { classId: h.classId, specId: h.specId };
+    if (typeof igorHeroStashGear === 'function') igorHeroStashGear();
   }
   function addToParty() {
     if (!pickClass || !pickSpec) return;
@@ -535,7 +580,9 @@
     const prevGear = (editSlot != null && party[editSlot]?.gear) ? normalizeGear(party[editSlot].gear) : emptyGear();
     const entry = { classId: pickClass, specId: pickSpec, sec: prevSec, gear: prevGear };
     ensureSec(entry);
-    autoPlayPick = { classId: pickClass, specId: pickSpec };
+    if (!(heroPartyOn() && party[0] && party[0].heroLocked)) {
+      autoPlayPick = { classId: pickClass, specId: pickSpec };
+    }
     if (editSlot != null && editSlot < party.length) {
       party[editSlot] = entry;
       editSlot = null;
@@ -905,6 +952,9 @@
     hero._baseSecCritRating = hero.sec.critRating;
     hero._baseSecVersRating = hero.sec.versRating;
     hero._baseSecMasteryRating = hero.sec.masteryRating;
+    if (typeof igorHeroApplyHonestStats === 'function') {
+      igorHeroApplyHonestStats(hero);
+    }
     if (isHeroUnit && typeof igorHeroApplyTalents === 'function') {
       igorHeroApplyTalents(hero);
     }
@@ -1010,7 +1060,7 @@
       } else {
         log(`Ключ +${keyLevel}: ${dungeon.name}. Маршрут с развилками · нужно ⚔ ${FORCES_TARGET}% сил (на карте ~${FORCES_MAP_BUDGET}%).` +
           (keyLevel >= 9 ? ' Потолок без шмоток — +8. Выше стена.' : (keyLevel >= 8 ? ' +8 — потолок без шмоток.' : '')), 'system');
-        log('Авто-ключ: союзники ходят сами. Клик по герою — взять его следующий ход. Кнопка сверху выключает авто.', 'system');
+        log('Авто-ключ: союзники ходят сами. Клик по герою — взять управление. Кнопка сверху выключает авто.', 'system');
       }
       log(`Отряд: ${run.party.map(p => p.fullName).join(', ')}`, 'system');
       updateHud(); renderPath(); renderPowers(); enterRoom();
@@ -1701,6 +1751,9 @@
         u._baseSecVersRating = lvSec.versRating;
         u._baseSecMasteryRating = lvSec.masteryRating;
       }
+      if (typeof igorHeroApplyHonestStats === 'function') {
+        igorHeroApplyHonestStats(u);
+      }
       if (u._isHero && typeof igorHeroApplyStatTalents === 'function') {
         igorHeroApplyStatTalents(u);
       }
@@ -2076,6 +2129,7 @@
     const cont = document.getElementById('btn-continue');
     if (cont) cont.classList.toggle('hidden', !hasSave());
     renderHistory();
+    try { refreshHonestPickCards(); } catch (_) {}
   }
 
   try {

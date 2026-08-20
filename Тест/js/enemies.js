@@ -193,7 +193,7 @@
           { at: 0.35, name: 'Разлом', abilities: [
             { id: 'bolt', name: 'Тень', cost: 0, cd: 0, type: 'damage', power: 1.4, school: 'shadow' },
             { id: 'cast', name: 'Взрыв ша', cost: 14, cd: 2, type: 'cast_aoe', power: 1.0, castKind: 'aoe', castPrio: 4, school: 'shadow', instFlag: 'jade_burst' },
-            { id: 'buster', name: 'Удар сомнения', cost: 12, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'buster', castPrio: 2, school: 'shadow' },
+            { id: 'buster', name: 'Удар сомнения', cost: 12, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'buster', castPrio: 2, school: 'shadow', instFlag: 'jade_doubt_strike' },
           ]},
         ]},
       rift: { id: 'bz', name: 'Пожиратель Разлома', icon: '🌑', role: 'dps', hp: 590, atk: 22, def: 7, speed: 11, mana: 55,

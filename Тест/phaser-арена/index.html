@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phaser-арена — песочница</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/arena.css?v=0.1.0" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="top-left">
+        <p class="kicker">Только Тест · ключ не тронут</p>
+        <h1>Phaser-арена</h1>
+        <p class="lead">Phaser — библиотека, которая рисует поле на холсте. Цифры здесь учебные, не из кита Хмелевара.</p>
+      </div>
+      <div class="top-actions">
+        <div class="seg" role="group" aria-label="Число духов">
+          <button type="button" class="seg-btn on" data-n="5">5 духов</button>
+          <button type="button" class="seg-btn" data-n="1">1 дух</button>
+        </div>
+        <button type="button" class="btn" id="btn-reset">Сначала</button>
+        <a class="btn" href="../index.html">К тесту</a>
+      </div>
+    </header>
+
+    <p class="hint" id="hint">Сначала способность (клавиши 1–4), потом клик по духу. Автоудара нет.</p>
+
+    <div id="game"></div>
+    <p class="boot-error hidden" id="boot-error"></p>
+
+    <footer class="dock">
+      <div class="hero-strip">
+        <div class="hero-name">Хмелевар</div>
+        <div class="meter">
+          <span class="meter-lab">HP</span>
+          <div class="meter-track hp"><i id="hp-fill"></i></div>
+          <span class="meter-val" id="hp-val">200 / 200 HP</span>
+        </div>
+        <div class="meter">
+          <span class="meter-lab">энергия</span>
+          <div class="meter-track en"><i id="en-fill"></i></div>
+          <span class="meter-val" id="en-val">100 / 100 энергии</span>
+        </div>
+      </div>
+      <div class="abs" id="abs"></div>
+    </footer>
+  </div>
+  <script src="vendor/phaser.min.js"></script>
+  <script src="js/arena.js?v=0.1.1"></script>
+</body>
+</html>

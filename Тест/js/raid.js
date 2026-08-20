@@ -495,7 +495,7 @@
     if (allyTitle && raidAutoAllies) {
       allyTitle.textContent = run.raid
         ? 'Рейд (клик — взять управление)'
-        : 'Отряд (клик — взять следующий ход)';
+        : 'Отряд (клик — взять управление)';
     }
   }
 
@@ -503,12 +503,23 @@
     if (!run || !run.party) return null;
     const alive = run.party.filter(p => p && p.alive);
     if (!alive.length) return null;
-    if (run.raid) {
-      return (alive.find(p => p.role === 'tank') || alive[0]).uid;
-    }
+    const tavern = alive.find(p => p._isHero);
+    if (tavern) return tavern.uid;
+    try {
+      if (typeof igorHeroGetActive === 'function') {
+        const rec = igorHeroGetActive();
+        if (rec) {
+          const m = alive.find(p => p.classId === rec.classId && p.specId === rec.specId);
+          if (m) return m.uid;
+        }
+      }
+    } catch (_) {}
     if (autoPlayPick) {
       const m = alive.find(p => p.classId === autoPlayPick.classId && p.specId === autoPlayPick.specId);
       if (m) return m.uid;
+    }
+    if (run.raid) {
+      return (alive.find(p => p.role === 'tank') || alive[0]).uid;
     }
     return (alive.find(p => p.role === 'dps') || alive[0]).uid;
   }
@@ -588,7 +599,7 @@
         raidAutoAllies = !raidAutoAllies;
         try { syncPartyAutoHud(); } catch (_) {}
         toast(raidAutoAllies
-          ? 'Союзники ходят сами. Клик по герою — взять следующий ход'
+          ? 'Союзники ходят сами. Клик по герою — взять управление'
           : (run && run.raid ? 'Вы ходите всеми десятью' : 'Вы ходите всем отрядом'));
       });
     }

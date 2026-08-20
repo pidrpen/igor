@@ -1,5 +1,6 @@
 /* dungeon-inst: составы паков по комнате + механики инста. Только Тест. */
 (function () {
+  let spawnMeta = null;
   function instTheme() { return run?.dungeon?.theme || null; }
   function instKey() { return +(run?.keyLevel || 2); }
   function instNode() { return (typeof currentRouteNode === 'function') ? currentRouteNode() : null; }
@@ -13,6 +14,34 @@
     }
     return combat.inst;
   }
+  function noteSpawn(extra) {
+    spawnMeta = Object.assign(spawnMeta || {}, extra || {});
+  }
+  function takeSpawnMeta() {
+    const m = spawnMeta || {};
+    spawnMeta = null;
+    return m;
+  }
+  function isDummyRole(e) {
+    if (!e) return false;
+    const r = e.instRole;
+    return !!(e.instObject || r === 'vent' || r === 'reflect' || r === 'trough'
+      || r === 'furnace' || r === 'lantern' || r === 'sluice' || r === 'ember_core'
+      || r === 'forge_hearth' || r === 'jade_whisper' || r === 'jade_seed'
+      || r === 'rift_invert_shard' || r === 'rift_hunger');
+  }
+  function stampAbilities(unit, srcList) {
+    if (!unit || !srcList) return;
+    (unit.abilities || []).forEach((ab) => {
+      const src = srcList.find(s => s && (s.name === ab.name || s.id === ab.id));
+      if (src && src.instFlag) ab.instFlag = src.instFlag;
+    });
+  }
+  function stampBossFlags(boss) {
+    if (!boss || !boss.phases) return;
+    const ph = boss.phases[boss.phaseIndex || 0] || boss.phases[0];
+    stampAbilities(boss, ph && ph.abilities);
+  }
   function ss() { return (typeof STAT_SCALE === 'number') ? STAT_SCALE : 1000; }
   function trueDmg(t, pct, src, name, school) {
     if (!t || !t.alive) return;
@@ -24,7 +53,7 @@
     (typeof livingHeroes === 'function' ? livingHeroes() : []).forEach(h => trueDmg(h, pct, src, name, school));
   }
   function isAoeCtx(ctx) {
-    return !!(ctx && (ctx.isAoe || ctx.type === 'aoe' || ctx.type === 'cast_aoe' || ctx.isDot || ctx.type === 'dot'));
+    return !!(ctx && (ctx.isAoe || ctx.type === 'aoe' || ctx.type === 'cast_aoe' || ctx.type === 'heal_aoe'));
   }
   function hasWall(u) { return typeof hasMajorDef === 'function' && hasMajorDef(u); }
   function seniorEnemy() {
@@ -468,7 +497,6 @@
         if (!String(u.name).includes('СТ')) u.name = u.name + ' · СТ';
       }
       if (key === 'live') u.instRole = 'ember_live';
-      if (key === 'coal' && i === 1 && theme === 'ember') { /* live is separate */ }
       if (theme === 'forge' && key === 'bruiser' && out.some(x => x.instRole === 'forge_bruiser')) {
         const bash = (u.abilities || []).find(a => a.instFlag === 'forge_bash');
         if (bash) bash.curCd = 1;
@@ -478,9 +506,8 @@
     });
     if (recipe.vent) out.push(lockObject(scaleEnemy(makeObject('vent', 'Шлюзовой вентиль', '⚙️'), k, false, false)));
     if (recipe.trough) out.push(lockObject(scaleEnemy(makeObject('trough', 'Зольный жёлоб', '🪵'), k, false, false)));
-    if (recipe.liveRound === 2) {
-      instCombat().spawnLiveOn = 2;
-    }
+    if (recipe.liveRound === 2) noteSpawn({ spawnLiveOn: 2 });
+    if (recipe.splitAt) noteSpawn({ riftSplitAt: recipe.splitAt, riftSplitN: recipe.splitN || 4 });
     if (recipe.extraCoal12 && k >= 12) {
       const c = scaleEnemy(UNITS.ember.coal(), k, false, false);
       finishUnit(c, UNITS.ember.coal());
@@ -513,10 +540,6 @@
         }
       }
     }
-    if (recipe.splitAt) {
-      instCombat().riftSplitAt = recipe.splitAt;
-      instCombat().riftSplitN = recipe.splitN || 4;
-    }
     if (theme === 'ember') {
       const live = out.find(e => e.instRole === 'ember_live');
       if (live) paintAura(live, 'ember_live', 'Живой уголь', '🔥', 1, 'Убить одиночным. Область кормит жар.');
@@ -532,6 +555,7 @@
     if (!tpl || typeof scaleEnemy !== 'function') return null;
     const boss = scaleEnemy(tpl, k, true, false);
     boss.instRole = theme + (isFinal ? '_final' : '_mid');
+    stampBossFlags(boss);
     const out = [boss];
     const addTrash = (factory, elite) => {
       const t = factory();
@@ -545,7 +569,10 @@
       if (!isFinal) addTrash(Math.random() < 0.5 ? UNITS.tide.archer : UNITS.tide.priest, false);
       else addTrash(UNITS.tide.oracle, true);
     }
-    if (theme === 'forge' && !isFinal) addTrash(UNITS.forge.pyro, false);
+    if (theme === 'forge' && !isFinal) {
+      addTrash(UNITS.forge.pyro, false);
+      noteSpawn({ forgeIngot: true });
+    }
     if (theme === 'forge' && isFinal) addTrash(UNITS.forge.sparkMaster, true);
     if (theme === 'crypt' && !isFinal) addTrash(UNITS.crypt.acolyte, false);
     if (theme === 'crypt' && isFinal) {
@@ -579,7 +606,7 @@
       out.push(lockObject(scaleEnemy(makeObject('furnace', 'Топка чертогов', '♨️'), k, false, false)));
     }
     if (theme === 'jade' && !isFinal) {
-      instCombat().lanterns = true;
+      noteSpawn({ lanterns: true });
       const a = lockObject(scaleEnemy(makeObject('lantern', 'Нефритовый фонарь', '🏮'), k, false, false));
       const b = lockObject(scaleEnemy(makeObject('lantern', 'Нефритовый фонарь', '🏮'), k, false, false));
       a.instLit = true; b.instLit = false;
@@ -592,6 +619,7 @@
   function spawnInstEncounter(type) {
     if (run?.raid) return null;
     const theme = instTheme();
+    spawnMeta = { theme, type };
     if (!theme || !UNITS[theme]) return null;
     const k = instKey();
     if (type === 'boss' || type === 'final') return spawnInstBoss(theme, type, k);
@@ -605,23 +633,33 @@
     if (instTheme() !== 'tide') return;
     const inst = instCombat();
     inst.pressure = Math.max(0, Math.min(5, (inst.pressure || 0) + n));
-    if (why) log('Давление: ' + (n > 0 ? '+' : '') + n + ' · ' + why + ' · сейчас ' + inst.pressure, 'system');
-    paintAura(seniorEnemy(), 'tide_pressure', 'Столб давления', '🌊', inst.pressure, '5 стаков — гидроудар. Вентиль −2.');
+    if (why && n) log('Давление: ' + (n > 0 ? '+' : '') + n + ' · ' + why + ' · сейчас ' + inst.pressure, 'system');
+    paintAura(seniorEnemy(), 'tide_pressure', 'Столб давления', '🌊', inst.pressure, '5 стаков — гидроудар. Вентиль / светящийся шлюз. Кик шкалу не гасит.');
     if (inst.pressure >= 5) {
-      const abyss = !!(combat.enemies || []).some(e => e.isBoss && e.hp / e.maxHp <= 0.3);
+      const abyss = tideAbyss();
       partyTrue(abyss ? 0.15 : 0.12, null, 'Гидростатический удар', 'frost');
-      log('Гидростатический удар', 'enemy');
+      log('Гидростатический удар · ' + (abyss ? '15%' : '12%') + ' max HP', 'enemy');
       toast('Столб давления!');
       inst.pressure = 0;
       paintAura(seniorEnemy(), 'tide_pressure', 'Столб давления', '🌊', 0, '5 стаков — гидроудар.');
     }
+  }
+  function tideAbyss() {
+    const boss = (combat.enemies || []).find(e => e.isBoss && e.alive);
+    return !!(boss && combat.type === 'final' && boss.hp / boss.maxHp <= 0.3);
+  }
+  function pickLungTarget() {
+    const hs = livingHeroes();
+    const pool = hs.filter(h => h.role === 'dps' || h.role === 'healer');
+    if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+    return hs.find(h => h.role === 'tank') || hs[0] || null;
   }
   function addLungs(hero, n) {
     if (!hero || !hero.alive) return;
     if ((hero.buffs || []).some(b => b.id === 'air_pocket')) return;
     let b = (hero.buffs || []).find(x => x.id === 'tide_lungs');
     if (!b) {
-      applyStatus(hero, { id: 'tide_lungs', name: 'Затопление лёгких', icon: '🌊', turns: 6, stacks: n || 1, tip: '6% max HP за стак. На 3 — удушье. Лечение −1.' });
+      applyStatus(hero, { id: 'tide_lungs', name: 'Затопление лёгких', icon: '🌊', turns: 6, stacks: n || 1, tip: '6% max HP за стак. На 3 — удушье. Лечение 1–9 → клик по носителю −1.' });
     } else {
       b.stacks = Math.min(3, (b.stacks || 1) + (n || 1));
       b.turns = Math.max(b.turns || 0, 6);
@@ -636,18 +674,59 @@
       b.stacks = (b.stacks || 1) - 1;
       if (b.stacks <= 0) hero.buffs = hero.buffs.filter(x => x.id !== 'tide_lungs');
     }
-    applyStatus(hero, { id: 'air_pocket', name: 'Воздушный карман', icon: '💨', turns: 2, tip: 'Новые лёгкие не вешаются' });
+    applyStatus(hero, { id: 'air_pocket', name: 'Воздушный карман', icon: '💨', turns: 2, tip: 'Новые лёгкие не вешаются. В Бездне хил снова полный.' });
+    if (hero.buffs) hero.buffs = hero.buffs.filter(b => b.id !== 'tide_compress');
   }
   function startTideGrab(tentacle, pct) {
     const inst = instCombat();
     if (inst.grab) return;
     const dps = livingHeroes().filter(h => h.role === 'dps' && h.alive);
-    const t = dps[0] || livingHeroes().find(h => h.role !== 'tank') || null;
+    const t = (dps.length ? dps[Math.floor(Math.random() * dps.length)] : null)
+      || livingHeroes().find(h => h.role !== 'tank') || livingHeroes()[0] || null;
     if (!t || !tentacle) return;
-    inst.grab = { tentacleUid: tentacle.uid, heroUid: t.uid, left: 2, pct: pct || 0.12 };
-    applyStatus(t, { id: 'tide_grab', name: 'Хватка', icon: '🌊', turns: 2, tip: 'Пропуск хода. Бейте Щупальце.', skipTurn: true, ccMode: 'stun' });
-    log('Хватка: ' + t.name + ' · 2 раунда', 'enemy');
+    inst.grab = { tentacleUid: tentacle.uid, heroUid: t.uid, left: 2, pct: pct || 0.08 };
+    applyStatus(t, { id: 'tide_grab', name: 'Хватка', icon: '🌊', turns: 2, tip: 'Пропуск хода. 1–9 урон → клик по Щупальцу.', skipTurn: true, ccMode: 'stun' });
+    log('Хватка: ' + t.name + ' · 2 раунда · бейте Щупальце', 'enemy');
     toast('Хватка!');
+  }
+  function spawnTideTentacle() {
+    if ((combat.enemies || []).some(e => e.alive && e.instRole === 'tentacle')) return null;
+    const tpl = UNITS.tide.tentacle();
+    const t = scaleEnemy(tpl, instKey(), false, false);
+    finishUnit(t, tpl);
+    t.forcesValue = 0;
+    combat.enemies.push(t);
+    log('Щупальце хватает', 'enemy');
+    startTideGrab(t, combat.type === 'final' ? 0.08 : 0.12);
+    return t;
+  }
+  function killRole(role) {
+    (combat.enemies || []).forEach(e => {
+      if (e.alive && e.instRole === role) { e.alive = false; e.hp = 0; }
+    });
+  }
+  function spawnSluices() {
+    killRole('vent');
+    const have = (combat.enemies || []).filter(e => e.alive && e.instRole === 'sluice');
+    if (have.length >= 2) { relitSluices(); return; }
+    have.forEach(e => { e.alive = false; e.hp = 0; });
+    const a = lockObject(scaleEnemy(makeObject('sluice', 'Верхний шлюз', '⬆️'), instKey(), false, false));
+    const b = lockObject(scaleEnemy(makeObject('sluice', 'Нижний шлюз', '⬇️'), instKey(), false, false));
+    a.instRole = 'sluice'; b.instRole = 'sluice';
+    combat.enemies.push(a, b);
+    relitSluices();
+    log('Обратный ток: 1–9 урон → клик по светящемуся шлюзу', 'system');
+  }
+  function relitSluices() {
+    const pair = (combat.enemies || []).filter(e => e.alive && e.instRole === 'sluice');
+    if (pair.length < 2) return;
+    const lit = Math.random() < 0.5 ? 0 : 1;
+    pair.forEach((e, i) => {
+      e.instLit = i === lit;
+      e.name = (i === 0 ? 'Верхний шлюз' : 'Нижний шлюз') + (e.instLit ? ' · ток' : '');
+      if (e.instLit) paintAura(e, 'tide_flow', 'Обратный ток', '🌊', 1, 'Клик уроном сюда. Тёмный шлюз — промах.');
+      else if (e.buffs) e.buffs = e.buffs.filter(b => b.id !== 'tide_flow');
+    });
   }
 
   function addForgeHeat(n, why) {
@@ -727,11 +806,310 @@
       abilities: [], instObject: false, instRole: 'reflect',
       reflectOf: real.uid, forcesValue: 0,
     };
+    if (aliveCards() >= 6) return;
     combat.enemies.push(copy);
     inst.reflectUid = copy.uid;
     inst.reflectLeft = 2;
-    log('Ложный портрет: ' + copy.name, 'enemy');
+    log('Ложный портрет: ' + copy.name + ' · не кликайте эту карту', 'enemy');
     toast('Отражение!');
+  }
+
+  function aliveCards() {
+    return (combat.enemies || []).filter(e => e && e.alive && e.hp > 0).length;
+  }
+  function instBoss() {
+    return (combat.enemies || []).find(e => e.isBoss && e.alive) || null;
+  }
+  function spawnMechCard(role, name, icon, hp) {
+    const o = makeObject(role, name, icon || '✨');
+    o.hp = 40;
+    const u = scaleEnemy(o, instKey(), false, false);
+    u.instRole = role;
+    u.instObject = false;
+    u.forcesValue = 0;
+    u.isBoss = false;
+    u.isElite = false;
+    u.atk = 1;
+    if (hp > 0) { u.maxHp = hp; u.hp = hp; }
+    combat.enemies.push(u);
+    return u;
+  }
+
+  function hearthsLive() {
+    return (combat.enemies || []).filter(e => e.alive && e.instRole === 'forge_hearth');
+  }
+  function putAshCrown() {
+    const inst = instCombat();
+    if (inst.crownUid && livingHeroes().some(h => h.uid === inst.crownUid && (h.buffs || []).some(b => b.id === 'forge_crown'))) return;
+    const pool = livingHeroes().filter(h => h.role === 'dps');
+    const t = (pool.length ? pool[Math.floor(Math.random() * pool.length)] : null)
+      || livingHeroes().find(h => h.role !== 'tank') || livingHeroes()[0];
+    if (!t) return;
+    inst.crownUid = t.uid;
+    inst.crownLeft = 3;
+    inst.crownBornR = inst.roundAcc || 0;
+    applyStatus(t, {
+      id: 'forge_crown', name: 'Пепельная корона', icon: '👑', turns: 4,
+      dispellable: true, school: 'magic',
+      tip: 'Входящий огонь +30%. Хил ≥15% max HP или очищение → клик по носителю. 3 хода — вспышка 12% max HP.',
+    });
+    log(t.name + ': Пепельная корона · хил или очищение → клик', 'enemy');
+    toast('Пепельная корона!');
+  }
+  function clearAshCrown(flash) {
+    const inst = instCombat();
+    const h = (run.party || []).find(p => p.uid === inst.crownUid);
+    if (h && h.buffs) h.buffs = h.buffs.filter(b => b.id !== 'forge_crown');
+    if (flash && h && h.alive) {
+      partyTrue(0.12, null, 'Вспышка короны', 'fire');
+      log('Пепельная корона догорела — вспышка 12% max HP', 'enemy');
+      toast('Вспышка короны!');
+    }
+    inst.crownUid = null;
+    inst.crownLeft = 0;
+  }
+  function spawnForgeHearths() {
+    const inst = instCombat();
+    if (inst.hearthsOut) return;
+    inst.hearthsOut = true;
+    const pyro = UNITS.forge && UNITS.forge.pyro ? UNITS.forge.pyro() : { hp: 74 };
+    const base = Math.round((pyro.hp || 74) * 1.10);
+    const dummy = { id: 'p', name: 'Жаркий очаг', icon: '♨️', hp: base, atk: 1, def: 0, speed: 1, abilities: [] };
+    for (let i = 0; i < 2; i++) {
+      const h = scaleEnemy(dummy, instKey(), false, false);
+      h.name = 'Жаркий очаг';
+      h.icon = '♨️';
+      h.instRole = 'forge_hearth';
+      h.instObject = false;
+      h.forcesValue = 0;
+      h.atk = 1;
+      h.abilities = [{ id: 'idle', name: '—', cost: 0, cd: 99, type: 'buff', power: 0, icon: '✨', gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0, baseCd: 99, curCd: 99, desc: '', castKind: null, castPrio: 0 }];
+      paintAura(h, 'forge_hearth', 'Жаркий очаг', '♨️', 1, 'Урон 1–9 → клик. Пока жив — кик не сбрасывает Перегрев.');
+      combat.enemies.push(h);
+    }
+    log('Жаркие очаги: урон → клик по очагу. Пока живы, прерывание не сбрасывает Перегрев.', 'system');
+    toast('Жаркие очаги!');
+  }
+
+  function jadeWhisper() {
+    return (combat.enemies || []).find(e => e.alive && e.instRole === 'jade_whisper') || null;
+  }
+  function jadeSeeds() {
+    return (combat.enemies || []).filter(e => e.alive && e.instRole === 'jade_seed');
+  }
+  function putVoidTouch() {
+    const inst = instCombat();
+    if (jadeWhisper()) return;
+    const boss = instBoss();
+    if (!boss) return;
+    if (aliveCards() >= 6) return;
+    const pool = livingHeroes().filter(h => h.role !== 'tank');
+    const t = (pool.length ? pool[Math.floor(Math.random() * pool.length)] : null) || livingHeroes()[0];
+    if (!t) return;
+    applyStatus(t, {
+      id: 'jade_void', name: 'Касание пустоты', icon: '🕳️', turns: 3,
+      dispellable: true, school: 'magic',
+      tip: 'Одиночный хил или очищение → клик по носителю. Или урон → клик по шёпоту.',
+    });
+    const hp = Math.max(1, Math.round(boss.maxHp * 0.12));
+    const w = spawnMechCard('jade_whisper', 'Шёпот: ' + t.name, '☯️', hp);
+    w._left = 2;
+    w._bornR = instCombat().roundAcc || 0;
+    w.mustKillTurns = 2;
+    w.carrierUid = t.uid;
+    inst.voidUid = t.uid;
+    paintAura(w, 'jade_whisper', 'Шёпот', '🗣️', 1, 'Урон 1–9 → клик сюда. Не по Ша Сомнения.');
+    log('Касание пустоты на ' + t.name + ' · бейте шёпот или лечите носителя', 'enemy');
+    toast('Касание пустоты!');
+  }
+  function clearVoidTouch(pulse) {
+    const inst = instCombat();
+    const w = (combat.enemies || []).find(e => e.instRole === 'jade_whisper');
+    const carrierUid = (w && w.carrierUid) || inst.voidUid;
+    const carrier = (run.party || []).find(p => p.uid === carrierUid);
+    if (w) { w.alive = false; w.hp = 0; }
+    if (carrier && carrier.buffs) carrier.buffs = carrier.buffs.filter(b => b.id !== 'jade_void');
+    if (pulse) {
+      const pct = inst.jadeEnrage ? 0.18 : 0.12;
+      partyTrue(pct, null, 'Пульс касания', 'shadow');
+      if (carrier && carrier.alive) addDoubt(carrier);
+      log('Шёпот дожил — пульс ' + Math.round(pct * 100) + '% max HP', 'enemy');
+      toast('Пульс касания!');
+    }
+    inst.voidUid = null;
+  }
+  function spawnJadeSeeds(n) {
+    const boss = instBoss();
+    if (!boss) return;
+    const have = jadeSeeds().length;
+    const want = Math.min(3, n);
+    const add = Math.max(0, want - have);
+    const hp = Math.max(1, Math.round(boss.maxHp * 0.16));
+    for (let i = 0; i < add; i++) {
+      if (aliveCards() >= 6) break;
+      const s = spawnMechCard('jade_seed', 'Семя сомнения', '🌱', hp);
+      s._left = instCombat().jadeEnrage ? 1 : 3;
+      s._bornR = instCombat().roundAcc || 0;
+      s.mustKillTurns = s._left;
+      paintAura(s, 'jade_seed', 'Семя сомнения', '🌱', 1, 'Урон 1–9 → клик по семени. Клик по Ша кормит семя.');
+    }
+    if (add > 0) {
+      log('Семена сомнения ×' + jadeSeeds().length + ' · бейте семена, не Ша Сомнения', 'enemy');
+      toast('Семена сомнения!');
+    }
+  }
+
+  function riftInvertOn() {
+    return !!(instCombat().riftInvert);
+  }
+  function startRiftInvert() {
+    const inst = instCombat();
+    const boss = instBoss();
+    if (!boss) return;
+    inst.riftInvert = true;
+    inst.riftInvertPause = 0;
+    paintAura(boss, 'rift_invert', 'Инверсия пака', '🔀', 1, 'Область бьёт только кликнутую цель. Одиночная бьёт всех: клик 100%, остальные 60%.');
+    log('Инверсия пака: область + клик = точечный съём. Одиночная кормит ряд.', 'system');
+    toast('Инверсия пака!');
+  }
+  function stopRiftInvert(areaBan) {
+    const inst = instCombat();
+    inst.riftInvert = false;
+    const boss = instBoss();
+    if (boss && boss.buffs) boss.buffs = boss.buffs.filter(b => b.id !== 'rift_invert');
+    if (areaBan) {
+      inst.riftInvertPause = 2;
+      inst.riftAreaBan = 2;
+      if (boss) paintAura(boss, 'rift_area_ban', 'Запрет области', '🚫', 2, 'Область лечит Пожирателя на 50% нанесённого.');
+      log('Инверсия снята на 2 хода · Запрет области', 'enemy');
+    }
+  }
+  function spawnInvertShard() {
+    const inst = instCombat();
+    if ((combat.enemies || []).some(e => e.alive && e.instRole === 'rift_invert_shard')) return;
+    const guard = UNITS.rift && UNITS.rift.guard ? UNITS.rift.guard() : { hp: 200 };
+    const scaled = scaleEnemy({
+      id: 'eq', name: 'Нестабильный осколок', icon: '💠', hp: Math.round((guard.hp || 200) * 1.10),
+      atk: 1, def: 4, speed: 1, abilities: [],
+    }, instKey(), false, true);
+    scaled.name = 'Нестабильный осколок';
+    scaled.instRole = 'rift_invert_shard';
+    scaled.instObject = false;
+    scaled.forcesValue = 0;
+    scaled.isBoss = false;
+    scaled.atk = 1;
+    scaled._left = 3;
+    scaled._bornR = instCombat().roundAcc || 0;
+    scaled.mustKillTurns = 3;
+    scaled.abilities = [{ id: 'idle', name: '—', cost: 0, cd: 99, type: 'buff', power: 0, icon: '✨', gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0, baseCd: 99, curCd: 99, desc: '', castKind: null, castPrio: 0 }];
+    paintAura(scaled, 'rift_shard', 'Нестабильный осколок', '💠', 1, '3 хода. Область + клик сюда. Одиночная вешает Слой хаоса.');
+    combat.enemies.push(scaled);
+    inst.shardUid = scaled.uid;
+    log('Нестабильный осколок · 3 хода · область + клик', 'enemy');
+    toast('Осколок!');
+  }
+  function killInvertShard(silent) {
+    (combat.enemies || []).forEach(e => {
+      if (e.instRole === 'rift_invert_shard') { e.alive = false; e.hp = 0; }
+    });
+    instCombat().shardUid = null;
+    if (!silent) log('Нестабильный осколок снят', 'player');
+  }
+  function setHungerAuras(stOnBoss) {
+    const boss = instBoss();
+    const hunger = (combat.enemies || []).find(e => e.alive && e.instRole === 'rift_hunger');
+    if (!boss || !hunger) return;
+    const st = stOnBoss ? boss : hunger;
+    const aoe = stOnBoss ? hunger : boss;
+    if (boss.buffs) boss.buffs = boss.buffs.filter(b => b.id !== 'rift_take_st' && b.id !== 'rift_take_aoe');
+    if (hunger.buffs) hunger.buffs = hunger.buffs.filter(b => b.id !== 'rift_take_st' && b.id !== 'rift_take_aoe');
+    paintAura(st, 'rift_take_st', 'Принимает одиночную', '🎯', 1, 'Одиночный урон 1–9 → клик сюда. Область лечит 8% max HP.');
+    paintAura(aoe, 'rift_take_aoe', 'Принимает область', '🌀', 1, 'Урон по области 1–9 → клик сюда. Одиночная лечит 8% max HP.');
+    instCombat().hungerStOnBoss = !!stOnBoss;
+    log('Ауры: ' + st.name + ' — одиночная · ' + aoe.name + ' — область', 'system');
+  }
+  function startRiftHunger() {
+    const inst = instCombat();
+    if (inst.riftHunger) return;
+    const boss = instBoss();
+    if (!boss) return;
+    inst.riftHunger = true;
+    inst.riftInvert = false;
+    inst.riftAreaBan = 0;
+    if (boss.buffs) boss.buffs = boss.buffs.filter(b => b.id !== 'rift_invert' && b.id !== 'rift_area_ban');
+    killInvertShard(true);
+    const h = scaleEnemy({
+      id: 'bz', name: 'Голод Разлома', icon: '🌑', hp: 200, atk: Math.max(1, Math.round((boss.atk || 1) / ss())),
+      def: 7, speed: 8, abilities: [],
+    }, instKey(), false, true);
+    h.name = 'Голод Разлома';
+    h.icon = boss.icon || '🌑';
+    h.instRole = 'rift_hunger';
+    h.instObject = false;
+    h.forcesValue = 0;
+    h.isBoss = false;
+    h.maxHp = boss.maxHp;
+    h.hp = boss.hp;
+    h.atk = Math.round((boss.atk || 1) * 0.8);
+    const bolt = (boss.abilities || []).find(a => a && (a.id === 'bolt' || a.name === 'Луч хаоса'));
+    const abs = (boss.abilities || []).find(a => a && (a.instFlag === 'rift_absorb' || a.name === 'Поглощение'));
+    h.abilities = [];
+    if (bolt) {
+      const b = Object.assign({}, bolt);
+      b.curCd = 0;
+      h.abilities.push(b);
+    }
+    if (abs) {
+      const a = Object.assign({}, abs);
+      a.curCd = 0;
+      h.abilities.push(a);
+    }
+    if (!h.abilities.length) {
+      h.abilities = [{ id: 'idle', name: '—', cost: 0, cd: 99, type: 'buff', power: 0, icon: '✨', gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0, baseCd: 99, curCd: 99, desc: '', castKind: null, castPrio: 0 }];
+    }
+    combat.enemies.push(h);
+    inst.hungerSwap = 2;
+    setHungerAuras(true);
+    log('Два голодных тела. Оба настоящие. Бейте совпавший тип, иначе Пожиратель лечит 8% max HP.', 'system');
+    toast('Два тела!');
+  }
+  function hungerAccepts(target, aoe) {
+    if (!target) return false;
+    const id = aoe ? 'rift_take_aoe' : 'rift_take_st';
+    return (target.buffs || []).some(b => b.id === id);
+  }
+  function maybeFinalePhases() {
+    const theme = instTheme();
+    const boss = instBoss();
+    if (!boss || combat.type !== 'final') return;
+    const ratio = boss.hp / Math.max(1, boss.maxHp);
+    const inst = instCombat();
+    if (theme === 'forge') {
+      if (ratio <= 0.55 && !inst.crownStarted) {
+        inst.crownStarted = true;
+        putAshCrown();
+      }
+      if (ratio <= 0.25) spawnForgeHearths();
+    }
+    if (theme === 'jade') {
+      if (ratio <= 0.70 && !inst.jadeSeeds70) {
+        inst.jadeSeeds70 = true;
+        spawnJadeSeeds(3);
+      }
+      if (ratio <= 0.50 && !inst.jadeSeeds50 && ratio > 0.35) {
+        inst.jadeSeeds50 = true;
+        spawnJadeSeeds(3);
+      }
+      if (ratio <= 0.35) inst.jadeNoNewSeeds = true;
+    }
+    if (theme === 'rift') {
+      if (ratio <= 0.60 && inst.riftInvert) {
+        stopRiftInvert(false);
+        killInvertShard(true);
+        log('Инверсия пака гаснет — кнопки снова значат то, что написано', 'system');
+      }
+      if (ratio <= 0.30) startRiftHunger();
+    }
   }
 
   function openSoak(need, kind, label) {
@@ -802,20 +1180,55 @@
     const theme = instTheme();
     if (!UNITS[theme]) return;
     const inst = instCombat();
+    const meta = takeSpawnMeta();
+    if (inst.ready && inst.theme === theme && inst.combatType === combat.type) {
+      if (meta.spawnLiveOn) inst.spawnLiveOn = meta.spawnLiveOn;
+      if (meta.riftSplitAt) { inst.riftSplitAt = meta.riftSplitAt; inst.riftSplitN = meta.riftSplitN; }
+      return;
+    }
     inst.theme = theme;
+    inst.combatType = combat.type;
+    inst.ready = true;
     inst.pressure = 0;
     inst.heat = 0;
     inst.hallHeat = (theme === 'ember' && (combat.enemies || []).some(e => e.isBoss)) ? 2 : (theme === 'ember' ? 1 : 0);
     inst.roundAcc = 0;
     inst.echoDebt = 0;
+    inst.echoRecord = null;
     inst.yankUsed = false;
     inst.shellLoads = 0;
-    if (theme === 'tide') log('Столб давления 0/5. Гимн кормит столб. Вентиль −2 стака.', 'system');
-    if (theme === 'jade') log('Сомнение: не бейте карту «Отражение». Смятение — прерывание в Шёпота ша.', 'system');
-    if (theme === 'crypt') log('Эхо клика: Гниль прыгает на последний клик. Плиту снимают одиночные.', 'system');
-    if (theme === 'forge') log('Жар горна 0/3. Прерывание гасит жар. Ковочный удар — стенка танка.', 'system');
-    if (theme === 'ember') log('Жар чертогов. Живого уголька — одиночным, уголь в жёлоб / колосса. Кик жар не гасит.', 'system');
-    if (theme === 'rift') log('Читайте ауры. Скрытое ядро ест одиночную. Ложный панцирь ест область.', 'system');
+    inst.coreOut = false;
+    inst.sluiceOn = false;
+    inst.skipPlanPressure = false;
+    inst.brandUid = null;
+    inst.brandLeft = 0;
+    inst.ingotLeft = 0;
+    inst.spawnLiveOn = meta.spawnLiveOn || 0;
+    inst.riftSplitAt = meta.riftSplitAt || 0;
+    inst.riftSplitN = meta.riftSplitN || 0;
+    inst.crownUid = null; inst.crownLeft = 0; inst.crownStarted = false; inst.hearthsOut = false;
+    inst.voidUid = null; inst.jadeSeeds70 = false; inst.jadeSeeds50 = false; inst.jadeNoNewSeeds = false;
+    inst.jadeWrong = 0; inst.jadeEnrage = false;
+    inst.riftInvert = false; inst.riftInvertPause = 0; inst.riftAreaBan = 0;
+    inst.riftHunger = false; inst.shardUid = null; inst.hungerStOnBoss = true; inst.hungerSwap = 0;
+    if (theme === 'tide') log('Столб давления 0/5. Гимн кормит столб. 1–9 урон → вентиль (−2). Лёгкие: лечение → клик по тонущему.', 'system');
+    if (theme === 'jade') {
+      if (combat.type === 'final') log('Ша Сомнения: касание — урон по шёпоту или хил по носителю. Семена — урон по семени. Отражение не бить.', 'system');
+      else log('Сомнение: не бейте карту «Отражение». Смятение — прерывание в Шёпота ша.', 'system');
+    }
+    if (theme === 'crypt') log('Эхо клика: одиночный в Хранителя записывается. Гниль прыгает на последний клик. Плиту едят одиночные.', 'system');
+    if (theme === 'forge') {
+      if (combat.type === 'final') log('Перегрев: прерывание → клик по Королеве. С горна — корона (хил/очищение → носитель). С 25% — очаги; пока живы, кик жар не сбрасывает.', 'system');
+      else log('Жар горна 0/3. Прерывание гасит жар. Слиток на миде — убить за 4 раунда.', 'system');
+    }
+    if (theme === 'ember') log('Жар чертогов 0–8. Живого уголька — одиночным, уголь в жёлоб / топку / Титана. Кик жар не гасит.', 'system');
+    if (theme === 'rift') {
+      if (combat.type === 'final') {
+        log('Инверсия пака: область + клик = точечный съём. Осколок — область. С 30% два тела — бейте совпавший тип.', 'system');
+        startRiftInvert();
+        spawnInvertShard();
+      } else log('Читайте ауры. Скрытое ядро ест одиночную. Ложный панцирь ест область.', 'system');
+    }
     if (theme === 'crypt' && combat.type === 'boss') {
       const boss = (combat.enemies || []).find(e => e.isBoss);
       if (boss) {
@@ -832,6 +1245,18 @@
     if (col && theme === 'ember' && (col.instRole === 'ember_colossus' || combat.type === 'final')) {
       applyStatus(col, { id: 'ember_shell', name: combat.type === 'final' ? 'Угольная броня' : 'Угольная корка', icon: '🪨', turns: 99, dmgReduce: combat.type === 'final' ? 0.40 : 0.25, tip: 'Кладите уголь в корпус.' });
     }
+    if ((meta.forgeIngot || (theme === 'forge' && combat.type === 'boss')) && theme === 'forge') {
+      const ing = scaleEnemy(makeObject('forge_ingot', 'Раскалённый слиток', '🧱'), instKey(), false, false);
+      ing.instRole = 'forge_ingot';
+      ing.instObject = false;
+      ing.maxHp = Math.round(152 * ss() * (1 + (instKey() - 2) * 0.16));
+      ing.hp = ing.maxHp;
+      ing.atk = 1;
+      ing.forcesValue = 0;
+      combat.enemies.push(ing);
+      inst.ingotLeft = 4;
+      log('Раскалённый слиток · 4 раунда, иначе Мастер горна +25% атаки', 'system');
+    }
   }
 
   function tickInstRoom() {
@@ -841,15 +1266,20 @@
     const inst = instCombat();
     inst.roundAcc = (inst.roundAcc || 0) + 1;
     const r = inst.roundAcc;
+    try { maybeFinalePhases(); } catch (e) { console.error(e); }
 
     if (inst.soak && combat.round >= inst.soak.until) resolveSoak();
 
     if (theme === 'tide') {
       const boss = (combat.enemies || []).find(e => e.isBoss && e.alive);
-      const every = boss ? 1 : 2;
-      if (boss && boss.hp / boss.maxHp <= 0.6 && combat.type === 'final') {
-        /* наводнение: ток */
+      const ratio = boss ? boss.hp / Math.max(1, boss.maxHp) : 1;
+      const wantSluice = !!(boss && ((combat.type === 'boss' && ratio <= 0.5) || (combat.type === 'final' && ratio <= 0.6)));
+      if (wantSluice && !inst.sluiceOn) {
+        inst.sluiceOn = true;
+        spawnSluices();
       }
+      if (inst.sluiceOn && r >= 3 && r % 3 === 0) relitSluices();
+      const every = (boss && combat.type === 'final') ? 1 : 2;
       if (!inst.skipPlanPressure && r % every === 0) addPressure(1, 'тик комнаты');
       inst.skipPlanPressure = false;
       const grab = inst.grab;
@@ -861,7 +1291,7 @@
           inst.grab = null;
           addPressure(-1, 'Щупальце убито');
         } else if (hero && hero.alive) {
-          trueDmg(hero, grab.pct || 0.12, ten, 'Хватка', 'frost');
+          trueDmg(hero, grab.pct || 0.08, ten, 'Хватка', 'frost');
           grab.left -= 1;
           if (grab.left <= 0) {
             applyStatus(hero, { id: 'stun', name: 'Оглушение', icon: '💫', turns: 1, ccMode: 'stun' });
@@ -869,8 +1299,10 @@
             ten.alive = false; ten.hp = 0;
             hero.buffs = (hero.buffs || []).filter(b => b.id !== 'tide_grab');
             inst.grab = null;
-            log('Хватка сорвалась', 'enemy');
+            log('Хватка сорвалась — оглушение и лёгкие', 'enemy');
           }
+        } else {
+          inst.grab = null;
         }
       }
       for (const h of livingHeroes()) {
@@ -885,19 +1317,26 @@
         }
       }
       const lagoon = (combat.enemies || []).find(e => e.alive && e.instRole === 'lagoon');
-      if (lagoon && r % 3 === 0) {
-        const dps = livingHeroes().filter(h => h.role === 'dps');
-        if (dps.length) addLungs(dps[Math.floor(Math.random() * dps.length)], 1);
+      if (lagoon && r % 3 === 0) addLungs(pickLungTarget(), 1);
+      if (boss && combat.type === 'boss' && r >= 3 && r % (ratio <= 0.5 ? 2 : 3) === 0 && !boss.casting) {
+        addLungs(pickLungTarget(), 1);
       }
-      if (boss && combat.type === 'boss' && r % (boss.hp / boss.maxHp <= 0.5 ? 2 : 3) === 0) {
-        const t = livingHeroes().find(h => h.role !== 'tank') || livingHeroes()[0];
-        if (t) {
-          log('Отнять воздух — прерывание в Жреца прилива (если читает) / иначе лёгкие', 'enemy');
-          if (!boss.casting) addLungs(t, 2);
+      if (boss && combat.type === 'final') {
+        const grabEvery = ratio <= 0.3 ? 2 : (ratio <= 0.6 ? 3 : 4);
+        if (r >= grabEvery && r % grabEvery === 0 && !inst.grab) spawnTideTentacle();
+        if (r >= 3 && r % 3 === 0) addLungs(pickLungTarget(), 1);
+        if (tideAbyss()) {
+          livingHeroes().forEach(h => {
+            if ((h.buffs || []).some(b => b.id === 'air_pocket')) {
+              h.buffs = (h.buffs || []).filter(b => b.id !== 'tide_compress');
+            } else if (!(h.buffs || []).some(b => b.id === 'tide_compress')) {
+              applyStatus(h, { id: 'tide_compress', name: 'Компрессия', icon: '🌊', turns: 99, healTakenMod: -0.25, tip: 'Лечение −25%. Снимите лёгкие — Воздушный карман.' });
+            }
+          });
         }
       }
       const oracle = (combat.enemies || []).find(e => e.alive && e.instRole === 'oracle');
-      if (oracle && r % 2 === 0 && !(combat.enemies || []).some(e => e.alive && e.instRole === 'vent')) {
+      if (oracle && r % 2 === 0 && !inst.sluiceOn && !(combat.enemies || []).some(e => e.alive && e.instRole === 'vent')) {
         combat.enemies.push(lockObject(scaleEnemy(makeObject('vent', 'Шлюзовой вентиль', '⚙️'), instKey(), false, false)));
       }
     }
@@ -916,9 +1355,61 @@
         sh._jadeHalf = true;
         spawnJadeReflect(sh);
       }
+      if (combat.type === 'final') {
+        const boss = instBoss();
+        const ratio = boss ? boss.hp / Math.max(1, boss.maxHp) : 1;
+        if (r >= 24 && !inst.jadeEnrage) {
+          inst.jadeEnrage = true;
+          if (boss) applyStatus(boss, { id: 'jade_enrage', name: 'Ярость сомнения', icon: '☯️', turns: 99, atkMod: 0.40, tip: '+40% исходящего. Семена цветут за 1 ход. Пульс касания 18%.' });
+          jadeSeeds().forEach(s => { s._left = Math.min(s._left || 1, 1); s.mustKillTurns = s._left; });
+          log('Ярость финала: Ша Сомнения +40% урона. Семена цветут за 1 ход.', 'enemy');
+          toast('Ярость сомнения!');
+        }
+        if (r >= 2 && (r - 2) % 3 === 0) putVoidTouch();
+        const w = jadeWhisper();
+        if (w) {
+          const carrier = (run.party || []).find(p => p.uid === w.carrierUid);
+          if (carrier && carrier.alive && w._bornR !== r) trueDmg(carrier, 0.05, w, 'Касание пустоты', 'shadow');
+          if (w._bornR !== r) w._left = (w._left || 2) - 1;
+          if (w._left <= 0 && w.alive) clearVoidTouch(true);
+        }
+        jadeSeeds().forEach(s => {
+          if (s._bornR === r) return;
+          s._left = (s._left || 3) - 1;
+          s.mustKillTurns = s._left;
+          if (s._left <= 0 && s.alive) {
+            partyTrue(0.08, s, 'Семя расцвело', 'shadow');
+            livingHeroes().forEach(addDoubt);
+            s.alive = false; s.hp = 0;
+            log('Семя сомнения расцвело — 8% max HP и Сомнение', 'enemy');
+          }
+        });
+        if (boss && ratio <= 0.35 && r >= 4 && r % 4 === 0) spawnJadeReflect(boss);
+      }
     }
 
     if (theme === 'crypt') {
+      if (inst.echoRecord && combat.type === 'boss') {
+        const rec = inst.echoRecord;
+        inst.echoRecord = null;
+        const keeper = (combat.enemies || []).find(e => e.isBoss && e.alive);
+        if (keeper && rec.amt > 0) {
+          const ward = (keeper.buffs || []).some(b => b.id === 'bone_ward' && (b.stacks || 0) > 0);
+          const total = Math.max(1, Math.round(rec.amt * (ward ? 0.80 : 0.65)));
+          if (rec.ripped) {
+            const hs = livingHeroes();
+            const each = Math.max(1, Math.round(total / Math.max(1, hs.length)));
+            hs.forEach(h => { if (typeof dealTrue === 'function') dealTrue(h, each, keeper, 'dot', { school: 'shadow', abilityName: 'Первый отзвук' }); });
+            log('Первый отзвук рвётся областью — ' + (typeof fmt === 'function' ? fmt(total) : total) + ' т на всех', 'enemy');
+          } else {
+            const t = (typeof getThreatTarget === 'function' ? getThreatTarget(keeper) : null) || livingHeroes()[0];
+            if (t) {
+              if (typeof dealTrue === 'function') dealTrue(t, total, keeper, 'dot', { school: 'shadow', abilityName: 'Первый отзвук' });
+              log('Первый отзвук → ' + t.name + ' · ' + (ward ? '80%' : '65%') + ' записи · ' + (typeof fmt === 'function' ? fmt(total) : total) + ' т', 'enemy');
+            }
+          }
+        }
+      }
       (combat.enemies || []).filter(e => e.alive && e.instRole === 'crypt_plate').forEach(p => {
         const sh = p.shield || 0;
         p._plateIgnore = (p._plateIgnore || 0) + 1;
@@ -972,6 +1463,36 @@
     if (theme === 'forge') {
       const giant = (combat.enemies || []).find(e => e.alive && (e.instRole === 'forge_giant' || e.instRole === 'forge_smith'));
       if (giant && r % 2 === 0) addForgeHeat(1, 'чемпион');
+      const ing = (combat.enemies || []).find(e => e.alive && e.instRole === 'forge_ingot');
+      if (ing && inst.ingotLeft > 0) {
+        inst.ingotLeft -= 1;
+        if (inst.ingotLeft <= 0) {
+          const smith = (combat.enemies || []).find(e => e.isBoss && e.alive);
+          if (smith) {
+            applyStatus(smith, { id: 'forge_blade', name: 'Готовый клинок', icon: '⚔️', turns: 99, atkMod: 0.25, tip: 'Слиток дожил. Атака +25%.' });
+            log('Слиток готов — Мастер горна +25% атаки', 'enemy');
+            toast('Готовый клинок!');
+          }
+          ing.alive = false; ing.hp = 0;
+        }
+      }
+      if (combat.type === 'final') {
+        const boss = instBoss();
+        const ratio = boss ? boss.hp / Math.max(1, boss.maxHp) : 1;
+        if (inst.crownUid) {
+          const h = (run.party || []).find(p => p.uid === inst.crownUid);
+          const has = h && h.alive && (h.buffs || []).some(b => b.id === 'forge_crown');
+          if (!has) {
+            inst.crownUid = null;
+            inst.crownLeft = 0;
+          } else if (inst.crownBornR !== r) {
+            trueDmg(h, 0.05, boss, 'Пепельная корона', 'fire');
+            inst.crownLeft = (inst.crownLeft || 3) - 1;
+            if (inst.crownLeft <= 0) clearAshCrown(true);
+          }
+        }
+        if (ratio <= 0.55 && r >= 4 && r % 4 === 0 && !inst.crownUid) putAshCrown();
+      }
     }
 
     if (theme === 'ember') {
@@ -1006,20 +1527,30 @@
           log('Живой уголёк', 'enemy');
         }
       }
+      if (inst.brandUid) {
+        inst.brandLeft = (inst.brandLeft || 0) - 1;
+        const carrier = livingHeroes().find(h => h.uid === inst.brandUid);
+        if (!carrier || inst.brandLeft <= 0) {
+          if (carrier && (carrier.buffs || []).some(b => b.id === 'ember_brand')) {
+            trueDmg(carrier, 0.10, null, 'Клеймо истекло', 'fire');
+            addHallHeat(2, 'клеймо истекло', true);
+            carrier.buffs = carrier.buffs.filter(b => b.id !== 'ember_brand');
+            log(carrier.name + ': клеймо сгорело', 'enemy');
+          }
+          inst.brandUid = null;
+          inst.brandLeft = 0;
+        }
+      }
       if (bossMode && combat.type === 'boss' && r >= 3 && r % (combat.enemies.some(e => e.isBoss && e.hp / e.maxHp <= 0.4) ? 2 : 3) === 0) {
         const dps = livingHeroes().filter(h => h.role === 'dps');
-        if (dps.length && !livingHeroes().some(h => (h.buffs || []).some(b => b.id === 'ember_brand'))) {
+        if (dps.length && !inst.brandUid) {
           const t = dps[Math.floor(Math.random() * dps.length)];
+          inst.brandUid = t.uid;
+          inst.brandLeft = 3;
           applyStatus(t, { id: 'ember_brand', name: 'Клеймо надсмотрщика', icon: '♨️', turns: 3, tip: 'Удар по надсмотрщику лечит его. Снять углём в топку или хилом ≥15% max HP.' });
           log(t.name + ': Клеймо надсмотрщика', 'enemy');
         }
       }
-      livingHeroes().forEach(h => {
-        const br = (h.buffs || []).find(b => b.id === 'ember_brand');
-        if (br && (br.turns || 0) <= 1 && r > 1) {
-          /* expire handled by status tick; extra punish if still present next */
-        }
-      });
       const titan = (combat.enemies || []).find(e => e.isBoss && e.alive && combat.type === 'final');
       if (titan && titan.hp / titan.maxHp <= 0.55 && !inst.coreOut) {
         inst.coreOut = true;
@@ -1034,6 +1565,20 @@
     }
 
     if (theme === 'rift') {
+      if (r >= 3 && r % 3 === 0 && combat.type !== 'boss' && combat.type !== 'final') {
+        const hosts = (combat.enemies || []).filter(e => e.alive && !isDummyRole(e) && (e.instRole === 'rift_shard' || e.instRole === 'rift_crawler' || e.instCore));
+        const core = hosts.find(e => e.instCore);
+        if (core && hosts.length > 1) {
+          const next = hosts.filter(e => e.uid !== core.uid)[Math.floor(Math.random() * (hosts.length - 1))];
+          if (next) {
+            core.instCore = false;
+            if (core.buffs) core.buffs = core.buffs.filter(b => b.id !== 'rift_core');
+            next.instCore = true;
+            paintAura(next, 'rift_core', 'Скрытое ядро', '🧿', 1, 'Одиночная 100%. Область 35%.');
+            log('Срыв подписи: ядро на ' + next.name, 'enemy');
+          }
+        }
+      }
       const st = (combat.enemies || []).find(e => e.alive && e.instRole === 'rift_stalker');
       const at = inst.riftSplitAt || 0.6;
       if (st && !st._split && st.hp / st.maxHp <= at) {
@@ -1071,6 +1616,38 @@
       if (combat.type === 'boss' && r % 3 === 0) {
         log('Якорь фазы: одиночная или провокация в одно тело', 'system');
       }
+      if (combat.type === 'final') {
+        const boss = instBoss();
+        const ratio = boss ? boss.hp / Math.max(1, boss.maxHp) : 1;
+        if (inst.riftInvertPause > 0) {
+          inst.riftInvertPause -= 1;
+          inst.riftAreaBan = Math.max(0, (inst.riftAreaBan || 0) - 1);
+          if (inst.riftAreaBan <= 0 && boss && boss.buffs) boss.buffs = boss.buffs.filter(b => b.id !== 'rift_area_ban');
+          if (inst.riftInvertPause <= 0 && ratio > 0.60) {
+            startRiftInvert();
+            spawnInvertShard();
+          }
+        }
+        if (inst.riftInvert && ratio > 0.60 && (r === 1 || r % 6 === 1)) spawnInvertShard();
+        const shard = (combat.enemies || []).find(e => e.alive && e.instRole === 'rift_invert_shard');
+        if (shard && shard._bornR !== r) {
+          shard._left = (shard._left || 3) - 1;
+          if (shard._left <= 0) {
+            killInvertShard(true);
+            if (inst.riftInvert) stopRiftInvert(true);
+            log('Осколок истёк без взрыва — инверсия снята, Запрет области 2 хода', 'enemy');
+          }
+        }
+        if (inst.riftHunger) {
+          inst.hungerSwap = (inst.hungerSwap || 2) - 1;
+          if (inst.hungerSwap <= 0) {
+            inst.hungerSwap = 2;
+            setHungerAuras(!inst.hungerStOnBoss);
+          }
+          const hunger = (combat.enemies || []).find(e => e.alive && e.instRole === 'rift_hunger');
+          if (hunger && boss) { hunger.hp = boss.hp; hunger.maxHp = boss.maxHp; }
+        }
+      }
     }
   }
 
@@ -1093,6 +1670,19 @@
       openSoak(2, 'pain', 'Всплеск боли · ровно 2');
       return true;
     }
+    if (theme === 'jade' && (flag === 'jade_doubt_strike' || name === 'Удар сомнения')) {
+      const tank = livingHeroes().find(h => h.role === 'tank') || livingHeroes()[0];
+      if (tank && tank.alive) {
+        let power = 1.15;
+        const wall = hasWall(tank) || ((tank.shield || 0) > tank.maxHp * 0.12);
+        if (wall) power *= 0.45;
+        else if (tank.role !== 'tank') power *= 1.25;
+        const raw = Math.max(1, Math.round((typeof getEff === 'function' ? getEff(actor).atk : actor.atk) * power));
+        if (typeof dealDmg === 'function') dealDmg(tank, raw, actor, { type: 'damage', school: 'shadow', abilityName: 'Удар сомнения', skipBlock: false });
+        log(actor.name + ': Удар сомнения → ' + tank.name + (wall ? ' (стенка 45%)' : ''), 'enemy');
+      }
+      return true;
+    }
     return false;
   }
 
@@ -1106,7 +1696,12 @@
         addPressure(2, 'пропущенный гимн');
         if (actor.isBoss && combat.type === 'boss') actor.hp = Math.min(actor.maxHp, actor.hp + Math.round(actor.maxHp * 0.08));
       }
-      if (flag === 'tide_tsunami' || name === 'Цунами') addPressure(1, 'Цунами');
+      if (flag === 'tide_tsunami' || flag === 'tide_whirl' || name === 'Цунами') addPressure(1, name || 'Цунами');
+      if (flag === 'tide_steal_air' || name === 'Отнять воздух') {
+        addLungs(pickLungTarget(), 2);
+        if (actor.isBoss) actor.hp = Math.min(actor.maxHp, actor.hp + Math.round(actor.maxHp * 0.08));
+        log('Отнять воздух прошло — 2 стака лёгких', 'enemy');
+      }
       if (flag === 'tide_grab' || name === 'Хватка') startTideGrab(actor, actor.isBoss ? 0.08 : 0.12);
     }
     if (theme === 'jade') {
@@ -1114,6 +1709,13 @@
         livingHeroes().forEach(addDoubt);
         const guard = (combat.enemies || []).find(e => e.alive && e.instRole === 'jade_guard');
         spawnJadeReflect(guard || actor);
+      }
+      if (flag === 'jade_wave' || name === 'Волна сомнения') {
+        livingHeroes().forEach(addDoubt);
+        log('Волна сомнения прошла — Сомнение на отряд', 'enemy');
+      }
+      if (flag === 'jade_sha_whisper' || name === 'Шёпот ша') {
+        spawnJadeReflect(actor);
       }
       if (flag === 'jade_gaze' || name === 'Взгляд камня') {
         const already = livingHeroes().find(h => (h.buffs || []).some(b => b.id === 'petrify'));
@@ -1132,9 +1734,10 @@
         instCombat().dustEcho = 2;
         log('Пыльный отзвук · 2 хода: следующая смерть бьёт 6% max HP', 'enemy');
       }
-      if (flag === 'crypt_choir' || name === 'Хор праха') {
+      if (flag === 'crypt_choir' || name === 'Хор праха' || name === 'Каменный хор') {
         const dps = livingHeroes().filter(h => h.role !== 'tank');
-        const pick = dps.sort(() => Math.random() - 0.5).slice(0, 1);
+        const n = name === 'Каменный хор' ? 2 : 1;
+        const pick = dps.sort(() => Math.random() - 0.5).slice(0, n);
         pick.forEach(h => applyStatus(h, { id: 'need_spread', name: 'Каменный хор', icon: '📣', turns: 2, tip: 'На своём ходе клик по себе без кнопки = Разойтись' }));
       }
       if (flag === 'crypt_shroud' || name === 'Саван') {
@@ -1164,9 +1767,18 @@
         }
       }
     }
+    if (theme === 'rift') {
+      if (flag === 'rift_absorb' || name === 'Поглощение') {
+        const boss = instBoss();
+        if (boss && hungerAccepts(actor, true)) {
+          boss.hp = Math.min(boss.maxHp, boss.hp + Math.round(boss.maxHp * 0.06));
+          log('Поглощение прошло — Пожиратель +6% max HP', 'enemy');
+        }
+      }
+    }
     if (theme === 'ember') {
       const bossMode = !!(combat.enemies || []).some(e => e.isBoss);
-      if (flag === 'ember_erupt' || /Искра|Кнут пепла/.test(name)) addHallHeat(bossMode ? 2 : 1, 'пропуск каста', bossMode);
+      if (flag === 'ember_erupt' || flag === 'ember_spark' || /Искра|Кнут пепла|Взрыв углей/.test(name)) addHallHeat(bossMode ? 2 : 1, 'пропуск каста', bossMode);
       if (flag === 'ember_slam') {
         const t = (typeof getThreatTarget === 'function' ? getThreatTarget(actor) : null);
         if (t && !hasWall(t)) {
@@ -1180,8 +1792,18 @@
     }
   }
 
-  function onInstInterrupt(target) {
+  function onInstInterrupt(target, heatSave) {
     const theme = instTheme();
+    if (theme === 'ember') return;
+    if (theme === 'forge' && target && target.isBoss && target.mech && target.mech.id === 'heat') {
+      if (hearthsLive().length && heatSave != null) {
+        const heat = (target.buffs || []).find(b => b.id === 'heat');
+        if (heat) heat.stacks = heatSave;
+        log('Очаги держат Перегрев — стаки не сброшены', 'enemy');
+        toast('Очаги держат жар!');
+      }
+      return;
+    }
     if (theme === 'forge' && !(target && target.isBoss && target.mech && target.mech.id === 'heat')) {
       addForgeHeat(-1, 'прерывание');
       if (target && target.instRole === 'forge_giant') instCombat().heat = 0;
@@ -1197,10 +1819,90 @@
     const theme = instTheme();
     const inst = instCombat();
     const name = ctx?.abilityName || '';
+    const aoe = isAoeCtx(ctx);
+    const fromAlly = !!(attacker && attacker.side === 'ally');
+
+    if (fromAlly && target.side === 'ally' && (target.buffs || []).some(b => b.id === 'forge_crown')
+        && ctx && ctx.school === 'fire') {
+      raw = Math.round(raw * 1.30);
+    }
+
+    if (theme === 'rift' && combat.type === 'final' && fromAlly && raw > 0 && !inst._riftRedirect) {
+      const clickUid = inst.castTargetUid;
+      if (inst.riftInvert && !(ctx && (ctx.type === 'dot' || ctx.isDot))) {
+        if (aoe) {
+          if (!clickUid || target.uid !== clickUid) return 0;
+        } else if (!inst._invertCleave) {
+          inst._invertCleave = true;
+          try {
+            (typeof living === 'function' ? living('enemy') : (combat.enemies || []).filter(e => e.alive)).forEach(e => {
+              if (!e || e.uid === target.uid || !e.alive) return;
+              if (typeof dealDmg === 'function') dealDmg(e, Math.round(raw * 0.6), attacker, {
+                type: 'damage', abilityName: name, instFlag: 'rift_invert_cleave',
+              });
+            });
+          } finally { inst._invertCleave = false; }
+        }
+      }
+      if (inst.riftAreaBan > 0 && aoe && target.isBoss && !inst._areaBanOnce) {
+        inst._areaBanOnce = true;
+        target.hp = Math.min(target.maxHp, target.hp + Math.round(raw * 0.5));
+        log('Запрет области: Пожиратель лечит 50% нанесённого', 'enemy');
+      }
+      if (inst.riftHunger && (target.isBoss || target.instRole === 'rift_hunger')) {
+        const boss = instBoss() || (target.isBoss ? target : null);
+        const finish = !!(boss && boss.hp / Math.max(1, boss.maxHp) <= 0.10);
+        const match = hungerAccepts(target, aoe);
+        if (!match) {
+          if (finish && boss) {
+            const half = Math.round(raw * 0.5);
+            if (target.instRole === 'rift_hunger') {
+              inst._riftRedirect = true;
+              try { if (typeof dealDmg === 'function') dealDmg(boss, half, attacker, ctx); }
+              finally { inst._riftRedirect = false; }
+              return 0;
+            }
+            raw = half;
+          } else {
+            if (boss && !inst._hungerHeal) {
+              inst._hungerHeal = true;
+              boss.hp = Math.min(boss.maxHp, boss.hp + Math.round(boss.maxHp * 0.08));
+              log('Несовпавший тип — Пожиратель +8% max HP', 'enemy');
+              toast('Не тот тип!');
+            }
+            return 0;
+          }
+        } else if (target.instRole === 'rift_hunger' && boss) {
+          inst._riftRedirect = true;
+          try {
+            if (typeof dealDmg === 'function') dealDmg(boss, raw, attacker, ctx);
+          } finally { inst._riftRedirect = false; }
+          return 0;
+        }
+      }
+    }
 
     if (target.instRole === 'vent') {
       addPressure(-2, 'вентиль');
       toast('Вентиль −2 давления');
+      return 0;
+    }
+    if (target.instRole === 'sluice') {
+      const instS = instCombat();
+      if (target.instLit) {
+        instS.skipPlanPressure = true;
+        log('Обратный ток закрыт — плановый стак столба в этом раунде не падает', 'player');
+        toast('Шлюз!');
+        relitSluices();
+      } else {
+        const weak = livingHeroes().slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+        if (weak) {
+          addLungs(weak, 1);
+          trueDmg(weak, 0.10, null, 'Промах по шлюзу', 'frost');
+        }
+        addPressure(1, 'тёмный шлюз');
+        log('Не тот шлюз', 'enemy');
+      }
       return 0;
     }
     if (target.instRole === 'lantern') {
@@ -1214,13 +1916,27 @@
       return 0;
     }
     if (target.instRole === 'reflect' && target.reflectOf) {
-      const real = (combat.enemies || []).find(e => e.uid === target.reflectOf && e.alive);
+      if (isAoeCtx(ctx)) return 0;
+      const real = (combat.enemies || []).find(e => e.uid === target.reflectOf && e.alive)
+        || (combat.enemies || []).find(e => e.alive && e.isBoss)
+        || (combat.enemies || []).find(e => e.alive && !isDummyRole(e) && e.uid !== target.uid);
       if (real && raw > 0) {
         const heal = Math.round(raw * 0.8);
         real.hp = Math.min(real.maxHp, real.hp + heal);
         if (attacker && attacker.side === 'ally') addDoubt(attacker);
-        log('Отражение кормит ' + real.name, 'enemy');
+        log('Отражение кормит ' + real.name + ' · Сомнение', 'enemy');
         toast('Не то тело!');
+        if (theme === 'jade' && combat.type === 'final' && attacker && attacker.side === 'ally') {
+          inst.jadeWrong = (inst.jadeWrong || 0) + 1;
+          if (real.isBoss) paintAura(real, 'jade_boundless', 'Безграничное сомнение', '☯️', inst.jadeWrong, '3 стака: 40% max HP кликнувшему.');
+          if (inst.jadeWrong >= 3) {
+            inst.jadeWrong = 0;
+            if (real.isBoss && real.buffs) real.buffs = real.buffs.filter(b => b.id !== 'jade_boundless');
+            trueDmg(attacker, 0.40, real, 'Безграничное сомнение', 'shadow');
+            log('Три клика в Отражение — ' + attacker.name + ' получает 40% max HP', 'enemy');
+            toast('Безграничное сомнение!');
+          }
+        }
       }
       return 0;
     }
@@ -1238,6 +1954,8 @@
         clearCoal();
         addHallHeat(-2, 'уголь в топку', true);
         livingHeroes().forEach(h => { if (h.buffs) h.buffs = h.buffs.filter(b => b.id !== 'ember_brand'); });
+        inst.brandUid = null;
+        inst.brandLeft = 0;
         inst.placedThisRound = true;
         toast('Уголь в топку');
       }
@@ -1260,6 +1978,18 @@
     if (theme === 'jade' && attacker && attacker.side === 'ally') {
       const cut = ((attacker.buffs || []).find(b => b.id === 'jade_doubt')?.stacks || 0) * 0.08;
       if (cut) raw = Math.round(raw * (1 - cut));
+      if (combat.type === 'final' && target.isBoss && jadeSeeds().length && !aoe && raw > 0) {
+        const seeds = jadeSeeds().slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+        const s = seeds[0];
+        if (s) {
+          const feed = Math.max(1, Math.round(s.maxHp * 0.15));
+          s.hp = Math.min(s.maxHp, s.hp + feed);
+          log('Одиночная в Ша кормит семя (+15% max HP семени)', 'enemy');
+          toast('Семя кормится!');
+        }
+        raw = Math.round(raw * 0.4);
+      }
+      if (combat.type === 'final' && target.instRole === 'jade_seed' && aoe) raw = Math.round(raw * 0.7);
     }
     if (theme === 'crypt' && attacker && attacker.side === 'ally' && !isAoeCtx(ctx)) {
       target._lastClickUid = attacker.uid;
@@ -1269,6 +1999,9 @@
         applyStatus(attacker, { id: 'double_echo', name: 'Двойной отзвук', icon: '🔁', turns: 2, tip: 'Следующий входящий повторится на 50%' });
       }
       attacker._echoLast = target.uid;
+    }
+    if (theme === 'crypt' && target.isBoss && combat.type === 'boss' && attacker && attacker.side === 'ally') {
+      inst._echoPending = { ripped: isAoeCtx(ctx) };
     }
     if (theme === 'crypt' && target.instRole === 'echo_anchor') { /* ok */ }
     if (theme === 'crypt' && target.isBoss && combat.type === 'final' && raw > 0) {
@@ -1280,6 +2013,20 @@
     }
     if (theme === 'ember') {
       const bossMode = !!(combat.enemies || []).some(e => e.isBoss);
+      if (target.instRole === 'ember_core' && attacker && attacker.side === 'ally' && !isAoeCtx(ctx)) {
+        if (inst.coreHitUid !== attacker.uid || inst.coreHitRound !== combat.round) {
+          addHallHeat(-1, 'удар по ядру', true);
+          inst.coreHitUid = attacker.uid;
+          inst.coreHitRound = combat.round;
+        }
+        if (hasCoal(attacker)) {
+          clearCoal();
+          log('Уголь сгорел в ядре — загрузки нет', 'enemy');
+        }
+      }
+      if ((target.isBoss || target.instRole === 'ember_colossus' || target.instRole === 'ember_brute') && (inst.hallHeat || 0) <= 2) {
+        raw = Math.round(raw * 0.85);
+      }
       if (target.instRole === 'ember_brute' || (target.isBoss && combat.type === 'boss')) {
         const h = inst.hallHeat || 0;
         if (target.instRole === 'ember_brute') {
@@ -1372,7 +2119,21 @@
     }
     if ((target.buffs || []).some(b => b.id === 'ember_brand') && amount >= target.maxHp * 0.15) {
       target.buffs = target.buffs.filter(b => b.id !== 'ember_brand');
+      const instB = instCombat();
+      if (instB.brandUid === target.uid) { instB.brandUid = null; instB.brandLeft = 0; }
       log(target.name + ': Клеймо снято', 'heal');
+    }
+    const clickHeal = healer && healer.side === 'ally' && healer._lastAbilityType === 'heal'
+      && instCombat().castTargetUid === target.uid && !healer._lastWasAoe;
+    if (clickHeal && (target.buffs || []).some(b => b.id === 'forge_crown') && amount >= target.maxHp * 0.15) {
+      clearAshCrown(false);
+      log(target.name + ': Пепельная корона снята хилом', 'heal');
+      toast('Корона снята');
+    }
+    if (clickHeal && (target.buffs || []).some(b => b.id === 'jade_void')) {
+      clearVoidTouch(false);
+      log(target.name + ': Касание пустоты снято хилом — шёпот гаснет', 'heal');
+      toast('Касание снято');
     }
     if (healer && healer.side === 'ally') {
       const cut = ((healer.buffs || []).find(b => b.id === 'jade_doubt')?.stacks || 0) * 0.08;
@@ -1395,8 +2156,8 @@
       if (dest) applyStatus(dest, { id: 'rot', name: 'Гниль', icon: '🦠', turns: 2, dot: Math.round((unit.atk || 1) * 0.50), school: 'shadow', tip: 'Прыгнула с служки' });
     }
     if (unit.instRole === 'echo_anchor') openSoak(2, 'debt', 'Долг эха · ровно 2');
-    if (theme === 'ember' && (unit.instRole === 'ember_live' || (unit.instRole === 'ember_coal' && unit.name.indexOf('Живой') >= 0))) {
-      const bossMode = !!(combat.enemies || []).some(e => e.isBoss);
+    if (theme === 'ember' && (unit.instRole === 'ember_live' || (unit.instRole === 'ember_coal' && String(unit.name).indexOf('Живой') >= 0))) {
+      const bossMode = !!(combat.enemies || []).some(e => e.isBoss && e.alive);
       if (isAoeCtx(ctx) || (killer && killer._lastWasAoe)) {
         addHallHeat(2, 'уголёк областью', bossMode);
         partyTrue(bossMode ? 0.08 : 0.06, unit, 'Вспышка угля', 'fire');
@@ -1412,6 +2173,43 @@
       if (hero) hero.buffs = (hero.buffs || []).filter(b => b.id !== 'tide_grab');
       inst.grab = null;
       addPressure(-1, 'Щупальце убито');
+    }
+    if (theme === 'forge' && unit.instRole === 'forge_ingot') {
+      inst.ingotLeft = 0;
+      log('Слиток снят', 'player');
+    }
+    if (unit.instRole === 'forge_hearth') {
+      if (!hearthsLive().length) {
+        log('Очаги погасли — прерывание снова сбрасывает Перегрев', 'player');
+        toast('Очаги погасли');
+      }
+    }
+    if (unit.instRole === 'jade_whisper') {
+      const carrier = (run.party || []).find(p => p.uid === unit.carrierUid);
+      if (carrier && carrier.buffs) carrier.buffs = carrier.buffs.filter(b => b.id !== 'jade_void');
+      inst.voidUid = null;
+      log('Шёпот снят — пульса нет', 'player');
+    }
+    if (unit.instRole === 'rift_invert_shard') {
+      inst.shardUid = null;
+      if (!isAoeCtx(ctx) && !(killer && killer._lastWasAoe)) {
+        const boss = instBoss();
+        if (boss) {
+          applyStatus(boss, { id: 'rift_chaos', name: 'Слой хаоса', icon: '🌀', turns: 2, atkMod: 0.20, tip: '+20% исходящего. Осколок сняли одиночной.' });
+          log('Осколок снят одиночной — Слой хаоса на Пожирателе', 'enemy');
+          toast('Слой хаоса!');
+        }
+      } else {
+        log('Осколок снят областью — штрафа нет', 'player');
+      }
+    }
+    if (unit.isBoss) {
+      (combat.enemies || []).forEach(e => {
+        if (!e || e.uid === unit.uid) return;
+        if (isDummyRole(e) || e.instRole === 'ember_live' || e.instRole === 'echo_anchor' || e.instRole === 'forge_ingot' || e.instRole === 'tentacle') {
+          e.alive = false; e.hp = 0;
+        }
+      });
     }
   }
 
@@ -1446,21 +2244,85 @@
     if (actor.instRole === 'ember_live') {
       addHallHeat(1, 'уголёк дожил до хода', !!(combat.enemies || []).some(e => e.isBoss));
     }
+    if (instTheme() === 'rift' && combat.type === 'final' && instCombat().riftHunger
+        && (actor.isBoss || actor.instRole === 'rift_hunger')) {
+      const takesAoe = (actor.buffs || []).some(b => b.id === 'rift_take_aoe');
+      const takesSt = (actor.buffs || []).some(b => b.id === 'rift_take_st');
+      const abs = (actor.abilities || []).find(a => a.instFlag === 'rift_absorb' || a.name === 'Поглощение');
+      if (takesAoe && abs && !(abs.curCd > 0) && !actor.casting && typeof castAbility === 'function') {
+        castAbility(actor, abs, actor);
+        return true;
+      }
+      const bolt = (actor.abilities || []).find(a => a && (a.id === 'bolt' || a.name === 'Луч хаоса'));
+      if (takesSt && bolt && !(bolt.curCd > 0) && !actor.casting && typeof castAbility === 'function') {
+        const tank = livingHeroes().find(h => h.role === 'tank') || livingHeroes()[0];
+        if (tank) {
+          castAbility(actor, bolt, tank);
+          return true;
+        }
+      }
+    }
     return false;
   }
 
+  function beforeInstCast(actor, ability, target) {
+    if (!actor || !ability) return;
+    actor._lastAbilityId = ability.id;
+    actor._lastWasAoe = ability.type === 'aoe' || ability.type === 'cast_aoe' || ability.type === 'heal_aoe';
+    actor._lastAbilityType = ability.type;
+    const inst = instCombat();
+    inst.castTargetUid = target && target.uid;
+    inst.castAbilityType = ability.type;
+    inst._areaBanOnce = false;
+    inst._hungerHeal = false;
+  }
+  function stripInstMark(target) {
+    if (!target) return;
+    const inst = instCombat();
+    if (inst.crownUid === target.uid || (target.buffs || []).some(b => b.id === 'forge_crown')) {
+      clearAshCrown(false);
+      log(target.name + ': Пепельная корона снята', 'heal');
+      toast('Корона снята');
+    }
+    if (inst.voidUid === target.uid || (target.buffs || []).some(b => b.id === 'jade_void')) {
+      clearVoidTouch(false);
+      log(target.name + ': Касание пустоты снято — шёпот гаснет', 'heal');
+      toast('Касание снято');
+    }
+  }
   function afterInstCast(actor, ability, target) {
     if (!actor || !ability || run?.raid) return;
     actor._lastAbilityId = ability.id;
     actor._lastWasAoe = ability.type === 'aoe' || ability.type === 'cast_aoe' || ability.type === 'heal_aoe';
+    if (ability.type === 'dispel' || ability.type === 'cleanse') stripInstMark(target || actor);
     if (hasCoal(actor) && target && target.side === 'ally' && target.uid !== actor.uid && !target.isPet && !actor._lastWasAoe) {
       clearCoal();
       giveCoal(target, 3);
       log('Уголь передан → ' + target.name, 'system');
     }
-    if (instTheme() === 'crypt' && ability.type === 'debuff' && target && target.side === 'ally') {
-      /* shroud already in resolve */
+    if (actor.instRole === 'tentacle' && ability && (ability.instFlag === 'tide_grab' || ability.name === 'Хватка')) {
+      startTideGrab(actor, 0.12);
     }
+    if (instTheme() === 'crypt' && ability && (ability.instFlag === 'crypt_rot' || ability.name === 'Гниль') && target) {
+      target._rotFromAcolyte = actor.uid;
+    }
+  }
+
+  function afterInstDealt(target, dealt, attacker, ctx) {
+    if (!target || run?.raid || !(dealt > 0)) return;
+    const inst = instCombat();
+    if (instTheme() !== 'crypt') return;
+    if (target.isBoss && combat.type === 'boss' && attacker && attacker.side === 'ally') {
+      const ripped = !!(inst._echoPending && inst._echoPending.ripped) || isAoeCtx(ctx);
+      inst._echoPending = null;
+      inst.echoRecord = { amt: dealt, ripped };
+    }
+  }
+
+  function noteInstKill(unit, killer, ctx) {
+    if (!unit || unit._instKilled) return;
+    unit._instKilled = true;
+    try { onInstKill(unit, killer, ctx); } catch (e) { console.error(e); }
   }
 
   /* ── hooks ── */
@@ -1516,8 +2378,21 @@
       try { n = onInstDamage(target, raw, attacker, ctx); } catch (e) { console.error(e); }
       const before = target && target.hp;
       const dealt = _deal(target, n, attacker, ctx);
+      try { afterInstDealt(target, dealt, attacker, ctx); } catch (e) { console.error(e); }
       try {
-        if (target && before > 0 && target.hp <= 0) onInstKill(target, attacker, ctx);
+        if (target && before > 0 && target.hp <= 0) noteInstKill(target, attacker, ctx);
+      } catch (e) { console.error(e); }
+      try { maybeFinalePhases(); } catch (e) { console.error(e); }
+      return dealt;
+    };
+  }
+  const _true = typeof dealTrue === 'function' ? dealTrue : null;
+  if (_true) {
+    dealTrue = function (t, d, source, floatKind, ctx) {
+      const before = t && t.hp;
+      const dealt = _true(t, d, source, floatKind, ctx);
+      try {
+        if (t && before > 0 && t.hp <= 0) noteInstKill(t, source, ctx || { isDot: floatKind === 'dot', type: 'dot' });
       } catch (e) { console.error(e); }
       return dealt;
     };
@@ -1529,8 +2404,9 @@
         const cut = ((healer.buffs || []).find(b => b.id === 'jade_doubt')?.stacks || 0) * 0.08;
         if (cut) amount = Math.round(amount * (1 - cut));
       }
+      const asked = amount;
       const r = _heal(t, amount, healer, opts);
-      try { onInstHeal(t, r || amount, healer); } catch (e) { console.error(e); }
+      try { onInstHeal(t, asked, healer); } catch (e) { console.error(e); }
       return r;
     };
   }
@@ -1566,8 +2442,10 @@
           }
         }
       }
+      const heatB = target && (target.buffs || []).find(b => b.id === 'heat');
+      const heatSave = heatB ? heatB.stacks : null;
       const r = _kick.apply(this, arguments);
-      try { if (r) onInstInterrupt(target); } catch (e) { console.error(e); }
+      try { if (r) onInstInterrupt(target, heatSave); } catch (e) { console.error(e); }
       return r;
     };
   }
@@ -1575,8 +2453,9 @@
   if (_check) {
     checkEnd = function () {
       if (combat && combat.enemies) {
-        const real = combat.enemies.filter(e => e.alive && e.hp > 0 && !e.vaultAway && !e.instObject && e.instRole !== 'vent' && e.instRole !== 'reflect' && e.instRole !== 'trough' && e.instRole !== 'furnace' && e.instRole !== 'lantern');
-        const dummy = combat.enemies.filter(e => e.instObject || e.instRole === 'vent' || e.instRole === 'reflect' || e.instRole === 'trough' || e.instRole === 'furnace' || e.instRole === 'lantern');
+        const real = combat.enemies.filter(e => e.alive && e.hp > 0 && !e.vaultAway && !isDummyRole(e)
+          && e.instRole !== 'ember_live' && e.instRole !== 'forge_ingot');
+        const dummy = combat.enemies.filter(e => isDummyRole(e) || e.instRole === 'ember_live' || e.instRole === 'forge_ingot');
         if (!real.length && dummy.length) dummy.forEach(d => { d.alive = false; d.hp = 0; });
       }
       return _check.apply(this, arguments);
@@ -1589,7 +2468,7 @@
       if (!combat || !combat.turnQueue) return;
       combat.turnQueue = combat.turnQueue.filter(id => {
         const u = (typeof allUnits === 'function' ? allUnits() : []).find(x => x.uid === id);
-        return u && !u.instObject && u.instRole !== 'vent' && u.instRole !== 'reflect' && u.instRole !== 'trough' && u.instRole !== 'furnace' && u.instRole !== 'lantern';
+        return u && !isDummyRole(u) && u.instRole !== 'forge_ingot';
       });
     };
   }
@@ -1600,9 +2479,18 @@
       return _ai.apply(this, arguments);
     };
   }
+  const _phase = typeof checkBossPhase === 'function' ? checkBossPhase : null;
+  if (_phase) {
+    checkBossPhase = function (boss) {
+      const r = _phase.apply(this, arguments);
+      try { stampBossFlags(boss); } catch (e) { console.error(e); }
+      return r;
+    };
+  }
   const _cast = typeof castAbility === 'function' ? castAbility : null;
   if (_cast) {
     castAbility = function (actor, ability, target) {
+      try { beforeInstCast(actor, ability, target); } catch (e) { console.error(e); }
       const r = _cast.apply(this, arguments);
       try { afterInstCast(actor, ability, target); } catch (e) { console.error(e); }
       return r;

@@ -1,0 +1,226 @@
+:root {
+  --bg: #08090c;
+  --panel: #12151c;
+  --border: color-mix(in oklab, #e8eaef 14%, transparent);
+  --gold: #c8d0da;
+  --text: #eceef2;
+  --muted: #8b93a3;
+  --ok: #3ecf8e;
+  --en: #f0b429;
+  --danger: #ef4444;
+  --monk: #00c78c;
+  --font-display: "Cinzel", Georgia, serif;
+  --font-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+.wrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1rem 0.45rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #141821 0%, #0c0e14 100%);
+}
+
+.kicker {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 650;
+  color: #f0f3f7;
+}
+
+.lead {
+  color: var(--muted);
+  font-size: 0.82rem;
+  max-width: 46rem;
+  line-height: 1.4;
+  margin-top: 0.15rem;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btn, .seg-btn, .ab {
+  font: inherit;
+  cursor: pointer;
+  color: var(--text);
+  background: #181c26;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.btn {
+  text-decoration: none;
+  padding: 0.45rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn:hover, .seg-btn:hover, .ab:hover { border-color: color-mix(in oklab, #e8eaef 32%, transparent); }
+
+.seg {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.seg-btn {
+  border: 0;
+  border-radius: 0;
+  padding: 0.45rem 0.7rem;
+  background: transparent;
+}
+
+.seg-btn.on {
+  background: color-mix(in oklab, var(--monk) 22%, #141821);
+  color: #d9ffef;
+}
+
+.hint {
+  padding: 0.35rem 1rem;
+  font-size: 0.84rem;
+  color: #d4dae3;
+  min-height: 1.6rem;
+}
+
+.hint.wait { color: #f0b429; }
+.hint.bad { color: #f07178; }
+.hint.ok { color: #3ecf8e; }
+
+#game {
+  flex: 1;
+  min-height: 240px;
+  background: #050608;
+}
+
+.boot-error {
+  padding: 0.8rem 1rem;
+  color: #f07178;
+}
+
+.hidden { display: none !important; }
+
+.dock {
+  border-top: 1px solid var(--border);
+  background: #0e1118;
+  padding: 0.65rem 1rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.hero-strip {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 0.7rem 1rem;
+  align-items: center;
+}
+
+.hero-name {
+  font-family: var(--font-display);
+  color: var(--monk);
+  min-width: 7rem;
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: 4.4rem 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.meter-track {
+  height: 8px;
+  border-radius: 99px;
+  background: #1b202b;
+  overflow: hidden;
+}
+
+.meter-track i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: inherit;
+}
+
+.meter-track.hp i { background: #3ecf8e; }
+.meter-track.en i { background: #f0b429; }
+.meter-val { font-variant-numeric: tabular-nums; color: var(--text); }
+
+.abs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.ab {
+  text-align: left;
+  padding: 0.5rem 0.6rem 0.55rem;
+  min-height: 4.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.ab .hk {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.ab .nm {
+  font-weight: 650;
+}
+
+.ab .meta {
+  font-size: 0.74rem;
+  color: #c8d0da;
+}
+
+.ab.on {
+  border-color: var(--monk);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--monk) 55%, transparent);
+}
+
+.ab.is-disabled {
+  opacity: 0.42;
+}
+
+.ab.cd .meta { color: #f07178; }
+
+@media (max-width: 820px) {
+  .top { flex-direction: column; }
+  .hero-strip { grid-template-columns: 1fr; }
+  .abs { grid-template-columns: 1fr 1fr; }
+}

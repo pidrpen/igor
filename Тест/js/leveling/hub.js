@@ -46,6 +46,13 @@
       '#igor-hero-plaque{font-size:.8rem;}',
       '#tv-queue-ov{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;}',
       '#tv-queue-ov .modal{max-width:360px;}',
+      '.pick-card.honest-cleared{border-color:#e0c14b;box-shadow:0 0 0 2px #e0c14b,0 0 20px rgba(240,193,75,.5);}',
+      '.pick-card .honest-cleared-note{color:#f0c14b;font-weight:700;}',
+      '#tavern-hub .tv-roster{display:flex;gap:.35rem;flex-wrap:wrap;margin:0 0 .7rem;}',
+      '#tavern-hub .tv-roster .tv-pick{display:flex;align-items:center;gap:.4rem;text-align:left;padding:.3rem .45rem;}',
+      '#tavern-hub .tv-roster .tv-pick img{width:36px;height:36px;}',
+      '#tavern-hub .tv-roster .tv-pick .tv-nm{font-size:.82rem;}',
+      '#tavern-hub .tv-roster .tv-pick .tv-sub{font-size:.68rem;color:var(--muted);}',
     ].join('');
     document.head.appendChild(s);
   }
@@ -106,6 +113,30 @@
 
   var pickClassId = null;
   var pickSpecId = null;
+  var respecOpen = false;
+  var creating = false;
+
+  function roster() {
+    return typeof G.igorHeroList === 'function' ? G.igorHeroList() : [];
+  }
+
+  function rosterHtml(activeId) {
+    var list = roster();
+    if (!list.length) return '';
+    var cards = list.map(function (x) {
+      var cls = classObj(x.classId);
+      var spec = specObj(x.classId, x.specId);
+      var on = x.id === activeId;
+      return '<button type="button" class="tv-pick' + (on ? ' on' : '') + '" data-hid="' + x.id + '">' +
+        '<img alt="" src="' + art(x.classId, x.specId) + '" />' +
+        '<div><div class="tv-nm">' + x.name + '</div>' +
+        '<div class="tv-sub">' + (cls ? cls.name : x.classId) + ' · ' + (spec ? spec.name : x.specId) +
+        ' · ур. ' + x.level + '</div></div></button>';
+    }).join('');
+    return '<div class="section-title">Герои</div><div class="tv-roster" id="tv-roster">' + cards +
+      '<button type="button" class="tv-pick" id="tv-new-hero"><div class="tv-nm">+ Новый герой</div>' +
+      '<div class="tv-sub">Прокачка отдельно</div></button></div>';
+  }
 
   function renderCreate() {
     var inner = $('tv-inner');
@@ -129,16 +160,25 @@
         '<div>' + (s.icon || '') + ' ' + s.name + '</div>' +
         '<div style="font-size:.72rem;color:var(--muted)">' + role + '</div></button>';
     }).join('');
+    var have = roster();
+    var backLabel = have.length ? '← К героям' : '← В лобби';
     inner.innerHTML =
-      '<div class="tv-head"><button class="btn" type="button" id="tv-back">← В лобби</button>' +
-      '<h1>Таверна</h1><span class="keys-hint">Один герой. Ключ 5 и рейд остаются открыты.</span></div>' +
-      '<div class="tv-card"><div class="section-title">Создать героя</div>' +
-      '<p class="keys-hint">Спек при создании. Переспек = новый герой. Изобретатель — общее дерево, не своё.</p>' +
+      '<div class="tv-head"><button class="btn" type="button" id="tv-back">' + backLabel + '</button>' +
+      '<h1>Таверна</h1><span class="keys-hint">Несколько героев. Активный идёт в инст и в слот 1 ключа.</span></div>' +
+      '<div class="tv-card"><div class="section-title">' + (have.length ? 'Новый герой' : 'Создать героя') + '</div>' +
+      '<p class="keys-hint">Каждый герой качается сам. Спек можно сменить позже: уровень останется, дерево талантов сбросится.</p>' +
       '<label>Имя</label><input id="tv-name" maxlength="18" placeholder="Имя" style="width:100%;margin:.35rem 0 .6rem;padding:.4rem;border-radius:8px;border:1px solid var(--border);background:#101218;color:var(--text)" />' +
       '<div class="section-title">Класс</div><div class="tv-create-grid" id="tv-classes">' + clsHtml + '</div>' +
       '<div class="section-title" style="margin-top:.6rem">Специализация</div><div class="tv-spec-grid" id="tv-specs">' + (specHtml || '<span class="keys-hint">Сначала класс</span>') + '</div>' +
       '<button class="btn btn-primary" type="button" id="tv-create" style="margin-top:.7rem;width:100%" ' + (pickClassId && pickSpecId ? '' : 'disabled') + '>Создать</button></div>';
-    $('tv-back').onclick = backLobby;
+    $('tv-back').onclick = function () {
+      if (have.length) {
+        creating = false;
+        renderHub();
+        return;
+      }
+      backLobby();
+    };
     inner.querySelectorAll('[data-cid]').forEach(function (b) {
       b.onclick = function () { pickClassId = b.getAttribute('data-cid'); pickSpecId = null; renderCreate(); };
     });
@@ -150,6 +190,8 @@
       var name = ($('tv-name').value || '').trim();
       var h = G.igorHeroCreate({ name: name || classObj(pickClassId).name, classId: pickClassId, specId: pickSpecId });
       if (!h) { toastMsg('Не удалось создать'); return; }
+      creating = false;
+      pickClassId = pickSpecId = null;
       toastMsg(h.name + ' · ур. 1');
       renderHub();
       paintPlaque();
@@ -175,7 +217,28 @@
     if (has('gen_focus')) atk = Math.round(atk * 1.08);
     if (has('gen_ward')) def = Math.round(def * 1.10);
     if (has('gen_grip')) { hp = Math.round(hp * 1.06); atk = Math.round(atk * 1.04); }
+    if (h.honest !== false) {
+      var honestM = typeof G.igorHeroHonestStatMult === 'function' ? G.igorHeroHonestStatMult() : 1.10;
+      hp = Math.round(hp * honestM);
+      atk = Math.round(atk * honestM);
+      def = Math.round(def * honestM);
+      speed = Math.round(speed * honestM);
+    }
     return { hp: hp, atk: atk, def: def, speed: speed, spec: spec };
+  }
+
+  function specButtonsHtml(classId, selectedId) {
+    var c = classObj(classId);
+    var specs = (c && c.specs || []).filter(function (s) {
+      return typeof isSpecPatched !== 'function' || isSpecPatched(classId, s.id);
+    });
+    return specs.map(function (s) {
+      var role = (typeof ROLE_LABEL !== 'undefined' && ROLE_LABEL[s.role]) ? ROLE_LABEL[s.role] : s.role;
+      return '<button type="button" class="tv-pick' + (selectedId === s.id ? ' on' : '') + '" data-sid="' + s.id + '">' +
+        '<img alt="" src="' + art(classId, s.id) + '" />' +
+        '<div>' + (s.icon || '') + ' ' + s.name + '</div>' +
+        '<div style="font-size:.72rem;color:var(--muted)">' + role + '</div></button>';
+    }).join('');
   }
 
   function renderTalents(h) {
@@ -221,7 +284,8 @@
     inner.innerHTML =
       '<div class="tv-head"><button class="btn" type="button" id="tv-back">← В лобби</button>' +
       '<h1>Таверна</h1>' +
-      '<span class="week-badge">ур. ' + h.level + (h.level >= 40 ? ' · потолок кита' : '') + '</span></div>' +
+      '<span class="week-badge">ур. ' + h.level + (h.level >= 40 && h.honest !== false ? ' · Честно прокачен' : (h.level >= 40 ? ' · потолок кита' : '')) + '</span></div>' +
+      rosterHtml(h.id) +
       '<div class="tv-grid">' +
       '<div class="tv-card">' +
       '<div style="display:flex;gap:.7rem;align-items:center"><img alt="" src="' + art(h.classId, h.specId) + '" style="width:72px;height:72px;border-radius:10px;object-fit:cover" />' +
@@ -238,11 +302,18 @@
       '<div>Инсты<b>' + (h.stats.instances || 0) + '</b></div>' +
       '<div>Вайпы<b>' + (h.stats.wipes || 0) + '</b></div></div>' +
       '<div class="section-title">Кнопки</div><div>' + renderSkills(h) + '</div>' +
-      '<p class="keys-hint" style="margin-top:.55rem">Короткий инст: 3 пака → элита → страж → финал. Без привала. Союзники ходят сами.</p>' +
+      '<p class="keys-hint" style="margin-top:.55rem">Короткий инст: 3 пака → элита → страж → финал. Без привала. Союзники ходят сами. Прокачка через таверну: +10% ко всем характеристикам.</p>' +
       '<button class="btn btn-primary" type="button" id="tv-queue-btn" style="width:100%;margin-top:.5rem">Встать в очередь</button>' +
       '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.45rem">' +
+      '<button class="btn btn-sm" type="button" id="tv-level-up"' + (h.level >= 40 ? ' disabled' : '') + '>Уровень +1</button>' +
+      '<button class="btn btn-sm" type="button" id="tv-respec">' + (respecOpen ? 'Скрыть смену спека' : 'Сменить специализацию') + '</button>' +
       '<button class="btn btn-sm" type="button" id="tv-reset-tal">Сброс дерева</button>' +
-      '<button class="btn btn-sm" type="button" id="tv-wipe-hero">Сброс героя</button></div>' +
+      '<button class="btn btn-sm" type="button" id="tv-wipe-hero">Удалить героя</button></div>' +
+      (respecOpen
+        ? '<div class="section-title" style="margin-top:.55rem">Новый спек</div>' +
+          '<p class="keys-hint">Уровень и опыт остаются. Дерево талантов сбросится.</p>' +
+          '<div class="tv-spec-grid" id="tv-respec-grid">' + specButtonsHtml(h.classId, h.specId) + '</div>'
+        : '') +
       '</div>' +
       '<div class="tv-card"><div class="section-title">Дерево · один из трёх</div>' +
       (h.classId === 'engineer' && h.specId === 'tinkerer'
@@ -250,6 +321,60 @@
       '<div id="tv-tree">' + renderTalents(h) + '</div></div></div>';
     $('tv-back').onclick = backLobby;
     $('tv-queue-btn').onclick = function () { startQueue(h); };
+    var rosterBox = $('tv-roster');
+    if (rosterBox) {
+      rosterBox.querySelectorAll('[data-hid]').forEach(function (b) {
+        b.onclick = function () {
+          var id = b.getAttribute('data-hid');
+          if (!id || id === h.id) return;
+          if (typeof G.igorHeroSetActive === 'function') G.igorHeroSetActive(id);
+          respecOpen = false;
+          toastMsg('Активный герой сменён');
+          renderHub();
+          paintPlaque();
+        };
+      });
+    }
+    var newBtn = $('tv-new-hero');
+    if (newBtn) {
+      newBtn.onclick = function () {
+        creating = true;
+        pickClassId = pickSpecId = null;
+        respecOpen = false;
+        renderCreate();
+      };
+    }
+    $('tv-level-up').onclick = function () {
+      if (h.level >= 40) return;
+      if (typeof G.igorHeroAddLevels !== 'function') return;
+      var r = G.igorHeroAddLevels(1);
+      if (r && r.dings && r.dings.length) toastMsg('Уровень ' + r.dings[r.dings.length - 1]);
+      else toastMsg('Потолок');
+      renderHub();
+      paintPlaque();
+    };
+    $('tv-respec').onclick = function () {
+      respecOpen = !respecOpen;
+      renderHub();
+    };
+    var respecGrid = $('tv-respec-grid');
+    if (respecGrid) {
+      respecGrid.querySelectorAll('[data-sid]').forEach(function (b) {
+        b.onclick = function () {
+          var sid = b.getAttribute('data-sid');
+          if (!sid || sid === h.specId) return;
+          var spec = specObj(h.classId, sid);
+          var specName = spec ? spec.name : sid;
+          if (!confirm('Сменить специализацию на «' + specName + '»? Уровень останется, дерево талантов сбросится.')) return;
+          var next = G.igorHeroChangeSpec(sid);
+          if (!next) { toastMsg('Не удалось сменить спек'); return; }
+          respecOpen = false;
+          toastMsg(next.name + ' · ' + specName);
+          renderHub();
+          paintPlaque();
+        };
+      });
+    }
     $('tv-reset-tal').onclick = function () {
       if (!confirm('Сбросить таланты? Уровень останется.')) return;
       G.igorHeroResetTalents(h);
@@ -257,10 +382,12 @@
       renderHub();
     };
     $('tv-wipe-hero').onclick = function () {
-      if (!confirm('Удалить героя? Ключ и шмот не трогаем.')) return;
+      if (!confirm('Удалить этого героя? Остальные в таверне останутся. Ключ и шмот не трогаем.')) return;
       G.igorHeroDeleteActive();
       pickClassId = pickSpecId = null;
-      toastMsg('Герой сброшен');
+      respecOpen = false;
+      creating = false;
+      toastMsg('Герой удалён');
       renderHub();
       paintPlaque();
     };
@@ -282,7 +409,7 @@
     ensureOverlay();
     injectCss();
     var h = hero();
-    if (!h) renderCreate();
+    if (creating || !h) renderCreate();
     else renderHero(h);
   }
 
@@ -431,8 +558,11 @@
     var cls = classObj(h.classId);
     var spec = specObj(h.classId, h.specId);
     var need = h.level >= 40 ? 0 : (typeof G.igorHeroXpToNext === 'function' ? G.igorHeroXpToNext(h.level) : 0);
+    var extra = roster().length > 1 ? (' · героев ' + roster().length) : '';
     el.textContent = h.name + ' · ' + (cls ? cls.name : h.classId) + ' (' + (spec ? spec.name : h.specId) + ') · ур. ' +
-      h.level + (need ? (' · ' + h.xp + '/' + need + ' опыта') : ' · потолок');
+      h.level + (need ? (' · ' + h.xp + '/' + need + ' опыта') : (h.honest !== false ? ' · Честно прокачен' : ' · потолок')) +
+      (h.honest !== false ? ' · +10% харак.' : '') + extra;
+    try { if (typeof refreshHonestPickCards === 'function') refreshHonestPickCards(); } catch (_) {}
   }
 
   function injectLobbyButton() {

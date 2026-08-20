@@ -333,8 +333,9 @@
     const type = (ability?.type || '').toLowerCase();
     const blob = id + ' ' + name + ' ' + type;
 
-    if (SKILL_FX[id]) {
-      const fx = { ...SKILL_FX[id] };
+    const kit = (typeof window !== 'undefined' && window.SKILL_FX && window.SKILL_FX[id]) || SKILL_FX[id];
+    if (kit) {
+      const fx = { ...kit };
       if (fx.motion === 'glaive' || fx.motion === 'lunge') fx.motion = 'slash';
       if (fx.motion === 'pulse') fx.motion = 'nova';
       return fx;

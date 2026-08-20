@@ -80,12 +80,20 @@
     return false;
   }
 
+  const EXTRA_LOOT_POWER_CHANCE = 0.10;
+
   function grantLoot(done) {
-    // Gear draft 1 of 3 (+ assign to hero); rare chance at old power loot
-    if (Math.random() < 0.18) {
-      openLootDraft(typeof done === 'function' ? done : null);
+    const afterGear = () => {
+      if (Math.random() < EXTRA_LOOT_POWER_CHANCE && typeof openLootDraft === 'function') {
+        openLootDraft(typeof done === 'function' ? done : null);
+      } else if (typeof done === 'function') {
+        done();
+      }
+    };
+    if (typeof openGearDraft === 'function') {
+      openGearDraft(afterGear);
     } else {
-      openGearDraft(typeof done === 'function' ? done : null);
+      afterGear();
     }
   }
 

@@ -252,9 +252,11 @@
       }
     }
     if (dmg > 0) dmg = shareMechanistOwnerHit(target, dmg, attacker);
+    if (dmg > 0 && typeof clampRaidBossDamage === 'function') dmg = clampRaidBossDamage(target, dmg);
     if (dmg <= 0) {
       if (target._pendingLuckyStack) target._pendingLuckyStack = false;
       if (target.stagger > 0) floatText(target.uid, 'шат ' + fmt(target.stagger), 'dmg');
+      try { if (typeof raidBossOnHpTouched === 'function') raidBossOnHpTouched(target); } catch (_) {}
       updateBossFrame();
       updateVignette();
       return 0;
@@ -286,7 +288,10 @@
       try { maybeEngineerPetPair(attacker); } catch (_) {}
     }
     if (target.hp <= 0) { target.hp = 0; killUnit(target, attacker); }
-    else if (target.isBoss) checkBossPhase(target);
+    else if (target.isBoss) {
+      checkBossPhase(target);
+      try { if (typeof raidBossOnHpTouched === 'function') raidBossOnHpTouched(target); } catch (_) {}
+    }
     if (dmg > 0 && target.side === 'ally' && !target.isPet && partyHasSpiritLink()) {
       try { maybeSpiritLinkEqualize(target.name); } catch (e) { console.error('[spirit_link]', e); }
     }
@@ -339,11 +344,16 @@
     if (t.side === 'ally') d = Math.round(d * versInDmgMult(t) * masteryTankInMult(t));
     if (t.isPet) d = Math.max(1, Math.round(d * 0.1));
     if (d > 0) d = shareMechanistOwnerHit(t, d, source);
-    if (!(d > 0)) return 0;
+    if (d > 0 && typeof clampRaidBossDamage === 'function') d = clampRaidBossDamage(t, d);
+    if (!(d > 0)) {
+      try { if (typeof raidBossOnHpTouched === 'function') raidBossOnHpTouched(t); } catch (_) {}
+      return 0;
+    }
     t.hp -= d;
     floatText(t.uid, '−' + fmt(d), floatKind || 'dmg');
     pulseUnit(t.uid, 'hit');
     if (t.hp <= 0) { t.hp = 0; killUnit(t, source || null); }
+    else try { if (typeof raidBossOnHpTouched === 'function') raidBossOnHpTouched(t); } catch (_) {}
     updateVignette();
     meterOnDamage(source || null, t, d, ctx || null);
     if (d > 0 && source && t.side === 'enemy') {

@@ -915,6 +915,7 @@
     const w = spawnMechCard('jade_whisper', 'Шёпот: ' + t.name, '☯️', hp);
     w._left = 2;
     w._bornR = instCombat().roundAcc || 0;
+    w.mustKillTurns = 2;
     w.carrierUid = t.uid;
     inst.voidUid = t.uid;
     paintAura(w, 'jade_whisper', 'Шёпот', '🗣️', 1, 'Урон 1–9 → клик сюда. Не по Ша Сомнения.');
@@ -929,9 +930,10 @@
     if (w) { w.alive = false; w.hp = 0; }
     if (carrier && carrier.buffs) carrier.buffs = carrier.buffs.filter(b => b.id !== 'jade_void');
     if (pulse) {
-      partyTrue(0.12, null, 'Пульс касания', 'shadow');
+      const pct = inst.jadeEnrage ? 0.18 : 0.12;
+      partyTrue(pct, null, 'Пульс касания', 'shadow');
       if (carrier && carrier.alive) addDoubt(carrier);
-      log('Шёпот дожил — пульс 12% max HP', 'enemy');
+      log('Шёпот дожил — пульс ' + Math.round(pct * 100) + '% max HP', 'enemy');
       toast('Пульс касания!');
     }
     inst.voidUid = null;
@@ -946,8 +948,9 @@
     for (let i = 0; i < add; i++) {
       if (aliveCards() >= 6) break;
       const s = spawnMechCard('jade_seed', 'Семя сомнения', '🌱', hp);
-      s._left = 3;
+      s._left = instCombat().jadeEnrage ? 1 : 3;
       s._bornR = instCombat().roundAcc || 0;
+      s.mustKillTurns = s._left;
       paintAura(s, 'jade_seed', 'Семя сомнения', '🌱', 1, 'Урон 1–9 → клик по семени. Клик по Ша кормит семя.');
     }
     if (add > 0) {
@@ -997,6 +1000,7 @@
     scaled.atk = 1;
     scaled._left = 3;
     scaled._bornR = instCombat().roundAcc || 0;
+    scaled.mustKillTurns = 3;
     scaled.abilities = [{ id: 'idle', name: '—', cost: 0, cd: 99, type: 'buff', power: 0, icon: '✨', gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0, baseCd: 99, curCd: 99, desc: '', castKind: null, castPrio: 0 }];
     paintAura(scaled, 'rift_shard', 'Нестабильный осколок', '💠', 1, '3 хода. Область + клик сюда. Одиночная вешает Слой хаоса.');
     combat.enemies.push(scaled);
@@ -1047,7 +1051,22 @@
     h.maxHp = boss.maxHp;
     h.hp = boss.hp;
     h.atk = Math.round((boss.atk || 1) * 0.8);
-    h.abilities = [{ id: 'idle', name: '—', cost: 0, cd: 99, type: 'buff', power: 0, icon: '✨', gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0, baseCd: 99, curCd: 99, desc: '', castKind: null, castPrio: 0 }];
+    const bolt = (boss.abilities || []).find(a => a && (a.id === 'bolt' || a.name === 'Луч хаоса'));
+    const abs = (boss.abilities || []).find(a => a && (a.instFlag === 'rift_absorb' || a.name === 'Поглощение'));
+    h.abilities = [];
+    if (bolt) {
+      const b = Object.assign({}, bolt);
+      b.curCd = 0;
+      h.abilities.push(b);
+    }
+    if (abs) {
+      const a = Object.assign({}, abs);
+      a.curCd = 0;
+      h.abilities.push(a);
+    }
+    if (!h.abilities.length) {
+      h.abilities = [{ id: 'idle', name: '—', cost: 0, cd: 99, type: 'buff', power: 0, icon: '✨', gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0, baseCd: 99, curCd: 99, desc: '', castKind: null, castPrio: 0 }];
+    }
     combat.enemies.push(h);
     inst.hungerSwap = 2;
     setHungerAuras(true);
@@ -1189,6 +1208,7 @@
     inst.riftSplitN = meta.riftSplitN || 0;
     inst.crownUid = null; inst.crownLeft = 0; inst.crownStarted = false; inst.hearthsOut = false;
     inst.voidUid = null; inst.jadeSeeds70 = false; inst.jadeSeeds50 = false; inst.jadeNoNewSeeds = false;
+    inst.jadeWrong = 0; inst.jadeEnrage = false;
     inst.riftInvert = false; inst.riftInvertPause = 0; inst.riftAreaBan = 0;
     inst.riftHunger = false; inst.shardUid = null; inst.hungerStOnBoss = true; inst.hungerSwap = 0;
     if (theme === 'tide') log('Столб давления 0/5. Гимн кормит столб. 1–9 урон → вентиль (−2). Лёгкие: лечение → клик по тонущему.', 'system');
@@ -1204,8 +1224,9 @@
     if (theme === 'ember') log('Жар чертогов 0–8. Живого уголька — одиночным, уголь в жёлоб / топку / Титана. Кик жар не гасит.', 'system');
     if (theme === 'rift') {
       if (combat.type === 'final') {
-        log('Инверсия пака: область + клик = точечный съём. С 30% два тела — бейте совпавший тип.', 'system');
+        log('Инверсия пака: область + клик = точечный съём. Осколок — область. С 30% два тела — бейте совпавший тип.', 'system');
         startRiftInvert();
+        spawnInvertShard();
       } else log('Читайте ауры. Скрытое ядро ест одиночную. Ложный панцирь ест область.', 'system');
     }
     if (theme === 'crypt' && combat.type === 'boss') {
@@ -1337,6 +1358,13 @@
       if (combat.type === 'final') {
         const boss = instBoss();
         const ratio = boss ? boss.hp / Math.max(1, boss.maxHp) : 1;
+        if (r >= 24 && !inst.jadeEnrage) {
+          inst.jadeEnrage = true;
+          if (boss) applyStatus(boss, { id: 'jade_enrage', name: 'Ярость сомнения', icon: '☯️', turns: 99, atkMod: 0.40, tip: '+40% исходящего. Семена цветут за 1 ход. Пульс касания 18%.' });
+          jadeSeeds().forEach(s => { s._left = Math.min(s._left || 1, 1); s.mustKillTurns = s._left; });
+          log('Ярость финала: Ша Сомнения +40% урона. Семена цветут за 1 ход.', 'enemy');
+          toast('Ярость сомнения!');
+        }
         if (r >= 2 && (r - 2) % 3 === 0) putVoidTouch();
         const w = jadeWhisper();
         if (w) {
@@ -1348,6 +1376,7 @@
         jadeSeeds().forEach(s => {
           if (s._bornR === r) return;
           s._left = (s._left || 3) - 1;
+          s.mustKillTurns = s._left;
           if (s._left <= 0 && s.alive) {
             partyTrue(0.08, s, 'Семя расцвело', 'shadow');
             livingHeroes().forEach(addDoubt);
@@ -1641,6 +1670,19 @@
       openSoak(2, 'pain', 'Всплеск боли · ровно 2');
       return true;
     }
+    if (theme === 'jade' && (flag === 'jade_doubt_strike' || name === 'Удар сомнения')) {
+      const tank = livingHeroes().find(h => h.role === 'tank') || livingHeroes()[0];
+      if (tank && tank.alive) {
+        let power = 1.15;
+        const wall = hasWall(tank) || ((tank.shield || 0) > tank.maxHp * 0.12);
+        if (wall) power *= 0.45;
+        else if (tank.role !== 'tank') power *= 1.25;
+        const raw = Math.max(1, Math.round((typeof getEff === 'function' ? getEff(actor).atk : actor.atk) * power));
+        if (typeof dealDmg === 'function') dealDmg(tank, raw, actor, { type: 'damage', school: 'shadow', abilityName: 'Удар сомнения', skipBlock: false });
+        log(actor.name + ': Удар сомнения → ' + tank.name + (wall ? ' (стенка 45%)' : ''), 'enemy');
+      }
+      return true;
+    }
     return false;
   }
 
@@ -1884,6 +1926,17 @@
         if (attacker && attacker.side === 'ally') addDoubt(attacker);
         log('Отражение кормит ' + real.name + ' · Сомнение', 'enemy');
         toast('Не то тело!');
+        if (theme === 'jade' && combat.type === 'final' && attacker && attacker.side === 'ally') {
+          inst.jadeWrong = (inst.jadeWrong || 0) + 1;
+          if (real.isBoss) paintAura(real, 'jade_boundless', 'Безграничное сомнение', '☯️', inst.jadeWrong, '3 стака: 40% max HP кликнувшему.');
+          if (inst.jadeWrong >= 3) {
+            inst.jadeWrong = 0;
+            if (real.isBoss && real.buffs) real.buffs = real.buffs.filter(b => b.id !== 'jade_boundless');
+            trueDmg(attacker, 0.40, real, 'Безграничное сомнение', 'shadow');
+            log('Три клика в Отражение — ' + attacker.name + ' получает 40% max HP', 'enemy');
+            toast('Безграничное сомнение!');
+          }
+        }
       }
       return 0;
     }
@@ -2191,12 +2244,22 @@
     if (actor.instRole === 'ember_live') {
       addHallHeat(1, 'уголёк дожил до хода', !!(combat.enemies || []).some(e => e.isBoss));
     }
-    if (instTheme() === 'rift' && combat.type === 'final' && actor.isBoss && instCombat().riftHunger) {
+    if (instTheme() === 'rift' && combat.type === 'final' && instCombat().riftHunger
+        && (actor.isBoss || actor.instRole === 'rift_hunger')) {
       const takesAoe = (actor.buffs || []).some(b => b.id === 'rift_take_aoe');
+      const takesSt = (actor.buffs || []).some(b => b.id === 'rift_take_st');
       const abs = (actor.abilities || []).find(a => a.instFlag === 'rift_absorb' || a.name === 'Поглощение');
       if (takesAoe && abs && !(abs.curCd > 0) && !actor.casting && typeof castAbility === 'function') {
         castAbility(actor, abs, actor);
         return true;
+      }
+      const bolt = (actor.abilities || []).find(a => a && (a.id === 'bolt' || a.name === 'Луч хаоса'));
+      if (takesSt && bolt && !(bolt.curCd > 0) && !actor.casting && typeof castAbility === 'function') {
+        const tank = livingHeroes().find(h => h.role === 'tank') || livingHeroes()[0];
+        if (tank) {
+          castAbility(actor, bolt, tank);
+          return true;
+        }
       }
     }
     return false;

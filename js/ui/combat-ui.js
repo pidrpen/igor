@@ -476,7 +476,7 @@
         && typeof tryAssignRaidSoak === 'function' && tryAssignRaidSoak(unit)) {
       return;
     }
-    if (raidAutoAllies && combat?.waitingPlayer && unit?.side === 'ally' && !unit.isPet && !pendingTarget) {
+    if (raidAutoAllies && combat && !combat.over && unit?.side === 'ally' && !unit.isPet && !pendingTarget) {
       if (typeof setRaidFocus === 'function') setRaidFocus(unit);
       return;
     }

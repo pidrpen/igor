@@ -129,7 +129,13 @@
         playSkillAnim(actor, ability, fxTargets);
         if (ability.targetHpPct != null) {
           const pct = Number(ability.targetHpPct) || 0;
-          const raw = Math.max(1, Math.round(target.maxHp * pct));
+          let raw = Math.max(1, Math.round(target.maxHp * pct));
+          if (typeof clampRaidBossDamage === 'function') raw = clampRaidBossDamage(target, raw);
+          if (!(raw > 0)) {
+            log(`${actor.name}: ${ability.name} — босс на пороге фазы, урон не прошёл`, 'system');
+            try { if (typeof raidBossOnHpTouched === 'function') raidBossOnHpTouched(target); } catch (_) {}
+            break;
+          }
           target.hp = Math.max(0, target.hp - raw);
           try { floatText(target.uid, '−' + Math.round(pct * 100) + '%', 'dmg'); } catch (_) {}
           log(`${actor.name}: ${ability.name} → ${target.name} (−${fmt(raw)})`, cls);
@@ -140,6 +146,7 @@
             checkBossPhase(target);
           }
           if (typeof maybeTriggerRaidVault === 'function') maybeTriggerRaidVault(target);
+          try { if (typeof raidBossOnHpTouched === 'function') raidBossOnHpTouched(target); } catch (_) {}
           try { updateBossFrame(); } catch (_) {}
           break;
         }

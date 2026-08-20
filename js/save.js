@@ -1,4 +1,26 @@
 /* save: localStorage, export/import, history */
+  const HERO_KEY = 'igorHero_v1';
+
+  function persistGearState(p) {
+    const gear = (typeof normalizeGear === 'function')
+      ? normalizeGear(p && p.gear)
+      : ((p && p.gear) || { equipped: {}, bag: [] });
+    return gear;
+  }
+  function persistLobbyMember(p) {
+    if (!p) return null;
+    if (typeof ensureSec === 'function') ensureSec(p);
+    const sec = p.sec ? { ...p.sec } : (typeof defaultSec === 'function' ? defaultSec() : {});
+    return {
+      ...p,
+      classId: p.classId,
+      specId: p.specId,
+      sec,
+      gear: persistGearState(p),
+      abilityOrder: Array.isArray(p.abilityOrder) ? p.abilityOrder.slice() : undefined,
+    };
+  }
+
   function serializeRun() {
     if (!run || run.finished) return null;
     return {
@@ -21,17 +43,11 @@
       restBuffBattles: run.restBuffBattles,
       loot: run.loot || [],
       logs: run.logs.slice(0, 20),
-      partyBuild: party.map(p => {
-        ensureSec(p);
-        return {
-          classId: p.classId, specId: p.specId, sec: { ...p.sec }, gear: normalizeGear(p.gear),
-          abilityOrder: Array.isArray(p.abilityOrder) ? p.abilityOrder.slice() : undefined,
-        };
-      }),
+      partyBuild: (party || []).map(persistLobbyMember).filter(Boolean),
       party: run.party.map(p => ({
         classId: p.classId, specId: p.specId, hp: p.hp, maxHp: p.maxHp, atk: p.atk, def: p.def, speed: p.speed,
         alive: p.alive, res: p.res, shield: p.shield, sec: p.sec ? { ...p.sec } : defaultSec(),
-        gear: normalizeGear(p.gear),
+        gear: persistGearState(p),
         abilityOrder: Array.isArray(p.abilityOrder) ? p.abilityOrder.slice() : undefined,
         _baseAtk: p._baseAtk, _baseMaxHp: p._baseMaxHp, _baseDef: p._baseDef, _baseSpeed: p._baseSpeed,
         _baseSecCritRating: p._baseSecCritRating, _baseSecVersRating: p._baseSecVersRating,
@@ -44,10 +60,15 @@
   }
   function saveRun() {
     try {
+      if (run && run.party && typeof igorHeroStashFromUnit === 'function') {
+        const u = run.party.find(p => p && p._isHero);
+        if (u) igorHeroStashFromUnit(u);
+      }
       const data = serializeRun();
       if (data) localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch (_) { /* ignore */ }
   }
+  /** Только сейв захода ключа. igorHero_v1 не трогать — герой живёт отдельно. */
   function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (_) {} }
   function hasSave() {
     try { return !!localStorage.getItem(SAVE_KEY); } catch (_) { return false; }
@@ -59,19 +80,15 @@
 
   function savePartyProfile() {
     try {
-      const payload = {
-        party: (party || []).map(p => {
-          ensureSec(p);
-          return {
-            classId: p.classId, specId: p.specId, sec: { ...p.sec }, gear: normalizeGear(p.gear),
-            abilityOrder: Array.isArray(p.abilityOrder) ? p.abilityOrder.slice() : undefined,
-          };
-        }),
-        dungeonId: document.getElementById('dungeon-select')?.value || null,
-        keyLevel: document.getElementById('key-level')?.value || null,
-        gameMode: (typeof gameMode === 'string' ? gameMode : 'key'),
-        raidDiff: (typeof getRaidDiff === 'function' ? getRaidDiff() : 'normal'),
-      };
+      if (typeof igorHeroStashGear === 'function') igorHeroStashGear();
+      const prev = loadPartyProfile() || {};
+      const payload = { ...prev };
+      payload.party = (party || []).map(persistLobbyMember).filter(Boolean);
+      payload.dungeonId = document.getElementById('dungeon-select')?.value || null;
+      payload.keyLevel = document.getElementById('key-level')?.value || null;
+      payload.gameMode = (typeof gameMode === 'string' ? gameMode : 'key');
+      payload.raidDiff = (typeof getRaidDiff === 'function' ? getRaidDiff() : 'normal');
+      if (typeof getSharedBag === 'function') payload.sharedBag = getSharedBag();
       localStorage.setItem(PROFILE_KEY, JSON.stringify(payload));
     } catch (_) { /* ignore */ }
   }
@@ -87,8 +104,13 @@
   function applyPartyProfile(data) {
     if (!data || !Array.isArray(data.party)) return false;
     party = data.party.map(x => {
-      const e = { classId: x.classId, specId: x.specId, sec: x.sec ? { ...x.sec } : defaultSec(), gear: normalizeGear(x.gear) };
-      if (Array.isArray(x.abilityOrder) && x.abilityOrder.length) e.abilityOrder = x.abilityOrder.slice();
+      const e = {
+        ...x,
+        classId: x.classId,
+        specId: x.specId,
+        sec: x.sec ? { ...x.sec } : defaultSec(),
+        gear: persistGearState(x),
+      };
       ensureSec(e);
       return e;
     }).filter(e => !WOW_MOP || !WOW_MOP.getSpec || WOW_MOP.getSpec(e.classId, e.specId));
@@ -104,6 +126,9 @@
         setGameMode('raid');
       }
       if (data.raidDiff && typeof setRaidDiff === 'function') setRaidDiff(data.raidDiff);
+      if (Array.isArray(data.sharedBag) && typeof setSharedBag === 'function') {
+        setSharedBag(data.sharedBag);
+      }
     } catch (_) {}
     return true;
   }
@@ -124,12 +149,9 @@
     let best = 0;
     try { best = +(localStorage.getItem('mythicKeyBest') || 0); } catch (_) {}
     const profile = loadPartyProfile() || {
-      party: (party || []).map(p => {
-        ensureSec(p);
-        return { classId: p.classId, specId: p.specId, sec: { ...p.sec }, gear: normalizeGear(p.gear) };
-      }),
+      party: (party || []).map(persistLobbyMember).filter(Boolean),
     };
-    return {
+    const out = {
       type: 'mythic-key-save',
       saveFileVersion: SAVE_FILE_VERSION,
       exportedAt: new Date().toISOString(),
@@ -139,6 +161,11 @@
       history: loadHistory(),
       bestKey: best,
     };
+    try {
+      const rawHero = localStorage.getItem(HERO_KEY);
+      if (rawHero) out.igorHero = JSON.parse(rawHero);
+    } catch (_) { /* соседний агент / прокачка */ }
+    return out;
   }
 
   function applyFullSave(data) {
@@ -153,10 +180,19 @@
     if (typeof data.bestKey === 'number' && data.bestKey >= 0) {
       try { localStorage.setItem('mythicKeyBest', String(data.bestKey)); } catch (_) {}
     }
-    // Profile / party
+    // Profile / party (не стираем чужие поля профиля — merge на savePartyProfile)
     if (data.profile) {
-      try { localStorage.setItem(PROFILE_KEY, JSON.stringify(data.profile)); } catch (_) {}
+      try {
+        const prev = loadPartyProfile() || {};
+        localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...prev, ...data.profile }));
+      } catch (_) {}
       applyPartyProfile(data.profile);
+    }
+    // Прокачка: чужой ящик. Пишем только если приехал; не удаляем.
+    if (data.igorHero != null) {
+      try { localStorage.setItem(HERO_KEY, JSON.stringify(data.igorHero)); } catch (_) {}
+      try { if (typeof igorHeroBootLobby === 'function') igorHeroBootLobby(); } catch (_) {}
+      try { if (typeof igorHeroApplyGearToParty === 'function') igorHeroApplyGearToParty(); } catch (_) {}
     }
     // Active run
     if (data.run) {
@@ -201,7 +237,7 @@
       try {
         const data = JSON.parse(String(reader.result || ''));
         applyFullSave(data);
-        toast(data.run ? 'Импорт: отряд + активный ключ' : 'Импорт: отряд и история');
+        toast(data.run ? 'Импорт: отряд + таверна + ключ' : 'Импорт: отряд, таверна и история');
       } catch (e) {
         console.error(e);
         toast('Файл сейва повреждён или не подходит');

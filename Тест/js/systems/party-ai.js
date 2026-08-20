@@ -213,6 +213,167 @@
       defensives: ['blur', 'metamorph_havoc'],
       st: ['chaos_strike', 'demons_bite', 'throw_glaive'],
     },
+    'priest:holy': {
+      role: 'healer',
+      stHeal: ['holy_word', 'flash', 'heal', 'renew'],
+      aoeHeal: ['circle', 'poh'],
+      emergency: ['holy_word', 'flash', 'guardian'],
+      bigSpend: ['gh', 'poh'],
+      shields: ['guardian'],
+      hots: ['renew'],
+      filler: ['smite'],
+    },
+    'priest:shadow': {
+      role: 'dps',
+      dots: ['swp', 'vt', 'devouring'],
+      builders: ['mind_blast', 'mind_flay'],
+      spenders: ['devouring'],
+      execute: ['swd'],
+      aoe: ['mind_sear'],
+      summons: ['shadowfiend'],
+      st: ['mind_blast', 'mind_flay', 'swd'],
+    },
+    'shaman:elemental': {
+      role: 'dps',
+      dots: ['flame_shock'],
+      builders: ['lb', 'lv'],
+      spenders: ['ele_blast', 'lv', 'earth_shock'],
+      aoe: ['chain', 'thunderstorm'],
+      summons: ['fire_ele'],
+      st: ['ele_blast', 'lv', 'earth_shock', 'lb'],
+    },
+    'shaman:enhancement': {
+      role: 'dps',
+      dots: ['flame_shock'],
+      builders: ['lb'],
+      spenders: ['stormstrike', 'lava_lash'],
+      aoe: ['fire_nova'],
+      summons: ['feral_spirit'],
+      st: ['stormstrike', 'lava_lash', 'earth_shock', 'lb'],
+    },
+    'mage:arcane': {
+      role: 'dps',
+      dots: ['nether_tempest'],
+      builders: ['ab', 'am'],
+      spenders: ['abarr'],
+      aoe: ['ae'],
+      summons: ['mirror'],
+      st: ['abarr', 'ab', 'am'],
+    },
+    'warlock:demonology': {
+      role: 'dps',
+      dots: ['corruption'],
+      builders: ['shadow_bolt', 'hand_guldan'],
+      spenders: ['soul_fire'],
+      aoe: ['hand_guldan', 'felstorm'],
+      summons: ['imp_leader'],
+      st: ['soul_fire', 'shadow_bolt'],
+    },
+    'monk:windwalker': {
+      role: 'dps',
+      builders: ['jab'],
+      spenders: ['rsk'],
+      aoe: ['sck'],
+      summons: ['xuen'],
+      st: ['rsk', 'jab'],
+    },
+    'hunter:marksmanship': {
+      role: 'dps',
+      dots: ['serpent'],
+      execute: ['kill_shot'],
+      builders: ['steady'],
+      spenders: ['aimed', 'chimera', 'arcane'],
+      aoe: ['barrage', 'multi'],
+      st: ['chimera', 'aimed', 'arcane', 'steady'],
+    },
+    'hunter:survival': {
+      role: 'dps',
+      dots: ['serpent', 'black_arrow', 'explosive'],
+      execute: ['kill_shot'],
+      builders: ['cobra'],
+      spenders: ['explosive', 'arcane'],
+      aoe: ['explosive_trap', 'multi'],
+      st: ['explosive', 'arcane', 'cobra'],
+    },
+    'rogue:assassination': {
+      role: 'dps',
+      dots: ['garrote', 'rupture', 'mutilate'],
+      builders: ['mutilate', 'garrote'],
+      spenders: ['dispatch', 'rupture'],
+      aoe: ['fan'],
+      st: ['dispatch', 'mutilate', 'envenom'],
+    },
+    'rogue:subtlety': {
+      role: 'dps',
+      dots: ['hemorrhage'],
+      builders: ['hemorrhage', 'backstab', 'ambush'],
+      spenders: ['eviscerate'],
+      aoe: ['fan'],
+      st: ['ambush', 'backstab', 'eviscerate'],
+    },
+    'deathknight:unholy': {
+      role: 'dps',
+      dots: ['outbreak', 'dnd'],
+      builders: ['festering', 'scourge'],
+      spenders: ['death_coil'],
+      aoe: ['outbreak', 'dnd'],
+      summons: ['summon_garg'],
+      st: ['death_coil', 'scourge', 'festering'],
+    },
+    'druid:balance': {
+      role: 'dps',
+      dots: ['moonfire', 'sunfire'],
+      builders: ['wrath', 'starfire'],
+      spenders: ['starsurge'],
+      aoe: ['starfall', 'hurricane'],
+      st: ['starsurge', 'starfire', 'wrath'],
+    },
+    'druid:feral': {
+      role: 'dps',
+      dots: ['rake', 'rip', 'thrash'],
+      builders: ['shred', 'rake'],
+      spenders: ['ferocious', 'rip'],
+      aoe: ['thrash', 'swipe'],
+      st: ['ferocious', 'shred', 'rake'],
+    },
+    'druid:guardian': {
+      role: 'tank',
+      taunt: ['growl'],
+      defensives: ['survival', 'barkskin', 'frenzied', 'savage_def'],
+      builders: ['mangle', 'thrash'],
+      spenders: ['lacerate', 'maul'],
+      aoe: ['thrash'],
+      dots: ['thrash', 'lacerate'],
+      st: ['mangle', 'lacerate', 'maul'],
+    },
+    'druid:restoration': {
+      role: 'healer',
+      stHeal: ['swiftmend', 'regrowth', 'reju', 'lifebloom'],
+      aoeHeal: ['wg', 'tranq'],
+      emergency: ['swiftmend', 'regrowth'],
+      bigSpend: ['tranq'],
+      hots: ['reju', 'lifebloom', 'regrowth'],
+      filler: ['wrath'],
+      dots: ['moonfire'],
+    },
+    'engineer:sapper': {
+      role: 'dps',
+      dots: ['sticky_bomb'],
+      builders: ['sticky_bomb', 'shrapnel_blast'],
+      spenders: ['remote_charge', 'cluster_bomb', 'rocket_barrage'],
+      aoe: ['cluster_bomb', 'rocket_barrage', 'demolish', 'shrapnel_blast'],
+      summons: ['deploy_bomb_drone'],
+      st: ['remote_charge', 'sticky_bomb'],
+    },
+    'engineer:tinkerer': {
+      role: 'dps',
+      builders: ['zap_gun', 'flux_bolt'],
+      spenders: ['death_ray'],
+      aoe: ['rocket_chicken'],
+      summons: ['world_destroyer', 'scrap_swarm'],
+      petHeal: ['wrench_heal'],
+      st: ['death_ray', 'flux_bolt', 'zap_gun'],
+    },
   };
 
   function hpRatio(u) {
@@ -348,6 +509,7 @@
     if (s === 'soul_shards') return secondaryCur(actor) >= 1;
     if (s === 'soul_fragments') return secondaryCur(actor) >= 2;
     if (s === 'chi') return secondaryCur(actor) >= 2;
+    if (s === 'shadow_orbs') return secondaryCur(actor) >= 3;
     if (s === 'parts') return secondaryCur(actor) >= 3;
     if (t === 'rage' || t === 'fury') return primaryCur(actor) >= 40;
     if (t === 'energy' || t === 'focus') return primaryCur(actor) >= 50;
@@ -365,6 +527,7 @@
     if (s === 'soul_shards') return secondaryCur(actor) < 1;
     if (s === 'soul_fragments') return secondaryCur(actor) < 2;
     if (s === 'chi') return secondaryCur(actor) < 2;
+    if (s === 'shadow_orbs') return secondaryCur(actor) < 3;
     if (s === 'parts') return secondaryCur(actor) < 3;
     if (t === 'rage' || t === 'fury') return primaryCur(actor) < 30;
     if (t === 'energy' || t === 'focus') return primaryCur(actor) < 40;
@@ -515,6 +678,13 @@
 
   function focusFoe(foes) {
     if (!foes.length) return null;
+    var whisper = foes.find(function (e) { return e.instRole === 'jade_whisper'; });
+    if (whisper) return whisper;
+    var seeds = foes.filter(function (e) { return e.instRole === 'jade_seed'; })
+      .sort(function (a, b) { return (a._left || 99) - (b._left || 99); });
+    if (seeds.length) return seeds[0];
+    var shard = foes.find(function (e) { return e.instRole === 'rift_invert_shard'; });
+    if (shard) return shard;
     var cond = foes.find(function (e) {
       return e.mechRole === 'conductor' || e.mechRole === 'echo' || e.mustKillTurns;
     });

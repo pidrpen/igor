@@ -495,7 +495,7 @@
     if (allyTitle && raidAutoAllies) {
       allyTitle.textContent = run.raid
         ? 'Рейд (клик — взять управление)'
-        : 'Отряд (клик — взять следующий ход)';
+        : 'Отряд (клик — взять управление)';
     }
   }
 
@@ -503,12 +503,23 @@
     if (!run || !run.party) return null;
     const alive = run.party.filter(p => p && p.alive);
     if (!alive.length) return null;
-    if (run.raid) {
-      return (alive.find(p => p.role === 'tank') || alive[0]).uid;
-    }
+    const tavern = alive.find(p => p._isHero);
+    if (tavern) return tavern.uid;
+    try {
+      if (typeof igorHeroGetActive === 'function') {
+        const rec = igorHeroGetActive();
+        if (rec) {
+          const m = alive.find(p => p.classId === rec.classId && p.specId === rec.specId);
+          if (m) return m.uid;
+        }
+      }
+    } catch (_) {}
     if (autoPlayPick) {
       const m = alive.find(p => p.classId === autoPlayPick.classId && p.specId === autoPlayPick.specId);
       if (m) return m.uid;
+    }
+    if (run.raid) {
+      return (alive.find(p => p.role === 'tank') || alive[0]).uid;
     }
     return (alive.find(p => p.role === 'dps') || alive[0]).uid;
   }
@@ -588,7 +599,7 @@
         raidAutoAllies = !raidAutoAllies;
         try { syncPartyAutoHud(); } catch (_) {}
         toast(raidAutoAllies
-          ? 'Союзники ходят сами. Клик по герою — взять следующий ход'
+          ? 'Союзники ходят сами. Клик по герою — взять управление'
           : (run && run.raid ? 'Вы ходите всеми десятью' : 'Вы ходите всем отрядом'));
       });
     }
@@ -616,6 +627,110 @@
   function showRaidBriefing() {
     const el = document.getElementById('phase-sub');
     if (el) el.textContent = '';
+  }
+
+  function isLeiShenRaidBoss(u) {
+    if (!u) return false;
+    return !!(u.raidBoss || (u.isBoss && u.mech && u.mech.id === 'thunder_king') || u.heroId === 'ls');
+  }
+
+  function raidBossGateHp(maxHp, at) {
+    const max = Math.max(1, Number(maxHp) || 1);
+    return Math.max(1, Math.floor(max * at));
+  }
+
+  function raidBossAtOrBelow(u, at) {
+    if (!u) return false;
+    const max = Math.max(1, Number(u.maxHp) || 1);
+    const hp = Number(u.hp) || 0;
+    return hp <= raidBossGateHp(max, at) || hp / max <= at + 1e-9;
+  }
+
+  /** Минимальное HP, пока текущая фаза не открылась. Читер и клев не пробивают порог. */
+  function raidBossHpFloor(u) {
+    if (!u || typeof isRaidRun !== 'function' || !isRaidRun()) return 0;
+    if (!isLeiShenRaidBoss(u)) return 0;
+    const max = Math.max(1, Number(u.maxHp) || 1);
+    const vaultDone = !!(combat && combat.vault && combat.vault.dropped);
+    const pillarsUp = !!(u._pillars || (combat && (combat.enemies || []).some(e => e && e.instRole === 'static_pillar')));
+    const pIdx = Number(u.phaseIndex) || 0;
+    const gates = [
+      { at: 0.75, ok: vaultDone },
+      { at: 0.70, ok: pIdx >= 1 },
+      { at: 0.50, ok: pillarsUp },
+      { at: 0.40, ok: pIdx >= 2 },
+      { at: 0.15, ok: pIdx >= 3 },
+      { at: 0.05, ok: pIdx >= 4 },
+    ];
+    for (let i = 0; i < gates.length; i++) {
+      if (!gates[i].ok) return raidBossGateHp(max, gates[i].at);
+    }
+    return 0;
+  }
+
+  function raidBossOnHpTouched(u) {
+    if (!u || !isLeiShenRaidBoss(u)) return;
+    if (typeof checkBossPhase === 'function') checkBossPhase(u);
+    if (typeof maybeTriggerRaidVault === 'function') maybeTriggerRaidVault(u);
+    if (raidBossAtOrBelow(u, 0.50) && typeof queueRaidPhase === 'function') queueRaidPhase('pillars');
+    try { if (typeof fieldMaybeRaidSplit === 'function') fieldMaybeRaidSplit(u); } catch (_) {}
+  }
+
+  function clampRaidBossDamage(target, dmg) {
+    dmg = Math.max(0, Math.round(Number(dmg) || 0));
+    if (!target || !dmg) return 0;
+    const floor = raidBossHpFloor(target);
+    if (!(floor > 0)) return dmg;
+    const room = Math.max(0, (Number(target.hp) || 0) - floor);
+    if (dmg <= room) return dmg;
+    if (combat) {
+      const key = floor + ':' + (combat.round || 0);
+      if (combat._phaseClampLog !== key) {
+        combat._phaseClampLog = key;
+        const pct = Math.round(100 * floor / Math.max(1, target.maxHp));
+        if (room <= 0) {
+          log((target.name || 'Босс') + ': фаза ещё не сменилась — HP не ниже ' + pct + '%.', 'system');
+        } else {
+          log((target.name || 'Босс') + ': порог фазы ' + pct + '% — лишний урон срезан.', 'system');
+        }
+      }
+    }
+    return room;
+  }
+
+  function queueRaidPhase(name) {
+    if (!combat || !isRaidRun() || !name) return;
+    combat.raidPhaseQueue = combat.raidPhaseQueue || [];
+    if (name === 'vault' && (combat.vault || combat.raidPhase === 'vault')) return;
+    if (name === 'pillars' && ((combat.enemies || []).some(e => e && e.instRole === 'static_pillar') || combat.raidPhase === 'pillars')) return;
+    if (combat.raidPhaseQueue.indexOf(name) >= 0) return;
+    const vaultBusy = !!(combat.vault && !combat.vault.dropped);
+    if (vaultBusy && name !== 'vault') {
+      combat.raidPhaseQueue.push(name);
+      return;
+    }
+    startRaidPhase(name);
+  }
+  function startRaidPhase(name) {
+    if (!combat || !name) return;
+    const boss = (combat.enemies || []).find(e => e && (e.raidBoss || (e.isBoss && e.mech && e.mech.id === 'thunder_king')));
+    combat.raidPhase = name;
+    if (name === 'vault') {
+      if (typeof beginRaidVault === 'function' && boss) beginRaidVault(boss);
+      return;
+    }
+    if (name === 'pillars') {
+      if (typeof spawnRaidPillars === 'function' && boss) spawnRaidPillars(boss);
+      combat.raidPhase = 'boss';
+    }
+  }
+  function finishRaidPhase(name) {
+    if (!combat) return;
+    if (combat.raidPhase === name) combat.raidPhase = 'boss';
+    const q = combat.raidPhaseQueue || [];
+    const next = q.shift();
+    combat.raidPhaseQueue = q;
+    if (next) startRaidPhase(next);
   }
 
   function raidAllyAi(actor) {
@@ -904,14 +1019,15 @@
   function maybeTriggerRaidVault(target) {
     if (!isRaidRun() || !target || !target.alive) return;
     if (!target.raidBoss && !(target.isBoss && target.mech && target.mech.id === 'thunder_king')) return;
-    if (target._vaultInter) return;
-    if (target.hp / Math.max(1, target.maxHp) > 0.75) return;
-    target._vaultInter = true;
-    beginRaidVault(target);
+    if (!raidBossAtOrBelow(target, 0.75)) return;
+    queueRaidPhase('vault');
   }
 
   function beginRaidVault(boss) {
     if (!combat || !boss) return;
+    if (combat.vault && !combat.vault.dropped) return;
+    boss._vaultInter = true;
+    combat.raidPhase = 'vault';
     (combat.enemies || []).forEach(e => {
       if (e.mechRole === 'conductor' && e.alive) { e.alive = false; e.hp = 0; }
     });
@@ -989,6 +1105,7 @@
         log('Лэй Шэнь обрушивается в свод! Фон тот же — добивайте его здесь.', 'enemy');
         toast('Босс падает в комнату!');
       }
+      try { if (typeof finishRaidPhase === 'function') finishRaidPhase('vault'); } catch (_) {}
       try { if (typeof buildTurnQueue === 'function') buildTurnQueue(); } catch (_) {}
       try { renderCombat(); } catch (_) {}
       refreshRaidAlerts();
