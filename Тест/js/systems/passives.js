@@ -753,6 +753,25 @@
     }
   }
 
+  function controlledCombatHero() {
+    if (run && run.party && typeof raidAutoAllies !== 'undefined' && raidAutoAllies
+        && typeof raidPlayerUid !== 'undefined' && raidPlayerUid) {
+      const me = run.party.find(p => p && String(p.uid) === String(raidPlayerUid) && p.alive);
+      if (me) return me;
+    }
+    const a = typeof currentActor === 'function' ? currentActor() : null;
+    if (a && a.side === 'ally' && !a.isPet && a.alive) return a;
+    return (run && run.party || []).find(p => p && p.alive && !p.isPet) || null;
+  }
+
+  function syncPassivePocket() {
+    if (!run || !combat || combat.over) {
+      hidePassivePocket();
+      return;
+    }
+    renderPassiveTray(controlledCombatHero());
+  }
+
   function bindPassivePocketUI() {
     const pocket = document.getElementById('passive-pocket');
     if (!pocket || pocket.dataset.bound) return;

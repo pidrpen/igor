@@ -50,7 +50,10 @@
     }
     if (bar) bar.innerHTML = '';
     if (actions) actions.innerHTML = '';
-    try { renderPassiveTray(actor); } catch (e) { console.error(e); }
+    try {
+      if (typeof syncPassivePocket === 'function') syncPassivePocket();
+      else renderPassiveTray(actor);
+    } catch (e) { console.error(e); }
     if (!bar) return;
     function persistOrder(u, ids) {
       u.abilityOrder = ids.slice();
@@ -517,6 +520,7 @@
     updateBossFrame();
     updateVignette();
     if (run?.raid && typeof refreshRaidAlerts === 'function') refreshRaidAlerts();
+    try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
   }
 
   function bindUnitCardClicks() {
@@ -646,12 +650,43 @@
     return bits.join('|');
   }
 
+  function shieldDisplayParts(u) {
+    const layers = Array.isArray(u && u.shieldLayers) ? u.shieldLayers : [];
+    const special = layers.filter(s => s && s.separate && (Number(s.amount) || 0) > 0);
+    const generic = layers.filter(s => s && !s.separate && (Number(s.amount) || 0) > 0)
+      .reduce((n, s) => n + (Number(s.amount) || 0), 0);
+    const fallback = (!layers.length && (u.shield || 0) > 0) ? (u.shield || 0) : generic;
+    return { special, generic: fallback };
+  }
+
+  function shieldsBlockHtml(u) {
+    if (!u) return '<div class="u-shields"></div>';
+    const { special, generic } = shieldDisplayParts(u);
+    let inner = '';
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    for (const s of special) {
+      const pct = clamp((Number(s.amount) || 0) / Math.max(1, u.maxHp) * 100, 0, 100);
+      inner += `<div class="slot-shield slot-shield-named bar-wrap" data-shield-id="${esc(s.id)}" title="${esc(s.name || 'Щит')}">`
+        + `<div class="bar shield shield-pain"><i style="width:${pct}%"></i></div>`
+        + `<span class="bar-label">${s.icon || '🛡'}${fmt(s.amount)}</span></div>`;
+    }
+    if (generic > 0) {
+      inner += `<div class="slot-shield bar-wrap"><div class="bar shield"><i style="width:${clamp(generic / Math.max(1, u.maxHp) * 100, 0, 100)}%"></i></div>`
+        + `<span class="bar-label">🛡${fmt(generic)}</span></div>`;
+    } else if (!special.length && u.stagger > 0) {
+      inner += `<div class="slot-shield bar-wrap"><div class="bar" style="background:#3a2810"><i style="width:${clamp(u.stagger / u.maxHp * 100, 0, 100)}%;background:linear-gradient(90deg,#c97a2a,#8a4010)"></i></div>`
+        + `<span class="bar-label">шат ${fmt(u.stagger)}</span></div>`;
+    }
+    return `<div class="u-shields">${inner}</div>`;
+  }
+
   function unitStructSig(u) {
     const isDk = !!(u.res?.runes && u.res.secondary?.type === 'runic_power');
+    const parts = shieldDisplayParts(u);
     return [
       u.side,
       u.casting ? 1 : 0,
-      (u.shield || u.stagger > 0) ? 1 : 0,
+      (parts.special.length ? 's' + parts.special.length : '') + (parts.generic > 0 ? 'g' : '') + (u.stagger > 0 ? 't' : ''),
       u.res?.runes ? 1 : 0,
       (u.res?.secondary && !isDk) ? 1 : 0,
       (u.burstStacks || 0) > 0 ? 1 : 0,
@@ -714,11 +749,13 @@
       if (fill) fill.style.width = castPct + '%';
       if (name) name.textContent = telegraphLabel(u.casting);
     }
-    if (u.shield) {
-      const shI = card.querySelector('.slot-shield .bar.shield > i');
-      const shL = card.querySelector('.slot-shield .bar-label');
-      if (shI) shI.style.width = clamp(u.shield / u.maxHp * 100, 0, 100) + '%';
-      if (shL) shL.textContent = '🛡' + fmt(u.shield);
+    const shBox = card.querySelector(':scope > .u-shields');
+    if (shBox) {
+      const fresh = document.createElement('div');
+      fresh.innerHTML = shieldsBlockHtml(u);
+      if (fresh.firstElementChild && shBox.innerHTML !== fresh.firstElementChild.innerHTML) {
+        shBox.replaceWith(fresh.firstElementChild);
+      }
     }
     const nameEl = card.querySelector('.u-name');
     if (nameEl) {
@@ -1036,11 +1073,7 @@
     const castBar = u.casting
       ? `<div class="slot-cast"><div class="cast-bar" title="${telegraphLabel(u.casting)}"><i style="width:${castPct}%;animation:none"></i></div><div class="cast-name">${telegraphLabel(u.casting)}</div></div>`
       : '';
-    const shieldHtml = u.shield
-      ? `<div class="slot-shield bar-wrap"><div class="bar shield"><i style="width:${clamp(u.shield / u.maxHp * 100, 0, 100)}%"></i></div><span class="bar-label">🛡${fmt(u.shield)}</span></div>`
-      : (u.stagger > 0
-        ? `<div class="slot-shield bar-wrap"><div class="bar" style="background:#3a2810"><i style="width:${clamp(u.stagger / u.maxHp * 100, 0, 100)}%;background:linear-gradient(90deg,#c97a2a,#8a4010)"></i></div><span class="bar-label">шат ${fmt(u.stagger)}</span></div>`
-        : '');
+    const shieldHtml = shieldsBlockHtml(u);
     const ico = u.side === 'ally' ? (u.icon || '⚔') : (u.icon || '💀');
     const roleLabel = (u.isElite ? '◆ Элита · ' : '') + (ROLE_LABEL[u.role] || u.role) + (u.enraged ? ' 🔥' : '');
     const pSrc = portraitSrc(u);

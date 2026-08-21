@@ -19,6 +19,7 @@
     for (const p of run.party) {
       if (p.hp <= 0) { p.alive = false; p.hp = 0; } else p.alive = true;
       p.shield = 0;
+      p.shieldLayers = [];
       p._debugUsedThisTurn = false;
       p._oncePerTurnUsed = {};
       // Баффы/дебаффы едут в следующий пулл и тикают как обычно. КД не сбрасываем.
@@ -202,7 +203,7 @@
       if (typeof shouldRaidAuto === 'function' && shouldRaidAuto(actor)) {
         combat.waitingPlayer = false;
         document.getElementById('ability-bar').innerHTML = '';
-        try { hidePassivePocket(); } catch (_) {}
+        try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
         document.getElementById('combat-actions').innerHTML =
           `<span style="color:var(--muted)">Авто · ${actor.fullName || actor.name}…</span>`;
         clearTimeout(aiTimer);
@@ -231,7 +232,7 @@
       combat.waitingPlayer = false;
       combat._keepPlayerTurn = false;
       document.getElementById('ability-bar').innerHTML = '';
-      try { hidePassivePocket(); } catch (_) {}
+      try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
       document.getElementById('combat-actions').innerHTML =
         `<span style="color:var(--muted)">${actor.isPet ? 'Ход питомца…' : 'Ход врага…'}</span>`;
       clearTimeout(aiTimer);

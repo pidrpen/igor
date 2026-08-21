@@ -35,7 +35,7 @@
     const bar = document.getElementById('ability-bar');
     const actions = document.getElementById('combat-actions');
     if (bar) bar.innerHTML = '';
-    try { hidePassivePocket(); } catch (_) {}
+    try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
     if (actions) actions.innerHTML = '';
     if (checkEnd()) return;
     try {

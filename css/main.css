@@ -1556,6 +1556,8 @@
       opacity: .95; text-shadow: 0 1px 2px rgba(0,0,0,.75);
     }
     .bar-wrap { position: relative; margin-top: 3px; flex: 0 0 auto; height: 15px; }
+    .unit .u-shields { display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; min-height: 0; }
+    .unit .u-shields:empty { display: none; margin: 0; height: 0; }
     .unit .slot-shield { min-height: 0; height: auto; margin-top: 2px; flex: 0 0 auto; }
     .unit .slot-shield:empty { display: none; margin: 0; height: 0; min-height: 0; }
     .unit .slot-sec {
@@ -1613,6 +1615,7 @@
       background: linear-gradient(180deg, #8ec8ff 0%, #3a7fd4 40%, #1a4a9a 100%);
     }
     .bar.shield > i { background: linear-gradient(180deg, #d0d8e0, #708090); }
+    .bar.shield-pain > i { background: linear-gradient(180deg, #e8c070, #a07028 45%, #6a4010); }
     .bar-label {
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       font-size: .72rem; font-weight: 800; text-shadow: 0 1px 2px #000; pointer-events: none;
@@ -1774,15 +1777,15 @@
       flex: 1 1 auto;
       min-height: 0;
     }
-    /* ── Пассивки: карман слева снизу (не двигает панель скиллов) ── */
-    /* Стоит справа от Recount; раскрытие вниз/вверх не толкает ability-bar */
+    /* ── Пассивные бафы: слева снизу, не на рамке портрета ── */
     .passive-pocket {
       position: fixed;
-      left: calc(.55rem + min(280px, calc(100vw - 1.1rem)) + .4rem);
+      left: .55rem;
+      right: auto;
       bottom: .55rem;
       z-index: 56;
-      width: min(260px, calc(100vw - 1.1rem - 280px - .8rem));
-      min-width: 11rem;
+      width: min(300px, calc(46vw - 1rem));
+      min-width: 12rem;
       font-size: .72rem;
       color: var(--text);
       user-select: none;
@@ -2097,8 +2100,9 @@
     @media (max-width: 1000px) {
       .passive-pocket {
         left: .4rem;
-        bottom: calc(.4rem + 2.6rem); /* над Recount на узком экране */
-        width: min(260px, calc(100vw - .8rem));
+        right: auto;
+        bottom: .4rem;
+        width: min(260px, calc(50vw - .8rem));
       }
     }
 
@@ -2378,7 +2382,7 @@
 
     /* ── Recount (combat meter) ── */
     .recount-panel {
-      position: fixed; left: .55rem; bottom: .55rem; z-index: 55;
+      position: fixed; left: .55rem; bottom: 3.2rem; z-index: 55;
       width: min(280px, calc(100vw - 1.1rem));
       background: rgba(12, 14, 18, .92);
       border: 1px solid #5a4a28;
@@ -2542,7 +2546,7 @@
     }
     .recount-total strong { color: var(--gold-bright, #e0c060); font-weight: 700; }
     @media (max-width: 1000px) {
-      .recount-panel { left: .4rem; bottom: .4rem; width: min(260px, calc(100vw - .8rem)); }
+      .recount-panel { left: .4rem; bottom: 3rem; width: min(260px, calc(100vw - .8rem)); }
     }
 
     .skill-preview {

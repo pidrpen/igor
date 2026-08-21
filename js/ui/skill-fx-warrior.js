@@ -19,6 +19,7 @@
     revenge: { school: 'physical', motion: 'glaive', impact: 'hit' },
     thunder: { school: 'nature', motion: 'nova', impact: 'burst' },
     shield_block: { school: 'physical', motion: 'orbit', impact: 'ring' },
+    pain_endure: { school: 'physical', motion: 'orbit', impact: 'ring' },
     shield_wall: { school: 'physical', motion: 'nova', impact: 'flash' },
     last_stand: { school: 'blood', motion: 'pulse', impact: 'flash' },
     taunt: { school: 'physical', motion: 'pulse', impact: 'ring' },

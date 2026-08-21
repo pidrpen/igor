@@ -758,8 +758,10 @@
       }
       const fw = abilityFlatWeight(ab);
       const party = ab.id === 'heaven_shield' || ab.partyShield;
-      if (fw != null && party) return `щит ${fw}т всем + Искупление`;
-      return fw != null ? `щит ${fw}т` : `щит ~${fmt(abilityShieldRaw(actor, ab, actor))}`;
+      const frac = Number(ab.absorbFrac);
+      const absorbBit = (frac > 0 && frac < 1) ? (' · поглощает ' + Math.round(frac * 100) + '% входящего') : '';
+      if (fw != null && party) return `щит ${fw}т всем + Искупление` + absorbBit;
+      return (fw != null ? `щит ${fw}т` : `щит ~${fmt(abilityShieldRaw(actor, ab, actor))}`) + absorbBit;
     }
     if (ab.type === 'cc') {
       if (ab.ccMode === 'silence' || ab.id === 'mind_spike') return 'тишина · сбивает каст';
@@ -788,6 +790,7 @@
       elusive: 'Даёт щит: базовая прочность плюс урон, недавно снятый «Очищающим отваром».',
       guard: 'Ставит личный щит, поглощающий входящий урон.',
       fort_brew: 'Снижает получаемый урон и усиливает пошатывание на несколько ходов.',
+      pain_endure: 'Щит 45т отдельной полоской. Пока запас жив, съедает 50% каждого входящего удара. Поглощённое идёт в исцеление рекаунта тому, кто наложил щит.',
       provoke: 'Перетягивает внимание врагов на вас.',
       taunt: 'Перетягивает внимание врагов на вас.',
       debug_mode: 'Переключает режим атаки основного питомца: одна цель или по области. Можно использовать раз за ход.',
@@ -847,7 +850,11 @@
           parts.push('Исцеляет весь отряд.');
           break;
         case 'shield':
-          parts.push('Накладывает щит, поглощающий урон.');
+          if (ab.id === 'pain_endure') {
+            parts.push('Накладывает щит 45т отдельной полоской. Поглощает 50% входящего урона, пока запас щита не кончится.');
+          } else {
+            parts.push('Накладывает щит, поглощающий урон.');
+          }
           break;
         case 'buff':
           parts.push('Временно усиливает вас или ваших питомцев.');

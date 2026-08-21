@@ -279,7 +279,14 @@
           if (actor.side === 'ally') {
             sh = Math.round(sh * masteryShieldMult(actor) * versHealMult(actor));
           }
-          actor.shield = (actor.shield || 0) + sh;
+          if (typeof addUnitShield === 'function') {
+            addUnitShield(actor, {
+              id: 'bone_shield', name: 'Костяной щит', icon: '🦴',
+              fromUid: actor.uid, amount: sh, abilityId: ability.id,
+            });
+          } else {
+            actor.shield = (actor.shield || 0) + sh;
+          }
           log(`${actor.name}: Костяной щит 🛡${fmt(sh)}`, 'heal');
         }
         if (ability.cleaveOnDnd) {
@@ -602,7 +609,14 @@
         }
         if (ability.shieldFromDmg && totalAll > 0) {
           const sh = Math.round(totalAll * Number(ability.shieldFromDmg));
-          actor.shield = (actor.shield || 0) + sh;
+          if (typeof addUnitShield === 'function') {
+            addUnitShield(actor, {
+              id: ability.id + '_sh', name: ability.name, icon: ability.icon || '🛡',
+              fromUid: actor.uid, amount: sh, abilityId: ability.id, stack: true,
+            });
+          } else {
+            actor.shield = (actor.shield || 0) + sh;
+          }
           log(`${actor.name}: щит ${fmt(sh)} от ${ability.name}`, cls);
         }
         if (ability.dmgReduce && ability.id === 'heroic_leap') {
@@ -988,7 +1002,24 @@
           if (actor.side === 'ally') {
             amount = Math.round(amount * masteryShieldMult(actor) * versHealMult(actor));
           }
-          shT.shield += amount;
+          const frac = Number(ability.absorbFrac);
+          if (typeof addUnitShield === 'function') {
+            addUnitShield(shT, {
+              id: ability.id,
+              name: ability.name,
+              icon: ability.icon || '🛡',
+              fromUid: actor.uid,
+              amount,
+              absorbFrac: (frac > 0 && frac < 1) ? frac : 1,
+              separate: !!(frac > 0 && frac < 1),
+              abilityId: ability.id,
+            });
+          } else {
+            shT.shield += amount;
+          }
+          if (frac > 0 && frac < 1) {
+            try { floatText(shT.uid, '🛡' + fmt(amount), 'buff'); } catch (_) {}
+          }
           if (ability.id === 'elusive') {
             log(`${actor.name}: ${ability.name} 🛡${fmt(amount)}` +
               (purifyBonus ? ` (база + ${fmt(purifyBonus)} из очищ. stagger)` : ' (база)'), 'heal');
@@ -1041,6 +1072,7 @@
             pet.alive = true;
             pet.hp = Math.max(1, Math.round(pet.maxHp * 0.6));
             pet.shield = 0;
+            pet.shieldLayers = [];
             pet.buffs = [];
             pet.attackMode = pet.attackMode || 'st';
             log(`${actor.name}: ${ability.name} → ${pet.name} (+${fmt(pet.hp)} HP)`, 'heal');
@@ -1673,7 +1705,14 @@
     if (blood && h > 0) {
       const mast = (typeof masteryPct === 'function') ? masteryPct(actor) : 0;
       const sh = Math.max(1, Math.round(h * 0.20 * (1 + mast)));
-      actor.shield = (actor.shield || 0) + sh;
+      if (typeof addUnitShield === 'function') {
+        addUnitShield(actor, {
+          id: 'blood_shield', name: 'Щит крови', icon: '🩸',
+          fromUid: actor.uid, amount: sh, abilityId: 'death_strike', stack: true,
+        });
+      } else {
+        actor.shield = (actor.shield || 0) + sh;
+      }
       log(`${actor.name}: Щит крови 🛡${fmt(sh)} (20% хила)`, 'heal');
     }
   }

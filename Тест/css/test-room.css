@@ -1358,7 +1358,7 @@ body.lobby-chrome-hidden #lobby .src-note {
 body.raid-run #run-screen {
   height: 100vh;
   max-height: 100vh;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
@@ -1720,6 +1720,21 @@ body.raid-run .ability-zone {
 }
 body.raid-run .combat-actions {
   flex: 0 0 auto;
+}
+/* Как в ключе: отдельная рамка пассивок, в рейде слева снизу (recount чуть выше) */
+body.raid-run .passive-pocket {
+  left: .55rem;
+  right: auto;
+  bottom: .55rem;
+  z-index: 80;
+  width: min(280px, calc(42vw - 1rem));
+}
+body.raid-run .recount-panel {
+  left: .55rem;
+  right: auto;
+  bottom: 3.2rem;
+  z-index: 79;
+  width: min(280px, calc(42vw - 1rem));
 }
 
 .mark-chip {

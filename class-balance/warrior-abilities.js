@@ -54,6 +54,7 @@
     if (o.aoeBounce != null) ab.aoeBounce = o.aoeBounce;
     if (o.shieldFromDmg != null) ab.shieldFromDmg = o.shieldFromDmg;
     if (o.enemyDmgMod != null) ab.enemyDmgMod = o.enemyDmgMod;
+    if (o.absorbFrac != null) ab.absorbFrac = o.absorbFrac;
     if (o.grantBlock) ab.grantBlock = true;
     if (o.holyShock) ab.holyShock = o.holyShock;
     if (o.grantSelfBuff) ab.grantSelfBuff = o.grantSelfBuff;
@@ -144,6 +145,9 @@
         A({ id: 'shield_block', n: 'Блок щитом', en: 'Shield Block', i: '🧱',
           c: 10, cd: 5, t: 'buff', fa: 1, ch: 2, blockChanceAdd: 0.5, blockValueAdd: 0.2, bt: 2,
           d: '2 заряда · каждый заряд отдельно +1 за 5 ходов · +50% блок / +20% сила · 2 хода · без хода', sid: 2565 }),
+        A({ id: 'pain_endure', n: 'Стойкость к боли', en: 'Ignore Pain', i: '🪨',
+          c: 50, cd: 3, t: 'shield', fl: 45, absorbFrac: 0.5, school: 'physical',
+          d: 'щит 45т отдельной полоской · поглощает 50% входящего · 50 ярости · перезарядка 3', sid: 190456 }),
         A({ id: 'shield_wall', n: 'Глухая оборона', en: 'Shield Wall', i: '🏰',
           cd: 12, t: 'buff', fa: 1, dr: 0.6, bt: 2, d: '', sid: 871 }),
         A({ id: 'last_stand', n: 'Ни шагу назад', en: 'Last Stand', i: '❤️',

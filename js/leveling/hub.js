@@ -675,13 +675,6 @@
 
     wrap('setRaidFocus', function (orig) {
       return function (unit) {
-        if (run && run.tavern && unit && unit.side === 'ally' && !unit.isPet) {
-          if (!unit.alive) { toastMsg('Мёртв'); return; }
-          raidPlayerUid = unit.uid;
-          toastMsg('Управляете: ' + (unit.fullName || unit.name));
-          try { renderCombat(); } catch (_) {}
-          return;
-        }
         return orig(unit);
       };
     });

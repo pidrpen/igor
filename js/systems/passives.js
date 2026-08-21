@@ -500,57 +500,69 @@
     });
   }
 
+  function isClassAuraPassiveId(id) {
+    const s = String(id || '');
+    return s.indexOf('aura_') === 0 || s === 'hunter_aspect';
+  }
+
   function renderPassiveTray(actor, trayEl) {
     const tray = trayEl || document.getElementById('passive-tray');
     const pocket = document.getElementById('passive-pocket');
     if (!tray) return;
     const listEl = (!trayEl && document.getElementById('passive-list')) || tray;
     const tipPanel = document.getElementById('passive-pocket-tip');
-    // не вызываем hidePassiveTipFloat целиком — сбросит выбор при каждом ходе
     const float = document.getElementById('passive-tip-float');
     if (float) float.classList.add('hidden');
+    if (tipPanel) {
+      tipPanel.classList.add('hidden');
+      tipPanel.replaceChildren();
+    }
 
-    const passives = actor ? getUnitPassives(actor) : [];
-    if (!passives.length) {
+    const auras = (typeof listPartyClassAuras === 'function') ? listPartyClassAuras() : [];
+    const specPass = (actor ? getUnitPassives(actor) : []).filter(p => !isClassAuraPassiveId(p.id));
+    if (!auras.length && !specPass.length) {
       if (listEl) listEl.innerHTML = '';
-      if (tipPanel) {
-        tipPanel.classList.add('hidden');
-        tipPanel.replaceChildren();
-      }
       if (pocket && !trayEl) {
         pocket.classList.add('hidden', 'collapsed');
         delete pocket.dataset.userOpened;
       }
       return;
     }
-    const chipsHtml = passives.map(p => {
-      const name = p.name || 'Пассивка';
-      const detail = p.detail || p.short || '';
-      const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-      return `
-      <div class="passive-chip" tabindex="0" data-passive-name="${esc(name)}" data-passive-detail="${esc(detail)}">
-        <span class="p-tag">Пассив</span>
-        <span class="p-ico">${p.icon || '✨'}</span>
-        <span class="p-name">${name}</span>
-        <div class="passive-tip" role="tooltip">
-          <div class="pt-name">${name}</div>
-          <div class="pt-detail">${detail}</div>
+
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const chipHtml = (p, tag) => {
+      const from = p.fromName
+        ? `<div class="p-from">даёт ${esc(p.className || '')}${p.fromName ? ' · ' + esc(p.fromName) : ''}</div>`
+        : '';
+      return `<div class="passive-chip${p.fromName ? ' is-aura' : ''}">
+        <div class="p-head">
+          <span class="p-tag">${esc(tag)}</span>
+          <span class="p-ico">${p.icon || ''}</span>
+          <span class="p-name">${esc(p.name || 'Бафф')}</span>
         </div>
+        ${from}
+        <div class="p-detail">${esc(p.detail || p.short || 'Нет описания.')}</div>
       </div>`;
-    }).join('');
-    if (listEl) listEl.innerHTML = chipsHtml;
-    // tip-панель не чистим, если уже открыта — только при смене набора
-    if (tipPanel && tipPanel.dataset.forActor !== (actor && actor.uid)) {
-      tipPanel.classList.add('hidden');
-      tipPanel.replaceChildren();
-      tipPanel.dataset.forActor = actor && actor.uid ? actor.uid : '';
+    };
+
+    let html = '';
+    if (auras.length) {
+      html += '<div class="passive-sec">Баффы отряда</div>';
+      html += auras.map(a => chipHtml(a, 'отряд')).join('');
     }
+    if (specPass.length) {
+      const who = actor ? (actor.fullName || actor.name || 'герой') : '';
+      html += '<div class="passive-sec">Пассивки · ' + esc(who) + '</div>';
+      html += specPass.map(p => chipHtml(p, 'пассив')).join('');
+    }
+    if (listEl) listEl.innerHTML = html;
     if (pocket && !trayEl) {
       pocket.classList.remove('hidden');
-      if (pocket.dataset.userOpened !== '1') {
-        pocket.classList.add('collapsed');
+      if (pocket.dataset.userOpened === '0') pocket.classList.add('collapsed');
+      else {
+        pocket.classList.remove('collapsed');
+        pocket.dataset.userOpened = '1';
       }
-      bindPassiveChipTips(listEl || tray);
     }
   }
 
@@ -563,6 +575,25 @@
       pocket.classList.add('hidden', 'collapsed');
       delete pocket.dataset.userOpened;
     }
+  }
+
+  function controlledCombatHero() {
+    if (run && run.party && typeof raidAutoAllies !== 'undefined' && raidAutoAllies
+        && typeof raidPlayerUid !== 'undefined' && raidPlayerUid) {
+      const me = run.party.find(p => p && String(p.uid) === String(raidPlayerUid) && p.alive);
+      if (me) return me;
+    }
+    const a = typeof currentActor === 'function' ? currentActor() : null;
+    if (a && a.side === 'ally' && !a.isPet && a.alive) return a;
+    return (run && run.party || []).find(p => p && p.alive && !p.isPet) || null;
+  }
+
+  function syncPassivePocket() {
+    if (!run || !combat || combat.over) {
+      hidePassivePocket();
+      return;
+    }
+    renderPassiveTray(controlledCombatHero());
   }
 
   function bindPassivePocketUI() {

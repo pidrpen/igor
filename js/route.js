@@ -130,7 +130,7 @@
    */
   const TARGET_SELF_ONLY = new Set([
     // warrior prot
-    'shield_block', 'shield_wall', 'last_stand',
+    'shield_block', 'shield_wall', 'last_stand', 'pain_endure',
     // paladin
     'sot_r', 'ardent', 'divine_prot',
     // DK blood

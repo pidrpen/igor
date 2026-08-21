@@ -193,7 +193,14 @@
     if (id === 'party_shield') {
       for (const p of livingHeroes()) {
         const sh = Math.round(p.maxHp * 0.18);
-        p.shield = (p.shield || 0) + sh;
+        if (typeof addUnitShield === 'function') {
+          addUnitShield(p, {
+            id: 'party_shield', name: 'Щит отряда', icon: '🛡',
+            fromUid: actor && actor.uid, amount: sh, abilityId: 'party_shield',
+          });
+        } else {
+          p.shield = (p.shield || 0) + sh;
+        }
         pulseUnit(p.uid, 'shielded');
       }
       log('Оберег группы: щит 18% здоровья', 'heal');

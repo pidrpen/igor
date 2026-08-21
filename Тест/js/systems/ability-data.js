@@ -758,8 +758,10 @@
       }
       const fw = abilityFlatWeight(ab);
       const party = ab.id === 'heaven_shield' || ab.partyShield;
-      if (fw != null && party) return `щит ${fw}т всем + Искупление`;
-      return fw != null ? `щит ${fw}т` : `щит ~${fmt(abilityShieldRaw(actor, ab, actor))}`;
+      const frac = Number(ab.absorbFrac);
+      const absorbBit = (frac > 0 && frac < 1) ? (' · поглощает ' + Math.round(frac * 100) + '% входящего') : '';
+      if (fw != null && party) return `щит ${fw}т всем + Искупление` + absorbBit;
+      return (fw != null ? `щит ${fw}т` : `щит ~${fmt(abilityShieldRaw(actor, ab, actor))}`) + absorbBit;
     }
     if (ab.type === 'cc') {
       if (ab.ccMode === 'silence' || ab.id === 'mind_spike') return 'тишина · сбивает каст';
@@ -1068,6 +1070,10 @@
       case 'heal_aoe':
         return fl ? ('Исцеляет весь отряд на ' + fl + '.') : 'Исцеляет весь отряд.';
       case 'shield':
+        if (ab.id === 'pain_endure') {
+          return (fl ? ('Накладывает щит ' + fl + ' отдельной полоской. ') : '')
+            + 'Поглощает 50% входящего урона, пока запас щита не кончится.';
+        }
         return fl ? ('Накладывает щит на ' + fl + '.') : 'Накладывает щит, поглощающий урон.';
       case 'buff':
         return 'Временно усиливает вас или ваших питомцев.';
@@ -1143,6 +1149,7 @@
         return s;
       },
       provoke: 'Перетягивает внимание врагов на вас.',
+      pain_endure: 'Щит 45т отдельной полоской. Пока запас жив, съедает 50% каждого входящего удара. Поглощённое идёт в исцеление рекаунта тому, кто наложил щит.',
       taunt: 'Перетягивает внимание врагов на вас.',
       debug_mode: 'Переключает режим атаки основного питомца: одна цель или по области. Можно использовать раз за ход.',
       wrench_heal: 'Снимает 50% текущего HP основного питомца. Лечит цель на 10% её запаса HP.',

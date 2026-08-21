@@ -1,5 +1,5 @@
 /* systems/party-ai: spec-aware ally AI for raid / key companions.
-   partyAiAct(actor) → true if it already called castAbility (one ability). */
+   Один мозг на ключ 5 и рейд 10: partyAiAct(actor) → true if it already called castAbility (one ability). */
 (function (global) {
   'use strict';
 
@@ -45,9 +45,9 @@
     'warrior:protection': {
       role: 'tank',
       taunt: ['taunt'],
-      defensives: ['last_stand', 'shield_wall', 'shield_block'],
+      defensives: ['last_stand', 'shield_wall', 'shield_block', 'pain_endure'],
       builders: ['shield_slam'],
-      spenders: ['revenge'],
+      spenders: ['revenge', 'pain_endure'],
       aoe: ['revenge'],
       st: ['shield_slam', 'revenge', 'demo_shout'],
     },

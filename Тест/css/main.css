@@ -1567,8 +1567,11 @@
       opacity: .95; text-shadow: 0 1px 2px rgba(0,0,0,.75);
     }
     .bar-wrap { position: relative; margin-top: 3px; flex: 0 0 auto; height: 15px; }
+    .unit .u-shields { display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; min-height: 0; }
+    .unit .u-shields:empty { display: none; margin: 0; height: 0; }
     .unit .slot-shield { min-height: 0; height: auto; margin-top: 2px; flex: 0 0 auto; }
     .unit .slot-shield:empty { display: none; margin: 0; height: 0; min-height: 0; }
+    .bar.shield-pain > i { background: linear-gradient(180deg, #e8c070, #a07028 45%, #6a4010); }
     .unit .slot-sec {
       min-height: 0; height: auto; margin-top: 2px; flex: 0 0 auto;
       font-size: .7rem; color: var(--gold); line-height: 14px;
@@ -1785,11 +1788,11 @@
       flex: 1 1 auto;
       min-height: 0;
     }
-    /* ── Пассивные бафы: справа снизу, не на рамке портрета ── */
+    /* ── Пассивные бафы: слева снизу, не на рамке портрета ── */
     .passive-pocket {
       position: fixed;
-      right: .55rem;
-      left: auto;
+      left: .55rem;
+      right: auto;
       bottom: .55rem;
       z-index: 56;
       width: min(300px, calc(46vw - 1rem));
@@ -2157,8 +2160,8 @@
     }
     @media (max-width: 1000px) {
       .passive-pocket {
-        right: .4rem;
-        left: auto;
+        left: .4rem;
+        right: auto;
         bottom: .4rem;
         width: min(260px, calc(50vw - .8rem));
       }
@@ -2487,7 +2490,7 @@
 
     /* ── Recount (combat meter) ── */
     .recount-panel {
-      position: fixed; left: .55rem; bottom: .55rem; z-index: 55;
+      position: fixed; left: .55rem; bottom: 3.2rem; z-index: 55;
       width: min(280px, calc(100vw - 1.1rem));
       background: rgba(12, 14, 18, .92);
       border: 1px solid #5a4a28;
@@ -2651,7 +2654,7 @@
     }
     .recount-total strong { color: var(--gold-bright, #e0c060); font-weight: 700; }
     @media (max-width: 1000px) {
-      .recount-panel { left: .4rem; bottom: .4rem; width: min(260px, calc(100vw - .8rem)); }
+      .recount-panel { left: .4rem; bottom: 3rem; width: min(260px, calc(100vw - .8rem)); }
     }
 
     .skill-preview {

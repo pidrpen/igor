@@ -1,4 +1,128 @@
 /* systems/damage: revenge, dealDmg, heal, kill */
+
+  function unitShieldLayers(u) {
+    if (!u) return [];
+    if (!Array.isArray(u.shieldLayers)) u.shieldLayers = [];
+    return u.shieldLayers;
+  }
+
+  function syncUnitShield(u) {
+    if (!u) return;
+    const layers = unitShieldLayers(u).filter(s => s && (Number(s.amount) || 0) > 0);
+    u.shieldLayers = layers;
+    u.shield = layers.reduce((n, s) => n + (Number(s.amount) || 0), 0);
+  }
+
+  function clearUnitShields(u) {
+    if (!u) return;
+    u.shieldLayers = [];
+    u.shield = 0;
+  }
+
+  function shieldHealerOf(layer, fallback) {
+    const id = layer && layer.fromUid;
+    if (id != null) {
+      if (typeof allUnits === 'function') {
+        const u = allUnits().find(x => x && String(x.uid) === String(id));
+        if (u) return u;
+      }
+      if (run && run.party) {
+        const p = run.party.find(x => x && String(x.uid) === String(id));
+        if (p) return p;
+      }
+    }
+    return fallback || null;
+  }
+
+  function creditShieldAbsorb(layer, target, amount) {
+    if (!(amount > 0) || !layer) return;
+    const healer = shieldHealerOf(layer, target);
+    if (!healer) return;
+    try {
+      meterOnHeal(healer, target, amount, {
+        abilityId: layer.abilityId || layer.id,
+        abilityName: layer.name || 'Щит',
+        isShield: true,
+      });
+    } catch (_) {}
+  }
+
+  /** Наложить щит. Повтор того же id от того же кастера обновляет запас, не складывает. */
+  function addUnitShield(target, spec) {
+    if (!target || !spec) return 0;
+    const amount = Math.max(0, Math.round(Number(spec.amount) || 0));
+    if (!(amount > 0)) return 0;
+    const layers = unitShieldLayers(target);
+    const id = String(spec.id || 'shield');
+    const fromUid = spec.fromUid != null ? spec.fromUid : null;
+    const frac = Number(spec.absorbFrac);
+    const absorbFrac = (frac > 0 && frac < 1) ? frac : 1;
+    const separate = spec.separate != null ? !!spec.separate : absorbFrac < 1;
+    let layer = layers.find(s => s && s.id === id && String(s.fromUid) === String(fromUid));
+    if (layer) {
+      layer.amount = spec.stack ? (Number(layer.amount) || 0) + amount : amount;
+      layer.name = spec.name || layer.name;
+      layer.icon = spec.icon || layer.icon;
+      layer.absorbFrac = absorbFrac;
+      layer.separate = separate;
+      layer.abilityId = spec.abilityId || layer.abilityId || id;
+    } else {
+      layer = {
+        id,
+        name: spec.name || 'Щит',
+        icon: spec.icon || '🛡',
+        fromUid,
+        amount,
+        absorbFrac,
+        separate,
+        abilityId: spec.abilityId || id,
+      };
+      layers.push(layer);
+    }
+    syncUnitShield(target);
+    return amount;
+  }
+
+  /** Съесть щиты. Частичные (absorbFrac < 1) берут долю от удара, затем полные 100%. Возвращает оставшийся урон. */
+  function consumeUnitShields(target, dmg) {
+    dmg = Math.max(0, Math.round(Number(dmg) || 0));
+    if (!target || !(dmg > 0)) return dmg;
+    const layers = unitShieldLayers(target);
+    if (!layers.length) {
+      if (target.shield > 0) {
+        const a = Math.min(target.shield, dmg);
+        target.shield -= a;
+        dmg -= a;
+      }
+      return dmg;
+    }
+    let left = dmg;
+    const hit = dmg;
+    for (let i = 0; i < layers.length && left > 0; i++) {
+      const s = layers[i];
+      const frac = Number(s.absorbFrac);
+      if (!(frac > 0) || !(frac < 1)) continue;
+      const want = Math.max(1, Math.round(hit * frac));
+      const take = Math.min(want, Number(s.amount) || 0, left);
+      if (take <= 0) continue;
+      s.amount -= take;
+      left -= take;
+      creditShieldAbsorb(s, target, take);
+    }
+    for (let i = 0; i < layers.length && left > 0; i++) {
+      const s = layers[i];
+      const frac = Number(s.absorbFrac);
+      if (frac > 0 && frac < 1) continue;
+      const take = Math.min(Number(s.amount) || 0, left);
+      if (take <= 0) continue;
+      s.amount -= take;
+      left -= take;
+      creditShieldAbsorb(s, target, take);
+    }
+    syncUnitShield(target);
+    return left;
+  }
+
   function triggerProtRevenge(tank) {
     if (!tank || !tank.alive || !combat) return;
     if (combat._revengeLock) return;
@@ -233,7 +357,8 @@
       else if (Math.random() < cChance) { dmg = Math.round(dmg * cMul); crit = true; }
     }
     if (attacker) attacker._justCrit = !!crit;
-    if (target.shield > 0) {
+    if (typeof consumeUnitShields === 'function') dmg = consumeUnitShields(target, dmg);
+    else if (target.shield > 0) {
       const a = Math.min(target.shield, dmg);
       target.shield -= a; dmg -= a;
     }
@@ -343,6 +468,7 @@
     // True damage still respects vers/tank mastery for allies
     if (t.side === 'ally') d = Math.round(d * versInDmgMult(t) * masteryTankInMult(t));
     if (t.isPet) d = Math.max(1, Math.round(d * 0.1));
+    if (typeof consumeUnitShields === 'function') d = consumeUnitShields(t, d);
     if (d > 0) d = shareMechanistOwnerHit(t, d, source);
     if (d > 0 && typeof clampRaidBossDamage === 'function') d = clampRaidBossDamage(t, d);
     if (!(d > 0)) {
@@ -440,13 +566,13 @@
       unit.alive = true;
       unit.hp = Math.max(1, Math.round(unit.maxHp * 0.6));
       if (unit.res?.primary?.type === 'mana') unit.res.primary.current = Math.round(unit.res.primary.max * 0.6);
-      unit.shield = 0; unit.casting = null;
+      unit.shield = 0; unit.shieldLayers = []; unit.casting = null;
       floatText(unit.uid, 'возрождение!', 'heal');
       log(`${unit.name}: Возрождение 60% здоровья/маны (1× за ключ)`, 'heal');
       toast('Возрождение шамана!');
       return;
     }
-    unit.alive = false; unit.hp = 0; unit.shield = 0; unit.casting = null;
+    unit.alive = false; unit.hp = 0; unit.shield = 0; unit.shieldLayers = []; unit.casting = null;
     pulseUnit(unit.uid, 'dying');
     log((unit.isPet ? 'Питомец ' : '') + unit.name + ' погибает', 'system');
     // Pets: no death penalty. Основных (постоянных) оставляем как «труп» для воскрешения.

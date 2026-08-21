@@ -499,6 +499,11 @@
     }
   }
 
+  function sameUid(a, b) {
+    if (a == null || b == null) return false;
+    return String(a) === String(b);
+  }
+
   function pickAutoPlayerUid() {
     if (!run || !run.party) return null;
     const alive = run.party.filter(p => p && p.alive);
@@ -518,19 +523,52 @@
       const m = alive.find(p => p.classId === autoPlayPick.classId && p.specId === autoPlayPick.specId);
       if (m) return m.uid;
     }
-    if (run.raid) {
-      return (alive.find(p => p.role === 'tank') || alive[0]).uid;
-    }
     return (alive.find(p => p.role === 'dps') || alive[0]).uid;
   }
 
   function shouldRaidAuto(actor) {
     if (!run || !actor || actor.side !== 'ally' || actor.isPet) return false;
     if (!raidAutoAllies) return false;
-    if (!raidPlayerUid || !run.party.some(p => p.uid === raidPlayerUid && p.alive)) {
-      raidPlayerUid = pickAutoPlayerUid();
+    const still = raidPlayerUid && run.party.some(p => p && sameUid(p.uid, raidPlayerUid) && p.alive);
+    if (!still) raidPlayerUid = pickAutoPlayerUid();
+    return !sameUid(actor.uid, raidPlayerUid);
+  }
+
+  function handCurrentTurnToAuto(actor) {
+    if (!combat || combat.over || combat._afterBusy) return false;
+    if (!actor || actor.side !== 'ally' || actor.isPet || !actor.alive) return false;
+    combat.waitingPlayer = false;
+    pendingTarget = null;
+    const bar = document.getElementById('ability-bar');
+    if (bar) bar.innerHTML = '';
+    const actions = document.getElementById('combat-actions');
+    if (actions) {
+      actions.innerHTML = `<span style="color:var(--muted)">Авто · ${actor.fullName || actor.name}…</span>`;
     }
-    return actor.uid !== raidPlayerUid;
+    try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
+    try { renderCombat(); } catch (_) {}
+    try { clearTimeout(aiTimer); } catch (_) {}
+    aiTimer = setTimeout(() => {
+      try {
+        if (paused || !combat || combat.over || combat._afterBusy) return;
+        if (typeof installAnimAfterAction === 'function') installAnimAfterAction();
+        if (typeof raidAllyAi === 'function') {
+          if (!raidAllyAi(actor) && typeof aiAct === 'function') aiAct(actor);
+        } else if (typeof aiAct === 'function') {
+          aiAct(actor);
+        }
+        combat._aiAnimWait = true;
+        if (typeof afterAction === 'function') afterAction();
+      } catch (err) {
+        console.error('[focusAuto]', err);
+        if (combat) {
+          combat._keepPlayerTurn = false;
+          combat._aiAnimWait = true;
+        }
+        try { if (typeof afterAction === 'function') afterAction(); } catch (_) {}
+      }
+    }, 40);
+    return true;
   }
 
   function setRaidFocus(hero) {
@@ -539,12 +577,22 @@
     raidPlayerUid = hero.uid;
     autoPlayPick = { classId: hero.classId, specId: hero.specId };
     toast('Играете: ' + (hero.fullName || hero.name));
+    try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
+    const actor = typeof currentActor === 'function' ? currentActor() : null;
+    if (combat && combat.waitingPlayer && actor && actor.side === 'ally' && !actor.isPet
+        && !sameUid(actor.uid, hero.uid)) {
+      handCurrentTurnToAuto(actor);
+      return;
+    }
     try { renderCombat(); } catch (_) {}
+    if (combat && combat.waitingPlayer && actor && sameUid(actor.uid, hero.uid)) {
+      try { if (typeof showAbilities === 'function') showAbilities(hero); } catch (_) {}
+    }
   }
 
   function raidFocusClass(u) {
     if (!run || !raidAutoAllies || !u || u.side !== 'ally' || u.isPet) return '';
-    return u.uid === raidPlayerUid ? ' raid-focus' : '';
+    return sameUid(u.uid, raidPlayerUid) ? ' raid-focus' : '';
   }
 
   function currentMainTank(enemy) {
@@ -738,82 +786,6 @@
     if (!actor?.alive) return false;
     if (typeof partyAiAct === 'function') {
       try { if (partyAiAct(actor)) return true; } catch (err) { console.error('[partyAiAct]', err); }
-    }
-    const foes = living('enemy').filter(e => !e.vaultAway);
-    const friends = livingHeroes();
-    const usable = actor.abilities.filter(a => canPay(actor, a));
-    if (!usable.length) return false;
-    const boss = foes.find(e => e.isBoss) || foes[0];
-    const conductors = foes.filter(e => e.mechRole === 'conductor' || e.mechRole === 'echo' || e.mustKillTurns);
-    const lowestAlly = (list) => {
-      const a = (list || friends).filter(u => u && u.alive);
-      if (!a.length) return null;
-      return a.slice().sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0];
-    };
-
-    const casting = foes.find(e => e.casting);
-    const kick = usable.find(a => typeof isKickAbility === 'function' ? isKickAbility(a) : (a.type === 'interrupt' || (typeof INTERRUPT_IDS !== 'undefined' && INTERRUPT_IDS.has(a.id))));
-    if (casting && kick) {
-      castAbility(actor, kick, casting);
-      return true;
-    }
-
-    if (actor.role === 'tank') {
-      const ov = (h) => (h.buffs || []).find(b => b.id === 'overload');
-      const myStacks = ov(actor)?.stacks || 0;
-      const other = friends.find(h => h.role === 'tank' && h.uid !== actor.uid);
-      const otherStacks = other ? (ov(other)?.stacks || 0) : 0;
-      const mt = currentMainTank(boss);
-      const iAmMt = mt && mt.uid === actor.uid;
-      const taunt = usable.find(a => a.type === 'taunt');
-      if (taunt && other && otherStacks >= 2 && iAmMt === false) {
-        castAbility(actor, taunt, null);
-        return true;
-      }
-      if (taunt && myStacks >= 3 && iAmMt) {
-        // too late — still try to hold with a def
-      } else if (taunt && other && otherStacks >= 2 && iAmMt) {
-        // stay, OT should taunt
-      }
-      if (actor.hp / actor.maxHp < 0.45) {
-        const def = usable.find(a => (a.type === 'shield' || a.type === 'buff') && abilityTargetRule(a) === 'self_only');
-        if (def) { castAbility(actor, def, actor); return true; }
-      }
-    }
-
-    if (actor.role === 'healer') {
-      const pillars = (combat.enemies || []).filter(e => e && e.instRole === 'static_pillar' && e.alive);
-      const lowPillar = pillars.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-      const heal = usable.find(a => a.type === 'heal');
-      if (heal && lowPillar && lowPillar.hp / lowPillar.maxHp < 0.72) {
-        castAbility(actor, heal, lowPillar);
-        return true;
-      }
-      const crit = lowestAlly(friends.filter(h => h.hp / h.maxHp < 0.55));
-      const any = lowestAlly(friends.filter(h => h.hp < h.maxHp));
-      const aoeHeal = usable.find(a => a.type === 'heal_aoe');
-      const hurtCount = friends.filter(h => h.hp / h.maxHp < 0.8).length;
-      if (aoeHeal && hurtCount >= 3) { castAbility(actor, aoeHeal, actor); return true; }
-      const target = crit || (any && any.hp / any.maxHp < 0.92 ? any : null);
-      if (heal && target) {
-        castAbility(actor, heal, abilityTargetRule(heal) === 'self_only' ? actor : target);
-        return true;
-      }
-    }
-
-    const prio = conductors[0] || boss || foes[0];
-    if (!prio) return false;
-    const exec = usable.find(a => typeof EXECUTE_IDS !== 'undefined' && EXECUTE_IDS.has(a.id));
-    if (exec && prio.hp / prio.maxHp <= 0.35) { castAbility(actor, exec, prio); return true; }
-    const aoe = usable.find(a => a.type === 'aoe');
-    if (aoe && foes.length >= 2) { castAbility(actor, aoe, null); return true; }
-    const dmg = usable.find(a => a.type === 'damage' || a.type === 'dot') || usable[0];
-    if (dmg) {
-      const rule = abilityTargetRule(dmg);
-      if (rule === 'self_only') castAbility(actor, dmg, actor);
-      else if (rule === 'ally_any') castAbility(actor, dmg, lowestAlly() || actor);
-      else castAbility(actor, dmg, prio);
-      return true;
     }
     return false;
   }

@@ -91,11 +91,15 @@
   function meterHealLabel(healer, ctx) {
     const fromCtx = meterResolveAbilityName(healer, ctx);
     if (fromCtx) {
+      const label = (ctx && ctx.isShield && fromCtx.indexOf('щит') < 0 && fromCtx.indexOf('Щит') < 0)
+        ? (fromCtx + ' (щит)')
+        : fromCtx;
       if (healer && healer.isPet) {
-        return (healer.name ? healer.name + ': ' : 'Питомец: ') + fromCtx;
+        return (healer.name ? healer.name + ': ' : 'Питомец: ') + label;
       }
-      return fromCtx;
+      return label;
     }
+    if (ctx && ctx.isShield) return 'Щит';
     if (healer && healer.isPet) return healer.name || 'Питомец';
     return 'Исцеление';
   }
