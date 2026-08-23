@@ -11,7 +11,7 @@
     id: 'throne',
     name: 'Престол Грома',
     theme: 'jade',
-    timerBase: 10 * 60,
+    timerBase: 15 * 60,
     raid: true,
     midName: '—',
     finalName: 'Лэй Шэнь, Повелитель Грома',
@@ -41,6 +41,10 @@
   }
   function raidDiffLabel(diff) {
     return (diff || getRaidDiff()) === 'heroic' ? 'Героический' : 'Обычный';
+  }
+  /** Стена таймера рейда: обычный 15:00, героический 10:00. */
+  function raidTimerMax(diff) {
+    return (diff || getRaidDiff()) === 'heroic' ? 10 * 60 : 15 * 60;
   }
   function setRaidDiff(diff) {
     raidDifficulty = diff === 'heroic' ? 'heroic' : 'normal';
@@ -476,9 +480,20 @@
       return e;
     });
     editSlot = null;
+    const dps = RAID_PRESET.find(p => {
+      const spec = WOW_MOP.getSpec(p.classId, p.specId);
+      return spec && spec.role === 'dps';
+    });
+    autoPlayPick = dps
+      ? { classId: dps.classId, specId: dps.specId }
+      : null;
     renderParty();
     savePartyProfile();
-    toast('Собран рейд 10: 2 танка · 2 хила · 6 бойцов');
+    toast(dps
+      ? ('Собран рейд 10. Играете бойца: ' + (WOW_MOP.getClass(dps.classId)?.name || dps.classId)
+        + ' · ' + (WOW_MOP.getSpec(dps.classId, dps.specId)?.name || dps.specId)
+        + '. Клик по слоту — сменить.')
+      : 'Собран рейд 10: 2 танка · 2 хила · 6 бойцов');
   }
 
   function partyAutoTitle() {
@@ -508,21 +523,34 @@
     if (!run || !run.party) return null;
     const alive = run.party.filter(p => p && p.alive);
     if (!alive.length) return null;
-    const tavern = alive.find(p => p._isHero);
-    if (tavern) return tavern.uid;
+    const bySpec = (classId, specId) =>
+      alive.find(p => p.classId === classId && p.specId === specId);
+
+    // Явный выбор (спек слева, слот, «Собрать рейд», клик в бою) — ключ и рейд одинаково.
+    // Иначе createHero вешает _isHero на первого воина Защиты.
+    if (autoPlayPick) {
+      const m = bySpec(autoPlayPick.classId, autoPlayPick.specId);
+      if (m) return m.uid;
+      return (alive.find(p => p.role === 'dps') || alive[0]).uid;
+    }
+
+    let heroParty = false;
+    try { heroParty = typeof heroPartyOn === 'function' && heroPartyOn(); } catch (_) {}
+    if (heroParty) {
+      const tavern = alive.find(p => p._isHero);
+      if (tavern) return tavern.uid;
+    }
+
     try {
       if (typeof igorHeroGetActive === 'function') {
         const rec = igorHeroGetActive();
         if (rec) {
-          const m = alive.find(p => p.classId === rec.classId && p.specId === rec.specId);
-          if (m) return m.uid;
+          const m = bySpec(rec.classId, rec.specId);
+          if (m && m.role !== 'tank') return m.uid;
         }
       }
     } catch (_) {}
-    if (autoPlayPick) {
-      const m = alive.find(p => p.classId === autoPlayPick.classId && p.specId === autoPlayPick.specId);
-      if (m) return m.uid;
-    }
+
     return (alive.find(p => p.role === 'dps') || alive[0]).uid;
   }
 
@@ -552,7 +580,9 @@
       try {
         if (paused || !combat || combat.over || combat._afterBusy) return;
         if (typeof installAnimAfterAction === 'function') installAnimAfterAction();
-        if (typeof raidAllyAi === 'function') {
+        if (typeof partyAiAct === 'function') {
+          if (!partyAiAct(actor) && typeof aiAct === 'function') aiAct(actor);
+        } else if (typeof raidAllyAi === 'function') {
           if (!raidAllyAi(actor) && typeof aiAct === 'function') aiAct(actor);
         } else if (typeof aiAct === 'function') {
           aiAct(actor);
@@ -670,6 +700,14 @@
     }
     const allyTitle = document.querySelector('#ally-row')?.previousElementSibling;
     if (allyTitle) allyTitle.textContent = 'Рейд (клик — взять управление)';
+    try {
+      const pd = document.getElementById('place-dungeon');
+      const pr = document.getElementById('place-room');
+      const pt = document.getElementById('place-title');
+      if (pd) pd.textContent = 'Рейд 10 · ' + (typeof raidDiffLabel === 'function' ? raidDiffLabel() : '');
+      if (pr) pr.textContent = (typeof raidPhaseTitle === 'function') ? raidPhaseTitle() : 'Престол грома';
+      if (pt) pt.classList.remove('hidden');
+    } catch (_) {}
   }
 
   function showRaidBriefing() {

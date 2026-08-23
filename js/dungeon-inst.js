@@ -28,7 +28,7 @@
     return !!(e.instObject || r === 'vent' || r === 'reflect' || r === 'trough'
       || r === 'furnace' || r === 'lantern' || r === 'sluice' || r === 'ember_core'
       || r === 'forge_hearth' || r === 'jade_whisper' || r === 'jade_seed'
-      || r === 'rift_invert_shard' || r === 'rift_hunger');
+      || r === 'rift_invert_shard' || r === 'rift_hunger' || r === 'jade_echo');
   }
   function stampAbilities(unit, srcList) {
     if (!unit || !srcList) return;
@@ -105,6 +105,11 @@
           { id: 'h', name: 'Исцеление глубин', cost: 12, cd: 2, type: 'heal', power: 0.32 },
           { id: 'c', name: 'Гимн моря', cost: 12, cd: 2, type: 'cast_aoe', power: 0.80, castKind: 'kick', castPrio: 4, school: 'frost', instFlag: 'tide_hymn' },
         ] }),
+      siren: () => U({ id: 'sr', name: 'Певица рифа', icon: '🎶', hp: 72, atk: 13, def: 2, speed: 12, mana: 40,
+        abilities: [
+          { id: 'b', name: 'Волна', cost: 0, cd: 0, type: 'damage', power: 1.05, school: 'frost' },
+          { id: 'c', name: 'Гимн моря', cost: 12, cd: 2, type: 'cast_aoe', power: 0.80, castKind: 'kick', castPrio: 4, school: 'frost', instFlag: 'tide_hymn' },
+        ] }),
       tentacle: () => U({ id: 'th', name: 'Щупальце', icon: '🌊', role: 'tank', hp: 150, atk: 18, def: 8, speed: 7, instRole: 'tentacle',
         abilities: [
           { id: 't', name: 'Хватка', cost: 0, cd: 0, type: 'damage', power: 1.60, school: 'physical', instFlag: 'tide_grab' },
@@ -134,6 +139,11 @@
         abilities: [
           { id: 'cleave', name: 'Удар ци', cost: 0, cd: 0, type: 'damage', power: 1.15 },
           { id: 'whirl', name: 'Вихрь листвы', cost: 10, cd: 3, type: 'aoe', power: 0.55, school: 'nature' },
+        ] }),
+      adept: () => U({ id: 'ja', name: 'Старший ученик', icon: '🎋', hp: 102, atk: 16, def: 5, speed: 11,
+        abilities: [
+          { id: 'cleave', name: 'Удар ци', cost: 0, cd: 0, type: 'damage', power: 1.25 },
+          { id: 'whirl', name: 'Вихрь листвы', cost: 10, cd: 2, type: 'aoe', power: 0.70, school: 'nature' },
         ] }),
       whisper: () => U({ id: 'sha', name: 'Шёпот ша', icon: '☯️', hp: 78, atk: 14, def: 2, speed: 11, mana: 40,
         abilities: [
@@ -317,30 +327,35 @@
     const extraP = k >= 10 ? 1 : 0;
     const extraT = k >= 12 ? 1 : 0;
     if (theme === 'tide') {
-      const lit = { list: ['priest', ...Array(3 + extraA).fill('archer'), ...Array(extraP).fill('priest')], vent: true };
-      const grab = { list: ['tentacle', 'priest', ...Array(2 + extraA).fill('archer'), ...Array(extraP).fill('priest')], vent: true };
+      const lit = { name: 'Жрец глубин читает Гимн моря — сбить', list: ['priest', ...Array(3 + extraA).fill('archer'), ...Array(extraP).fill('priest')], vent: true };
+      const grab = { name: 'Щупальце держит бойца. Пока висит Хватка — бить Щупальце', list: ['tentacle', 'priest', ...Array(2 + extraA).fill('archer'), ...Array(extraP).fill('priest')], vent: true };
+      const choir = { name: 'Жрец глубин и Певица рифа. Оба читают Гимн моря — сбивать обоих', list: ['priest', 'siren', 'tentacle', ...Array(1 + extraA).fill('archer'), ...(extraP ? ['archer'] : [])], vent: true };
       return {
-        start: lit, hall: grab, fork1a: lit, fork1b: { list: ['guard'], champ: true, vent: true },
-        descent: { list: ['tentacle', 'priest', 'oracle', ...(k >= 10 ? ['archer'] : [])], vent: true },
-        fork2a: lit, fork2b: { list: ['lagoon'], champ: true, vent: true },
-        approach: { list: ['guard', ...(extraT ? ['tentacle'] : [])], champ: true, vent: true },
-        mop1: lit, mop2: { list: ['guard'], champ: true, vent: true },
-        mop3: { list: ['oracle', 'priest', 'archer'], vent: true },
+        start: lit, hall: grab, fork1a: lit,
+        fork1b: { name: 'Один Утопленный страж. Удар якорем — стена танка', list: ['guard'], champ: true, vent: true },
+        descent: { name: 'Оракул читает Цунами (не сбить) + Щупальце', list: ['tentacle', 'priest', 'oracle', ...(k >= 10 ? ['archer'] : [])], vent: true },
+        fork2a: choir,
+        fork2b: { name: 'Один Жрец лагуны. Сбить Гимн давления', list: ['lagoon'], champ: true, vent: true },
+        approach: { name: 'Утопленный страж. Удар якорем — стена танка', list: ['guard', ...(extraT ? ['tentacle'] : [])], champ: true, vent: true },
+        mop1: lit, mop2: { name: 'Один Утопленный страж. Удар якорем — стена танка', list: ['guard'], champ: true, vent: true },
+        mop3: { name: 'Оракул + Жрец глубин. Щупальца нет', list: ['oracle', 'priest', 'archer'], vent: true },
       }[nodeId] || null;
     }
     if (theme === 'jade') {
+      const gate = { name: 'Страж двора + один Шёпот ша. Сбить Смятение', list: ['guard', 'whisper', 'student', 'student', 'student'] };
+      const twoWhisper = { name: 'Два Шёпота ша. Сбивать того, кто сейчас читает', list: ['guard', 'whisper', 'whisper', 'student', 'student'] };
+      const verdict = { name: 'Страж двора без кастера. Нефритовый приговор — стена танка', list: ['guard', 'student', 'student', 'student', 'student'] };
+      const leaves = { name: 'Нет Стража двора. Шёпот ша + ученики с Вихрем листвы', list: ['whisper', 'adept', 'adept', 'student', 'student'] };
       return {
-        start: { list: ['guard', 'whisper', 'student', 'student', 'student'] },
-        hall: { list: ['guard', 'whisper', 'whisper', 'student', 'student'] },
-        fork1a: { list: ['guard', 'whisper', 'student', 'student', 'student'] },
-        fork1b: { list: ['stone'], champ: true },
-        descent: { list: ['shadow', 'whisper', 'student', 'student', 'student'] },
-        fork2a: { list: ['whisper', 'student', 'student', 'student', 'student'] },
-        fork2b: { list: ['shadow'], champ: true },
-        approach: { list: ['guardChamp', 'whisper'], champ: true },
-        mop1: { list: ['student', 'student', 'student', 'student', 'student'] },
-        mop2: { list: ['shadow'], champ: true },
-        mop3: { list: ['whisper', 'student', 'student', 'student', 'student'] },
+        start: gate, hall: twoWhisper, fork1a: verdict,
+        fork1b: { name: 'Один Каменный ученик. Сбить Взгляд камня', list: ['stone'], champ: true },
+        descent: { name: 'Тень ша + Шёпот ша. Сначала сбить Смятение', list: ['shadow', 'whisper', 'student', 'student', 'student'] },
+        fork2a: leaves,
+        fork2b: { name: 'Одна Тень ша', list: ['shadow'], champ: true },
+        approach: { name: 'Толстый Страж двора + Шёпот ша', list: ['guardChamp', 'whisper'], champ: true },
+        mop1: { name: 'Пять Учеников монастыря. Кастера нет', list: ['student', 'student', 'student', 'student', 'student'] },
+        mop2: { name: 'Одна Тень ша', list: ['shadow'], champ: true },
+        mop3: leaves,
       }[nodeId] || null;
     }
     if (theme === 'crypt') {
@@ -350,18 +365,25 @@
       const B = ['ritual', 'plate', 'mystic', 'acolyte'];
       if (k >= 5) B.push('shroud');
       if (k >= 10) B.push('acolyte');
+      const veil = ['shroud', 'shroud', 'ritual', 'acolyte'];
+      if (k >= 5) veil.push('acolyte');
+      if (k >= 10) veil.push('plate');
       const v1 = (k + (run?.route?.visited?.length || 0)) % 2 === 0;
       const V = v1
         ? ['necro', 'ritual', 'acolyte', ...(k >= 10 ? ['plate'] : [])]
         : ['pain', 'mystic', 'acolyte', ...(k >= 10 ? ['shroud'] : [])];
       return {
-        start: { list: A }, hall: { list: A }, fork1a: { list: B },
-        fork1b: { list: ['grave', ...(extraT ? ['acolyte'] : [])], champ: true },
-        descent: { list: V },
-        fork2a: { list: A },
-        fork2b: { list: ['urn', ...(extraT ? ['acolyte'] : [])], champ: true },
-        approach: { list: ['grave', ...(extraT ? ['acolyte'] : [])], champ: true },
-        mop1: { list: A }, mop2: { list: ['grave'], champ: true }, mop3: { list: V },
+        start: { name: 'Прах-ритуалист читает Вспышку праха — сбить. Мистик лечит', list: A },
+        hall: { name: 'Два Ткача савана. Лекаря нет', list: veil },
+        fork1a: { name: 'Надгробный страж в паке. Снять щит одиночными', list: B },
+        fork1b: { name: 'Один Могильный страж. Казнь стража — стена танка', list: ['grave', ...(extraT ? ['acolyte'] : [])], champ: true },
+        descent: { name: v1 ? 'Некромант склепа + ритуалист' : 'Ткач боли. Сок на Всплеск боли', list: V },
+        fork2a: { name: 'Прах-ритуалист читает Вспышку праха — сбить. Мистик лечит', list: A },
+        fork2b: { name: 'Один Хранитель урн. Сбить Хор праха', list: ['urn', ...(extraT ? ['acolyte'] : [])], champ: true },
+        approach: { name: 'Один Могильный страж. Казнь стража — стена танка', list: ['grave', ...(extraT ? ['acolyte'] : [])], champ: true },
+        mop1: { name: 'Прах-ритуалист читает Вспышку праха — сбить. Мистик лечит', list: A },
+        mop2: { name: 'Один Могильный страж. Казнь стража — стена танка', list: ['grave'], champ: true },
+        mop3: { name: v1 ? 'Некромант склепа + ритуалист' : 'Ткач боли. Сок на Всплеск боли', list: V },
       }[nodeId] || null;
     }
     if (theme === 'forge') {
@@ -371,39 +393,53 @@
       const slag = ['bruiser', 'hammer', 'hammer', 'pyro'];
       if (k >= 5) slag.push('pyro');
       if (k >= 10) slag.push('bruiser');
+      const hammers = ['bruiser', 'hammer', 'hammer', 'hammer'];
+      if (k >= 5) hammers.push('pyro');
+      if (k >= 10) hammers.push('pyro');
       return {
-        start: { list: sparks }, hall: { list: slag }, fork1a: { list: sparks },
-        fork1b: { list: ['giant'], champ: true },
-        descent: { list: ['sparkMaster', 'bruiser', 'pyro', ...(k >= 10 ? ['hammer'] : [])] },
-        fork2a: { list: slag },
-        fork2b: { list: ['smith'], champ: true },
-        approach: { list: ['giant', ...(extraT ? ['pyro'] : [])], champ: true },
-        mop1: { list: sparks }, mop2: { list: ['giant'], champ: true },
-        mop3: { list: ['sparkMaster', 'pyro', 'hammer'] },
+        start: { name: 'Два Искровых пироманта. Сбить Живую бомбу', list: sparks },
+        hall: { name: 'Два Молотобойца бьют Вихрем искр + Шлаковый громила', list: slag },
+        fork1a: { name: 'Два Искровых пироманта. Сбить Живую бомбу', list: sparks },
+        fork1b: { name: 'Один Шлаковый исполин. Сбить Перекал, стена на Проковку', list: ['giant'], champ: true },
+        descent: { name: 'Мастер искр читает Выброс жара + Шлаковый громила', list: ['sparkMaster', 'bruiser', 'pyro', ...(k >= 10 ? ['hammer'] : [])] },
+        fork2a: { name: 'Три Молотобойца. Каждый бьёт Вихрем искр', list: hammers },
+        fork2b: { name: 'Один Кователь горна. Сбить Искру горна', list: ['smith'], champ: true },
+        approach: { name: 'Один Шлаковый исполин. Сбить Перекал, стена на Проковку', list: ['giant', ...(extraT ? ['pyro'] : [])], champ: true },
+        mop1: { name: 'Два Искровых пироманта. Сбить Живую бомбу', list: sparks },
+        mop2: { name: 'Один Шлаковый исполин. Сбить Перекал, стена на Проковку', list: ['giant'], champ: true },
+        mop3: { name: 'Мастер искр + пиромант + молотобоец. Громилы нет', list: ['sparkMaster', 'pyro', 'hammer'] },
       }[nodeId] || null;
     }
     if (theme === 'ember') {
-      const area = k >= 5
-        ? { list: ['brute', 'live', 'coal', 'coal', 'coal'], trough: true }
-        : { list: ['brute', 'live', 'coal', 'coal'], trough: true };
+      const ash = k >= 5
+        ? { name: 'Живой уголёк убить одиночным, уголь положить в жёлоб', list: ['brute', 'live', 'coal', 'coal', 'coal'], trough: true }
+        : { name: 'Живой уголёк убить одиночным, уголь положить в жёлоб', list: ['brute', 'live', 'coal', 'coal'], trough: true };
+      const twoLive = k >= 5
+        ? { name: 'Два живых уголька. Второй не трогать, пока первый уголь не в жёлобе', list: ['brute', 'live', 'live', 'coal', 'coal'], trough: true }
+        : { name: 'Два живых уголька. Второй не трогать, пока первый уголь не в жёлобе', list: ['brute', 'live', 'live', 'coal'], trough: true };
+      const erupt = k >= 10
+        ? { name: 'Раскалённый берсерк читает Извержение — сбить. Пепельного громилы нет', list: ['berserk', 'live', 'coal', 'coal'], trough: true }
+        : { name: 'Раскалённый берсерк читает Извержение — сбить. Пепельного громилы нет', list: ['berserk', 'live', 'coal'], trough: true };
       const mix = k >= 10
-        ? { list: ['berserk', 'brute', 'live', 'coal'], trough: true }
-        : { list: ['berserk', 'brute', 'live'], trough: true };
-      const st = { list: ['colossus'], champ: true, liveRound: 2, extraCoal12: extraT };
-      const appr = { list: ['colossus', 'live'], champ: true, extraCoal12: extraT };
+        ? { name: 'Берсерк (сбить Извержение) + Пепельный громила', list: ['berserk', 'brute', 'live', 'coal'], trough: true }
+        : { name: 'Берсерк (сбить Извержение) + Пепельный громила', list: ['berserk', 'brute', 'live'], trough: true };
+      const st = { name: 'Один Угольный колосс. Уголь класть в него', list: ['colossus'], champ: true, liveRound: 2, extraCoal12: extraT };
+      const appr = { name: 'Угольный колосс. Живой уголёк уже на поле', list: ['colossus', 'live'], champ: true, extraCoal12: extraT };
       return {
-        start: area, hall: area, fork1a: area, fork1b: st, descent: mix,
-        fork2a: area, fork2b: st, approach: appr, mop1: area, mop2: st, mop3: mix,
+        start: ash, hall: twoLive, fork1a: ash, fork1b: st, descent: mix,
+        fork2a: erupt, fork2b: st, approach: appr, mop1: ash, mop2: st, mop3: mix,
       }[nodeId] || null;
     }
     if (theme === 'rift') {
       const nShard = k >= 10 ? 4 : (k >= 5 ? 3 : 2);
-      const area = { list: ['crawler', ...Array(nShard).fill('shard')], riftCore: true };
-      const mix = { list: ['guard', 'crawler', 'shard', ...(k >= 10 ? ['shard'] : [])], riftCore: true, emptyChance: 0.5 };
-      const st = { list: ['stalker', ...(extraT ? ['shard'] : [])], champ: true, splitAt: nodeId === 'approach' ? 0.5 : 0.6, splitN: nodeId === 'approach' ? 3 : 4 };
+      const area = { name: 'Толстый Ползун разлома — не танк. Смотри ауру «Скрытое ядро»', list: ['crawler', ...Array(nShard).fill('shard')], riftCore: true };
+      const swarm = { name: 'Одни Осколки пустоты. Толстого нет. Смотри «Скрытое ядро»', list: Array(nShard + 1).fill('shard'), riftCore: true };
+      const walls = { name: 'Два Ползуна разлома. Оба не танки. Смотри «Скрытое ядро»', list: ['crawler', 'crawler', ...Array(Math.max(1, nShard - 1)).fill('shard')], riftCore: true };
+      const mix = { name: 'Страж трещины бьёт по-настоящему + Ползун рядом', list: ['guard', 'crawler', 'shard', ...(k >= 10 ? ['shard'] : [])], riftCore: true, emptyChance: 0.5 };
+      const st = { name: 'Один Пустотный сталкер. На 60% здоровья рассыпается', list: ['stalker', ...(extraT ? ['shard'] : [])], champ: true, splitAt: nodeId === 'approach' ? 0.5 : 0.6, splitN: nodeId === 'approach' ? 3 : 4 };
       return {
-        start: area, hall: area, fork1a: area, fork1b: st, descent: mix,
-        fork2a: area, fork2b: st, approach: st, mop1: area, mop2: st, mop3: area,
+        start: area, hall: swarm, fork1a: area, fork1b: st, descent: mix,
+        fork2a: walls, fork2b: st, approach: st, mop1: area, mop2: st, mop3: swarm,
       }[nodeId] || null;
     }
     return null;
@@ -516,9 +552,9 @@
     }
     if (recipe.riftCore) {
       const shards = out.filter(e => e.instRole === 'rift_shard' || e.instRole === 'rift_crawler');
-      const onCrawler = Math.random() < 0.4;
-      const coreHost = onCrawler
-        ? out.find(e => e.instRole === 'rift_crawler')
+      const crawler = out.find(e => e.instRole === 'rift_crawler');
+      const coreHost = (crawler && Math.random() < 0.4)
+        ? crawler
         : (out.find(e => e.instRole === 'rift_shard') || shards[0]);
       if (coreHost) {
         coreHost.instCore = true;
@@ -541,8 +577,9 @@
       }
     }
     if (theme === 'ember') {
-      const live = out.find(e => e.instRole === 'ember_live');
-      if (live) paintAura(live, 'ember_live', 'Живой уголь', '🔥', 1, 'Убить одиночным. Область кормит жар.');
+      out.filter(e => e.instRole === 'ember_live').forEach((live) => {
+        paintAura(live, 'ember_live', 'Живой уголь', '🔥', 1, 'Убить одиночным. Область кормит жар.');
+      });
     }
     return applyForces(out);
   }
@@ -810,12 +847,63 @@
     combat.enemies.push(copy);
     inst.reflectUid = copy.uid;
     inst.reflectLeft = 2;
-    log('Ложный портрет: ' + copy.name + ' · не кликайте эту карту', 'enemy');
-    toast('Отражение!');
+  }
+
+  function jadeEchoUnit() {
+    return (combat?.enemies || []).find(e => e && e.alive && e.instRole === 'jade_echo') || null;
+  }
+  function spawnJadeEcho() {
+    if (!combat) return;
+    const inst = instCombat();
+    if (jadeEchoUnit()) return;
+    const heroes = (typeof livingHeroes === 'function' ? livingHeroes() : []).filter(h => h && h.alive);
+    if (!heroes.length) return;
+    const src = heroes[Math.floor(Math.random() * heroes.length)];
+    const copy = {
+      uid: (typeof uid === 'function' ? uid() : 'je_' + Date.now()),
+      name: src.fullName || src.name,
+      fullName: src.fullName || src.name,
+      icon: src.icon,
+      classId: src.classId,
+      specId: src.specId,
+      heroId: src.heroId,
+      side: 'ally',
+      role: src.role || 'dps',
+      alive: true,
+      hp: src.hp,
+      maxHp: src.maxHp,
+      atk: 1, def: 0, speed: 1, shield: 0, buffs: [],
+      abilities: [], instObject: false, instRole: 'jade_echo',
+      echoOf: src.uid, forcesValue: 0, isPet: false,
+    };
+    combat.enemies.push(copy);
+    inst.echoUid = copy.uid;
+    inst.echoLeft = 3;
+  }
+  function killJadeEcho() {
+    const echo = jadeEchoUnit();
+    if (!echo) return;
+    echo.alive = false;
+    echo.hp = 0;
+    echo._deadAt = Date.now();
+    const inst = instCombat();
+    inst.echoUid = null;
+    inst.echoLeft = 0;
+  }
+  function feedFromJadeEcho(amount, healer) {
+    const real = (combat.enemies || []).find(e => e.alive && e.instRole === 'jade_whisper')
+      || (combat.enemies || []).find(e => e.alive && e.instRole === 'jade_guard')
+      || seniorEnemy();
+    const heal = Math.max(1, Math.round(Number(amount) || 0));
+    if (real && heal > 0) {
+      real.hp = Math.min(real.maxHp, real.hp + heal);
+      if (typeof floatText === 'function') floatText(real.uid, '+' + (typeof fmt === 'function' ? fmt(heal) : heal), 'heal');
+    }
+    if (healer && healer.side === 'ally') addDoubt(healer);
   }
 
   function aliveCards() {
-    return (combat.enemies || []).filter(e => e && e.alive && e.hp > 0).length;
+    return (combat.enemies || []).filter(e => e && e.alive && e.hp > 0 && e.side !== 'ally').length;
   }
   function instBoss() {
     return (combat.enemies || []).find(e => e.isBoss && e.alive) || null;
@@ -1350,10 +1438,15 @@
           inst.reflectUid = null;
         }
       }
+      if (inst.echoUid) {
+        inst.echoLeft = (inst.echoLeft || 0) - 1;
+        if (inst.echoLeft <= 0) killJadeEcho();
+      }
       const sh = (combat.enemies || []).find(e => e.alive && e.instRole === 'jade_shadow' && !e._jadeHalf);
       if (sh && sh.hp / sh.maxHp <= 0.5) {
         sh._jadeHalf = true;
         spawnJadeReflect(sh);
+        spawnJadeEcho();
       }
       if (combat.type === 'final') {
         const boss = instBoss();
@@ -1709,6 +1802,7 @@
         livingHeroes().forEach(addDoubt);
         const guard = (combat.enemies || []).find(e => e.alive && e.instRole === 'jade_guard');
         spawnJadeReflect(guard || actor);
+        spawnJadeEcho();
       }
       if (flag === 'jade_wave' || name === 'Волна сомнения') {
         livingHeroes().forEach(addDoubt);
@@ -1716,6 +1810,7 @@
       }
       if (flag === 'jade_sha_whisper' || name === 'Шёпот ша') {
         spawnJadeReflect(actor);
+        spawnJadeEcho();
       }
       if (flag === 'jade_gaze' || name === 'Взгляд камня') {
         const already = livingHeroes().find(h => (h.buffs || []).some(b => b.id === 'petrify'));
@@ -1821,6 +1916,10 @@
     const name = ctx?.abilityName || '';
     const aoe = isAoeCtx(ctx);
     const fromAlly = !!(attacker && attacker.side === 'ally');
+    if (target.instRole === 'jade_echo') {
+      if (fromAlly && !aoe && raw > 0) killJadeEcho();
+      return 0;
+    }
 
     if (fromAlly && target.side === 'ally' && (target.buffs || []).some(b => b.id === 'forge_crown')
         && ctx && ctx.school === 'fire') {
@@ -2400,6 +2499,10 @@
   const _heal = typeof healUnit === 'function' ? healUnit : null;
   if (_heal) {
     healUnit = function (t, amount, healer, opts) {
+      if (t && t.instRole === 'jade_echo') {
+        feedFromJadeEcho(amount, healer);
+        return 0;
+      }
       if (healer && healer.side === 'ally') {
         const cut = ((healer.buffs || []).find(b => b.id === 'jade_doubt')?.stacks || 0) * 0.08;
         if (cut) amount = Math.round(amount * (1 - cut));
@@ -2455,7 +2558,7 @@
       if (combat && combat.enemies) {
         const real = combat.enemies.filter(e => e.alive && e.hp > 0 && !e.vaultAway && !isDummyRole(e)
           && e.instRole !== 'ember_live' && e.instRole !== 'forge_ingot');
-        const dummy = combat.enemies.filter(e => isDummyRole(e) || e.instRole === 'ember_live' || e.instRole === 'forge_ingot');
+        const dummy = combat.enemies.filter(e => isDummyRole(e) || e.instRole === 'ember_live' || e.instRole === 'forge_ingot' || e.instRole === 'jade_echo');
         if (!real.length && dummy.length) dummy.forEach(d => { d.alive = false; d.hp = 0; });
       }
       return _check.apply(this, arguments);

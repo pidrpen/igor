@@ -23,9 +23,9 @@
   <script src="class-balance/demonhunter-abilities.js?v=5.4.9.11В"></script>
   <script src="class-balance/cheat-abilities.js?v=5.4.8.38-cheat"></script>
   <script src="class-balance/apply-all.js?v=5.4.9.11В"></script>
-  <link rel="stylesheet" href="css/main.css?v=5.4.9.26В" />
+  <link rel="stylesheet" href="css/main.css?v=5.4.9.34В" />
   <link rel="stylesheet" href="css/theme-controls.css?v=5.4.9.23В" />
-  <link rel="stylesheet" href="css/test-room.css?v=5.4.9.25В" />
+  <link rel="stylesheet" href="css/test-room.css?v=5.4.9.28В" />
 </head>
 <body>
   <button class="btn btn-sm" type="button" id="btn-lobby-chrome" title="Скрыть карточки и посмотреть фон">Скрыть интерфейс</button>
@@ -83,7 +83,7 @@
         <div class="party-slots" id="party-slots"></div>
         <p class="party-req bad" id="party-req">Нужны: 1 танк · 1 целитель · 3 бойца</p>
         <button class="btn btn-ok hidden" type="button" id="btn-fill-raid" style="width:100%;margin:.35rem 0 .55rem">Собрать рейд 10 (пресет)</button>
-        <p class="keys-hint hidden" id="raid-hint">Лэй Шэнь, Повелитель Грома. <b>Обычный</b> — около <b>10.6м</b> HP, тяжёлый заход. <b>Героический</b> — около <b>19.5м</b> HP. Союзники ходят сами — клик по герою, чтобы взять управление.</p>
+        <p class="keys-hint hidden" id="raid-hint">Лэй Шэнь, Повелитель Грома. <b>Обычный</b> — около <b>10.6м</b> HP, таймер <b>15:00</b>. <b>Героический</b> — около <b>19.5м</b> HP, таймер <b>10:00</b>. Союзники ходят сами — клик по герою, чтобы взять управление. После победы — аксессуар рейда (клик в бою).</p>
         <div class="key-row" id="key-setup">
           <div class="field"><label>Подземелье</label><select id="dungeon-select"></select></div>
           <div class="field"><label>Уровень ключа</label><select id="key-level"></select></div>
@@ -288,8 +288,18 @@
           <img class="brew-keg-shard" id="cmp-keg-s1" alt="" draggable="false" />
           <img class="brew-keg-shard" id="cmp-keg-s2" alt="" draggable="false" />
           <canvas class="cmp-canvas" id="cmp-aoe-fx"></canvas>
+          <div class="cmp-fx-layer" id="cmp-fx-layer" aria-hidden="true"></div>
         </div>
         <p class="test-hint" id="cmp-status">Выбери спек слева, потом кнопку. 1 или 5 духов сверху.</p>
+        <div class="cmp-fx-row" id="cmp-fx-row" role="group" aria-label="Ролики школ">
+          <span class="cmp-fx-label">Ролики (CSS, как в бою)</span>
+          <button class="btn btn-sm" type="button" data-cmp-fx="bolt">Снаряд</button>
+          <button class="btn btn-sm" type="button" data-cmp-fx="hit">Удар</button>
+          <button class="btn btn-sm" type="button" data-cmp-fx="aoe">Область</button>
+          <button class="btn btn-sm" type="button" data-cmp-fx="shield">Щит</button>
+          <button class="btn btn-sm" type="button" data-cmp-fx="kick">Кик</button>
+          <button class="btn btn-sm" type="button" data-cmp-fx="death">Смерть</button>
+        </div>
         <div class="ability-zone test-ability-zone">
           <div class="section-title" style="text-align:center;margin-bottom:.35rem">Панель спека · 1–9</div>
           <div class="ability-bar" id="cmp-ability-bar" aria-label="Панель способностей"></div>
@@ -430,6 +440,11 @@
           </div>
           <div class="boss-flank-slot" id="boss-flank-right" data-flank="right"></div>
         </div>
+        <div class="place-title hidden" id="place-title">
+          <div class="place-dungeon" id="place-dungeon"></div>
+          <div class="place-room" id="place-room">Бой</div>
+        </div>
+        <div class="tele-banner hidden" id="tele-banner" aria-live="polite"></div>
         <div class="phase-banner" id="phase-banner">Бой</div>
         <div class="phase-sub" id="phase-sub"></div>
         <div id="raid-phase-hud" class="raid-phase-hud hidden">
@@ -489,14 +504,24 @@
         <div id="log"></div>
       </aside>
     </div>
-    <div id="passive-pocket" class="passive-pocket hidden" aria-label="Пассивные бафы">
-      <button type="button" class="passive-pocket-toggle" id="passive-pocket-toggle" title="Пассивные бафы">
-        <span class="passive-pocket-title">Пассивные бафы</span>
+    <div id="passive-pocket" class="passive-pocket hidden" aria-label="Пассивные способности">
+      <button type="button" class="passive-pocket-toggle" id="passive-pocket-toggle" title="Пассивные способности">
+        <span class="passive-pocket-title">Пассивные способности</span>
         <span class="passive-pocket-chevron" id="passive-pocket-chevron">▼</span>
       </button>
-      <div class="passive-pocket-panel" id="passive-tray" role="region" aria-label="Список пассивных бафов">
+      <div class="passive-pocket-panel" id="passive-tray" role="region" aria-label="Список пассивных способностей">
         <div class="passive-pocket-scroll" id="passive-list"></div>
         <div class="passive-pocket-tip hidden" id="passive-pocket-tip" role="tooltip" aria-live="polite"></div>
+      </div>
+    </div>
+    <div id="aura-pocket" class="passive-pocket aura-pocket hidden" aria-label="Баффы отряда">
+      <button type="button" class="passive-pocket-toggle" id="aura-pocket-toggle" title="Баффы отряда">
+        <span class="passive-pocket-title">Баффы отряда</span>
+        <span class="passive-pocket-chevron" id="aura-pocket-chevron">▼</span>
+      </button>
+      <div class="passive-pocket-panel" id="aura-tray" role="region" aria-label="Список классовых баффов отряда">
+        <div class="passive-pocket-scroll" id="aura-list"></div>
+        <div class="passive-pocket-tip hidden" id="aura-pocket-tip" role="tooltip" aria-live="polite"></div>
       </div>
     </div>
     <div id="recount-panel" class="recount-panel collapsed hidden" data-tab="damage">
@@ -607,8 +632,8 @@
   <div class="skill-fx-layer" id="skill-fx-layer"></div>
   <script src="js/state.js?v=5.4.9-dh"></script>
   <script src="js/core.js?v=5.4.9-dh"></script>
-  <script src="js/ui/balance-panel.js?v=5.4.9.26В"></script>
-  <script src="js/ui/diverge-panel.js?v=5.4.9.26В"></script>
+  <script src="js/ui/balance-panel.js?v=5.4.9.35В"></script>
+  <script src="js/ui/diverge-panel.js?v=5.4.9.35В-pour"></script>
   <script src="js/ui/fx.js?v=5.4.9.23В"></script>
   <script src="js/ui/skill-fx-warrior.js?v=5.4.9.26В"></script>
   <script src="js/ui/skill-fx-paladin.js?v=5.4.9.24В"></script>
@@ -625,40 +650,40 @@
   <script src="js/ui/skill-fx-demonhunter.js?v=5.4.9.24В"></script>
   <script src="js/enemies.js?v=5.4.9.15В"></script>
   <script src="js/route.js?v=5.4.9.26В"></script>
-  <script src="js/raid.js?v=5.4.9.25В"></script>
-  <script src="js/gear.js?v=5.4.9-hour"></script>
+  <script src="js/raid.js?v=5.4.9.35В"></script>
+  <script src="js/gear.js?v=5.4.9.33В"></script>
   <script src="js/shop/shop-sets.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop-trinkets-data.js?v=5.4.8.34-gear2"></script>
   <script src="js/shop/shop.js?v=5.4.8.34-gear6"></script>
   <script src="js/systems/telegraph-loot.js?v=5.4.9.26В"></script>
   <script src="js/systems/stats.js?v=5.4.9.22В"></script>
-  <script src="js/systems/passives.js?v=5.4.9.25В"></script>
+  <script src="js/systems/passives.js?v=5.4.9.28В"></script>
   <script src="js/systems/meter.js?v=5.4.9.26В"></script>
   <script src="js/systems/ability-data.js?v=5.4.9.26В"></script>
   <script src="js/systems/party-auras.js?v=5.4.9.10В"></script>
-  <script src="js/systems/field.js?v=5.4.9.10В"></script>
+  <script src="js/systems/field.js?v=5.4.9.35В"></script>
   <script src="js/systems/resources.js?v=5.4.9-runes3"></script>
-  <script src="js/systems/combat-loop.js?v=5.4.9.26В"></script>
-  <script src="js/ui/combat-ui.js?v=5.4.9.26В"></script>
+  <script src="js/systems/combat-loop.js?v=5.4.9.35В"></script>
+  <script src="js/ui/combat-ui.js?v=5.4.9.31В"></script>
   <script src="js/systems/abilities.js?v=5.4.9.26В"></script>
   <script src="js/systems/damage.js?v=5.4.9.26В"></script>
   <script src="js/systems/ai.js?v=5.4.9.07"></script>
   <script src="js/systems/party-ai.js?v=5.4.9.26В"></script>
-  <script src="js/systems/combat-flow.js?v=5.4.9.25В"></script>
-  <script src="js/save.js?v=5.4.9.23В"></script>
-  <script src="js/ui.js?v=5.4.9.23В"></script>
-  <script src="js/dungeon-inst.js?v=5.4.9.15В"></script>
+  <script src="js/systems/combat-flow.js?v=5.4.9.29В"></script>
+  <script src="js/save.js?v=5.4.9.34В"></script>
+  <script src="js/ui.js?v=5.4.9.35В"></script>
+  <script src="js/dungeon-inst.js?v=5.4.9.31В"></script>
   <script src="js/leveling/curve.js?v=5.4.9.19В"></script>
-  <script src="js/leveling/hero-save.js?v=5.4.9.23В"></script>
+  <script src="js/leveling/hero-save.js?v=5.4.9.27В"></script>
   <script src="js/leveling/unlocks.js?v=5.4.9.17В"></script>
   <script src="js/leveling/hero-talents.js?v=5.4.9.17В"></script>
-  <script src="js/leveling/hub.js?v=5.4.9.25В"></script>
+  <script src="js/leveling/hub.js?v=5.4.9.27В"></script>
   <script src="js/raid-split.js?v=5.4.9-split"></script>
   <script src="js/raid-finale.js?v=5.4.9-finale"></script>
   <script src="js/raid-catacombs.js?v=5.4.9-hour"></script>
   <script src="js/test-room/sprites.js?v=5.4.8.34-v06"></script>
   <script src="js/test-room/test-room.js?v=5.4.9-brew4"></script>
-  <script src="js/test-room/compare.js?v=5.4.9-cut2"></script>
+  <script src="js/test-room/compare.js?v=5.4.9.27В"></script>
   <script src="js/test-room/style-lab.js?v=5.4.9-style2"></script>
   <script src="js/test-room/brew-rooms.js?v=5.4.9-brew4"></script>
 </body>

@@ -456,16 +456,17 @@
   }
 
   function fieldShouldAuto(actor) {
+    if (!FIELD_LIVE) return false;
     if (!actor || actor.side !== 'ally' || actor.isPet) return false;
-    if (!fieldSplitActive() && !(typeof run !== 'undefined' && run && run.raid)) return false;
-    if (typeof shouldRaidAuto === 'function' && typeof isRaidRun === 'function' && isRaidRun()) {
-      return shouldRaidAuto(actor);
-    }
     if (!fieldSplitActive()) return false;
+    if (typeof shouldRaidAuto === 'function') return shouldRaidAuto(actor);
     try { raidAutoAllies = true; } catch (_) {}
     if (typeof raidPlayerUid === 'undefined' || !raidPlayerUid) {
-      var tank = (run.party || []).find(function (p) { return p.role === 'tank' && p.alive; });
-      raidPlayerUid = (tank && tank.uid) || (run.party[0] && run.party[0].uid);
+      if (typeof pickAutoPlayerUid === 'function') raidPlayerUid = pickAutoPlayerUid();
+      else {
+        var dps = (run.party || []).find(function (p) { return p.role === 'dps' && p.alive; });
+        raidPlayerUid = (dps && dps.uid) || (run.party[0] && run.party[0].uid);
+      }
     }
     return actor.uid !== raidPlayerUid;
   }

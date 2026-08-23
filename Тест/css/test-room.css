@@ -445,6 +445,41 @@
 }
 .brew-keg { width: 52px; height: auto; }
 .brew-keg-shard { width: 34px; height: auto; }
+.cmp-fx-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-items: center;
+  justify-content: center;
+  margin: .35rem 0 .15rem;
+}
+.cmp-fx-row .btn {
+  min-width: 5.2rem;
+}
+.cmp-fx-label {
+  width: 100%;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+  letter-spacing: .04em;
+}
+.cmp-fx-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+  overflow: hidden;
+}
+.cmp-fx-dummy-dead { filter: grayscale(1) brightness(.45); opacity: .35; transition: filter .35s, opacity .35s; }
+.cmp-fx-kick {
+  outline: 3px solid #f0c14b;
+  box-shadow: 0 0 18px rgba(240,193,75,.7);
+}
+.cmp-actor.shielded,
+#cmp-caster-portrait-img.shielded {
+  filter: drop-shadow(0 0 14px #3dd68c);
+}
 #cmp-stage-aoe .brew-keg,
 #cmp-stage-aoe .brew-keg-shard {
   z-index: 6;
@@ -944,9 +979,36 @@
   border-color: #4a70b0;
   color: #c8dcff;
 }
+.rm-here {
+  text-align: center;
+  font-family: Cinzel, serif;
+  font-weight: 700;
+  font-size: .82rem;
+  color: var(--gold-bright);
+  letter-spacing: .03em;
+  padding: .2rem .3rem .35rem;
+  line-height: 1.25;
+}
+.rm-you {
+  font-style: normal;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: #081018;
+  background: var(--gold-bright);
+  border-radius: 4px;
+  padding: .02rem .28rem;
+  margin-left: .25rem;
+  vertical-align: middle;
+}
 .rm-node.current {
   border-color: var(--gold);
   box-shadow: inset 3px 0 0 var(--gold), 0 0 12px rgba(224,192,96,.18);
+  background: color-mix(in oklab, var(--gold) 14%, var(--panel2));
+}
+.rm-node.current .rm-name {
+  font-size: .8rem;
+  white-space: normal;
   background: linear-gradient(90deg, rgba(224,192,96,.16), transparent);
   color: var(--text);
 }
@@ -1412,6 +1474,8 @@ body.raid-run .phase-sub,
 body.raid-run #battle-area > div > .section-title {
   display: none !important;
 }
+body.raid-run .place-title { display: block; }
+body.raid-run .place-room { font-size: 1.2rem; }
 .boss-flank {
   display: flex;
   align-items: flex-end;
@@ -1729,6 +1793,10 @@ body.raid-run .passive-pocket {
   z-index: 80;
   width: min(280px, calc(42vw - 1rem));
 }
+body.raid-run .passive-pocket.aura-pocket {
+  left: auto;
+  right: .55rem;
+}
 body.raid-run .recount-panel {
   left: .55rem;
   right: auto;
@@ -1806,28 +1874,28 @@ body.raid-run .raid-alert.soak { border-color: #4ac; color: #9de; }
   left: .45rem;
   z-index: 8;
   display: flex;
-  gap: .45rem;
+  gap: .55rem;
   align-items: center;
-  padding: .35rem .5rem;
-  background: rgba(8, 12, 10, .82);
-  border: 1px solid rgba(120, 180, 100, .35);
+  padding: .5rem .65rem;
+  background: rgba(8, 12, 10, .88);
+  border: 1px solid rgba(120, 180, 100, .45);
   border-radius: 10px;
-  max-width: 240px;
+  max-width: 320px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
 }
 .raid-cast-dock.hidden { display: none; }
 .raid-cast-dock img {
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid #6a8;
 }
 .raid-cast-meta { flex: 1; min-width: 0; }
-#raid-cast-title { font-size: .72rem; color: #cde; }
-#raid-cast-spell { font-size: .68rem; color: #9c6; margin: .1rem 0 .2rem; }
+#raid-cast-title { font-size: .82rem; color: #cde; font-weight: 700; }
+#raid-cast-spell { font-size: .84rem; color: #d4e05a; margin: .12rem 0 .28rem; font-weight: 800; }
 .raid-cast-bar {
-  height: 7px;
+  height: 10px;
   background: #1a2018;
   border-radius: 99px;
   overflow: hidden;

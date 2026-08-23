@@ -137,7 +137,7 @@
       '<h1>Таверна</h1><span class="keys-hint">Один герой. Ключ 5 и рейд остаются открыты.</span></div>' +
       '<div class="tv-card"><div class="section-title">Создать героя</div>' +
       '<p class="keys-hint">Спек можно сменить позже в таверне. Уровень и опыт остаются, дерево талантов сбросится. Изобретатель — общее дерево, не своё.</p>' +
-      '<label>Имя</label><input id="tv-name" maxlength="18" placeholder="Имя" style="width:100%;margin:.35rem 0 .6rem;padding:.4rem;border-radius:8px;border:1px solid var(--border);background:#101218;color:var(--text)" />' +
+      '<label>Ник</label><input id="tv-name" maxlength="24" placeholder="Ник в бою" style="width:100%;margin:.35rem 0 .6rem;padding:.4rem;border-radius:8px;border:1px solid var(--border);background:#101218;color:var(--text)" />' +
       '<div class="section-title">Класс</div><div class="tv-create-grid" id="tv-classes">' + clsHtml + '</div>' +
       '<div class="section-title" style="margin-top:.6rem">Специализация</div><div class="tv-spec-grid" id="tv-specs">' + (specHtml || '<span class="keys-hint">Сначала класс</span>') + '</div>' +
       '<button class="btn btn-primary" type="button" id="tv-create" style="margin-top:.7rem;width:100%" ' + (pickClassId && pickSpecId ? '' : 'disabled') + '>Создать</button></div>';
@@ -249,11 +249,16 @@
       '<div class="tv-grid">' +
       '<div class="tv-card">' +
       '<div style="display:flex;gap:.7rem;align-items:center"><img alt="" src="' + art(h.classId, h.specId) + '" style="width:72px;height:72px;border-radius:10px;object-fit:cover" />' +
-      '<div><div style="font-family:var(--font-display);font-size:1.15rem">' + h.name + '</div>' +
-      '<div>' + (cls ? cls.name : h.classId) + ' · ' + (s.spec ? s.spec.name : h.specId) + ' · ' + role + '</div>' +
+      '<div><div style="font-family:var(--font-display);font-size:1.15rem">' + h.name +
+      ' (' + (cls ? cls.name : h.classId) + (s.spec ? ' · ' + s.spec.name : '') + ')</div>' +
+      '<div>' + role + '</div>' +
       '<div class="keys-hint">ур. ' + h.level + ' / 40</div></div></div>' +
       '<div class="xp-bar" style="margin-top:.5rem"><i style="width:' + pct + '%"></i></div>' +
       '<div class="keys-hint">' + (h.level >= 40 ? 'опыт не растёт' : (h.xp + ' / ' + need + ' опыта')) + '</div>' +
+      '<label style="display:block;margin-top:.45rem">Ник</label>' +
+      '<div style="display:flex;gap:.35rem;margin:.2rem 0 .35rem">' +
+      '<input id="tv-nick" maxlength="24" value="' + String(h.name || '').replace(/"/g, '&quot;') + '" style="flex:1;padding:.4rem;border-radius:8px;border:1px solid var(--border);background:#101218;color:var(--text)" />' +
+      '<button class="btn btn-sm" type="button" id="tv-nick-save">Сохранить</button></div>' +
       '<div class="tv-sheet">' +
       '<div>Здоровье<b>' + fmtN(s.hp) + '</b></div>' +
       '<div>Атака<b>' + fmtN(s.atk) + '</b></div>' +
@@ -279,6 +284,29 @@
         ? '<p class="keys-hint">Изобретатель: общее дерево, не отдельная ветка.</p>' : '') +
       '<div id="tv-tree">' + renderTalents(h) + '</div></div></div>';
     $('tv-back').onclick = backLobby;
+    var nickSave = $('tv-nick-save');
+    if (nickSave) {
+      nickSave.onclick = function () {
+        var inp = $('tv-nick');
+        var next = inp ? inp.value : '';
+        var rec = typeof G.igorHeroRename === 'function' ? G.igorHeroRename(next) : null;
+        if (!rec) { toastMsg('Ник не сохранился'); return; }
+        toastMsg(rec.name + ' (' + (cls ? cls.name : '') + (s.spec ? ' · ' + s.spec.name : '') + ')');
+        try { if (typeof syncHeroPartySlot === 'function') syncHeroPartySlot(); } catch (_) {}
+        renderHub();
+        paintPlaque();
+        try { if (typeof renderParty === 'function') renderParty(); } catch (_) {}
+      };
+      var nickInp = $('tv-nick');
+      if (nickInp) {
+        nickInp.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            nickSave.click();
+          }
+        });
+      }
+    }
     $('tv-queue-btn').onclick = function () { startQueue(h); };
     $('tv-respec').onclick = function () {
       respecOpen = !respecOpen;
@@ -440,8 +468,9 @@
       if (p.isHero) {
         u._isHero = true;
         u._heroLevel = h.level;
+        u._heroNick = h.name;
         u.name = h.name;
-        u.fullName = h.name + ' · ' + (u.className || '') + ' (' + (u.specName || '') + ')';
+        u.fullName = h.name + ' (' + (u.className || '') + (u.specName ? ' · ' + u.specName : '') + ')';
       } else {
         u._isHero = false;
         u._heroLevel = h.level;
@@ -452,8 +481,9 @@
     if (typeof assignPartyUniqueNames === 'function') assignPartyUniqueNames(units);
     var me = units.find(function (u) { return u._isHero; }) || units[0];
     if (me) {
+      me._heroNick = h.name;
       me.name = h.name;
-      me.fullName = h.name + ' · ' + (me.className || '') + ' (' + (me.specName || '') + ')';
+      me.fullName = h.name + ' (' + (me.className || '') + (me.specName ? ' · ' + me.specName : '') + ')';
     }
     run = {
       dungeon: dungeon, keyLevel: 2, affixes: [], roomIndex: 0, talents: [], deaths: 0,
@@ -484,7 +514,7 @@
     var cls = classObj(h.classId);
     var spec = specObj(h.classId, h.specId);
     var need = h.level >= 40 ? 0 : (typeof G.igorHeroXpToNext === 'function' ? G.igorHeroXpToNext(h.level) : 0);
-    el.textContent = h.name + ' · ' + (cls ? cls.name : h.classId) + ' (' + (spec ? spec.name : h.specId) + ') · ур. ' +
+    el.textContent = h.name + ' (' + (cls ? cls.name : h.classId) + (spec ? ' · ' + spec.name : '') + ') · ур. ' +
       h.level + (need ? (' · ' + h.xp + '/' + need + ' опыта') : (h.honest !== false ? ' · Честно прокачен' : ' · потолок')) +
       (h.honest !== false ? ' · +10% харак.' : '');
     try { if (typeof refreshHonestPickCards === 'function') refreshHonestPickCards(); } catch (_) {}

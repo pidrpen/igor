@@ -22,9 +22,9 @@
   <script src="class-balance/engineer-abilities.js?v=5.4.9.11"></script>
   <script src="class-balance/demonhunter-abilities.js?v=5.4.9.11"></script>
   <script src="class-balance/apply-all.js?v=5.4.9.11"></script>
-  <link rel="stylesheet" href="css/main.css?v=5.4.9.26" />
+  <link rel="stylesheet" href="css/main.css?v=5.4.9.33" />
   <link rel="stylesheet" href="css/theme-controls.css?v=5.4.9.23" />
-  <link rel="stylesheet" href="css/raid.css?v=5.4.9.26" />
+  <link rel="stylesheet" href="css/raid.css?v=5.4.9.28" />
 </head>
 <body>
   <button class="btn btn-sm" type="button" id="btn-lobby-chrome" title="Скрыть карточки и посмотреть фон">Скрыть интерфейс</button>
@@ -147,6 +147,11 @@
           </div>
           <div class="boss-flank-slot" id="boss-flank-right" data-flank="right"></div>
         </div>
+        <div class="place-title hidden" id="place-title">
+          <div class="place-dungeon" id="place-dungeon"></div>
+          <div class="place-room" id="place-room">Бой</div>
+        </div>
+        <div class="tele-banner hidden" id="tele-banner" aria-live="polite"></div>
         <div class="phase-banner" id="phase-banner">Бой</div>
         <div class="phase-sub" id="phase-sub"></div>
         <div id="raid-phase-hud" class="raid-phase-hud hidden">
@@ -207,12 +212,22 @@
     </div>
     <div id="passive-pocket" class="passive-pocket collapsed hidden" aria-label="Пассивные способности">
       <button type="button" class="passive-pocket-toggle" id="passive-pocket-toggle" title="Пассивные способности">
-        <span class="passive-pocket-title">✨ Пассивные способности</span>
+        <span class="passive-pocket-title">Пассивные способности</span>
         <span class="passive-pocket-chevron" id="passive-pocket-chevron">▼</span>
       </button>
-      <div class="passive-pocket-panel" id="passive-tray" role="region" aria-label="Список пассивок">
+      <div class="passive-pocket-panel" id="passive-tray" role="region" aria-label="Список пассивных способностей">
         <div class="passive-pocket-scroll" id="passive-list"></div>
         <div class="passive-pocket-tip hidden" id="passive-pocket-tip" role="tooltip" aria-live="polite"></div>
+      </div>
+    </div>
+    <div id="aura-pocket" class="passive-pocket aura-pocket hidden" aria-label="Баффы отряда">
+      <button type="button" class="passive-pocket-toggle" id="aura-pocket-toggle" title="Баффы отряда">
+        <span class="passive-pocket-title">Баффы отряда</span>
+        <span class="passive-pocket-chevron" id="aura-pocket-chevron">▼</span>
+      </button>
+      <div class="passive-pocket-panel" id="aura-tray" role="region" aria-label="Список классовых баффов отряда">
+        <div class="passive-pocket-scroll" id="aura-list"></div>
+        <div class="passive-pocket-tip hidden" id="aura-pocket-tip" role="tooltip" aria-live="polite"></div>
       </div>
     </div>
     <div id="recount-panel" class="recount-panel collapsed hidden" data-tab="damage">
@@ -317,7 +332,7 @@
   <div class="skill-fx-layer" id="skill-fx-layer"></div>
   <script src="js/state.js?v=5.4.9.08"></script>
   <script src="js/core.js?v=5.4.9.08"></script>
-  <script src="js/ui/balance-panel.js?v=5.4.9.26"></script>
+  <script src="js/ui/balance-panel.js?v=5.4.9.33"></script>
   <script src="js/ui/fx.js?v=5.4.9.23"></script>
   <script src="js/ui/skill-fx-warrior.js?v=5.4.9.26"></script>
   <script src="js/ui/skill-fx-paladin.js?v=5.4.9.24"></script>
@@ -334,30 +349,30 @@
   <script src="js/ui/skill-fx-demonhunter.js?v=5.4.9.24"></script>
   <script src="js/enemies.js?v=5.4.9.17"></script>
   <script src="js/route.js?v=5.4.9.26"></script>
-  <script src="js/raid.js?v=5.4.9.26"></script>
-  <script src="js/gear.js?v=5.4.9.15"></script>
+  <script src="js/raid.js?v=5.4.9.33"></script>
+  <script src="js/gear.js?v=5.4.9.33"></script>
   <script src="js/systems/telegraph-loot.js?v=5.4.9.26"></script>
   <script src="js/systems/stats.js?v=5.4.9.22"></script>
-  <script src="js/systems/passives.js?v=5.4.9.26"></script>
+  <script src="js/systems/passives.js?v=5.4.9.28"></script>
   <script src="js/systems/meter.js?v=5.4.9.26"></script>
   <script src="js/systems/ability-data.js?v=5.4.9.26"></script>
   <script src="js/systems/party-auras.js?v=5.4.9.06"></script>
   <script src="js/systems/resources.js?v=5.4.9-runes3"></script>
-  <script src="js/systems/combat-loop.js?v=5.4.9.26"></script>
-  <script src="js/ui/combat-ui.js?v=5.4.9.26"></script>
+  <script src="js/systems/combat-loop.js?v=5.4.9.33"></script>
+  <script src="js/ui/combat-ui.js?v=5.4.9.33"></script>
   <script src="js/systems/abilities.js?v=5.4.9.26"></script>
   <script src="js/systems/damage.js?v=5.4.9.26"></script>
   <script src="js/systems/ai.js?v=5.4.8.40-pour"></script>
   <script src="js/systems/party-ai.js?v=5.4.9.26"></script>
-  <script src="js/systems/combat-flow.js?v=5.4.9.26"></script>
+  <script src="js/systems/combat-flow.js?v=5.4.9.33"></script>
   <script src="js/save.js?v=5.4.9.23"></script>
-  <script src="js/ui.js?v=5.4.9.23"></script>
+  <script src="js/ui.js?v=5.4.9.33"></script>
   <script src="js/leveling/curve.js?v=5.4.9.19"></script>
-  <script src="js/leveling/hero-save.js?v=5.4.9.23"></script>
+  <script src="js/leveling/hero-save.js?v=5.4.9.27"></script>
   <script src="js/leveling/unlocks.js?v=5.4.9.17"></script>
   <script src="js/leveling/hero-talents.js?v=5.4.9.17"></script>
-  <script src="js/leveling/hub.js?v=5.4.9.26"></script>
-  <script src="js/dungeon-inst.js?v=5.4.9.16"></script>
+  <script src="js/leveling/hub.js?v=5.4.9.27"></script>
+  <script src="js/dungeon-inst.js?v=5.4.9.33"></script>
   <script src="js/raid-split.js?v=5.4.9-pour"></script>
   <script src="js/raid-finale.js?v=5.4.9-pour"></script>
   <script src="js/raid-catacombs.js?v=5.4.9-lsn"></script>

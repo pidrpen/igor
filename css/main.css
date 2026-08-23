@@ -153,6 +153,10 @@
       transition: border-color var(--motion-quick) var(--ease-out), box-shadow var(--motion-quick) var(--ease-out), transform var(--motion-fast) var(--ease-out);
     }
     .unit.ally { border-color: color-mix(in oklab, var(--cc, var(--gold)) 35%, var(--border)); }
+    .unit.jade-echo {
+      opacity: .78;
+      filter: saturate(.55) brightness(1.06);
+    }
     .lobby-hero {
       display: flex; flex-direction: column; align-items: center; gap: .35rem; margin-bottom: .5rem;
       position: relative; z-index: 1;
@@ -904,6 +908,28 @@
       border-color: color-mix(in oklab, #3dd68c 45%, transparent);
       color: #b8f0d0;
     }
+    .rm-here {
+      text-align: center;
+      font-family: Cinzel, serif;
+      font-weight: 700;
+      font-size: .82rem;
+      color: var(--gold-bright);
+      letter-spacing: .03em;
+      padding: .2rem .3rem .35rem;
+      line-height: 1.25;
+    }
+    .rm-you {
+      font-style: normal;
+      font-size: .58rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+      color: #081018;
+      background: var(--gold-bright);
+      border-radius: 4px;
+      padding: .02rem .28rem;
+      margin-left: .25rem;
+      vertical-align: middle;
+    }
     .rm-node {
       display: grid;
       grid-template-columns: 1.1rem minmax(0, 1fr) auto auto;
@@ -1103,6 +1129,47 @@
     }
     .pet-port .art-wrap.pet-face .art-emoji { font-size: .9rem; }
     .pet-port .pet-timer, .pet-port .pet-hp { z-index: 1; }
+    .place-title {
+      text-align: center;
+      flex: 0 0 auto;
+      margin: 0 0 .12rem;
+      pointer-events: none;
+    }
+    .place-title.hidden { display: none; }
+    .place-dungeon {
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .place-room {
+      font-family: Cinzel, serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--gold-bright);
+      letter-spacing: .04em;
+      text-shadow: 0 0 22px rgba(224,192,96,.35);
+      line-height: 1.15;
+    }
+    .tele-banner {
+      text-align: center;
+      font-weight: 800;
+      font-size: .92rem;
+      letter-spacing: .03em;
+      padding: .28rem .7rem;
+      margin: 0 auto .2rem;
+      max-width: min(720px, 94%);
+      border-radius: 8px;
+      border: 1px solid var(--gold);
+      background: rgba(12, 10, 8, .88);
+      color: var(--gold-bright);
+      box-shadow: 0 6px 18px rgba(0,0,0,.45);
+    }
+    .tele-banner.hidden { display: none !important; }
+    .tele-banner.kind-kick { border-color: #f0c14b; color: #ffe9a8; box-shadow: 0 0 16px rgba(240,193,75,.35); }
+    .tele-banner.kind-buster { border-color: #e74c3c; color: #ffb0a0; box-shadow: 0 0 16px rgba(231,76,60,.4); }
+    .tele-banner.kind-aoe { border-color: #c77dff; color: #e0c0ff; box-shadow: 0 0 16px rgba(199,125,255,.35); }
     .phase-banner {
       text-align: center; font-weight: 700; color: var(--gold-bright);
       font-family: Cinzel, serif; font-size: 1.05rem; letter-spacing: .04em;
@@ -1762,10 +1829,10 @@
     .buff.is-hot { border-color: #3dd68c; background: #14281c; }
     .buff.is-debuff { border-color: #e74c3c; background: #2a1515; }
     .buff.is-buff { border-color: #4da3ff; background: #152030; }
-    .cast-bar { height: 8px; margin-top: 0; background: #1a1508; border: 1px solid #8a7030; border-radius: 3px; overflow: hidden; }
+    .cast-bar { height: 10px; margin-top: 0; background: #1a1508; border: 1px solid #8a7030; border-radius: 3px; overflow: hidden; }
     .slot-cast .cast-name {
-      font-size: .65rem; font-weight: 700; color: #f0e0a0; line-height: 12px; white-space: nowrap;
-      overflow: hidden; text-overflow: ellipsis; margin-top: 1px;
+      font-size: .74rem; font-weight: 800; color: #f0e0a0; line-height: 14px; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
       text-shadow: 0 1px 2px #000;
     }
 
@@ -1777,14 +1844,14 @@
       flex: 1 1 auto;
       min-height: 0;
     }
-    /* ── Пассивные бафы: слева снизу, не на рамке портрета ── */
+    /* ── Пассивные способности слева снизу; баффы отряда — справа ── */
     .passive-pocket {
       position: fixed;
       left: .55rem;
       right: auto;
       bottom: .55rem;
       z-index: 56;
-      width: min(300px, calc(46vw - 1rem));
+      width: min(280px, calc(42vw - 1rem));
       min-width: 12rem;
       font-size: .72rem;
       color: var(--text);
@@ -1792,6 +1859,10 @@
       pointer-events: auto;
       display: flex;
       flex-direction: column-reverse; /* body сверху, кнопка снизу → список «вниз» к кнопке */
+    }
+    .passive-pocket.aura-pocket {
+      left: auto;
+      right: .55rem;
     }
     .passive-pocket.hidden { display: none !important; }
     .passive-pocket-toggle {
@@ -1930,6 +2001,25 @@
       min-width: 0;
       box-sizing: border-box;
     }
+    .passive-pocket-scroll .passive-chip {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: .3rem;
+      padding: .28rem .42rem;
+      cursor: pointer;
+    }
+    .passive-pocket-scroll .passive-chip .p-from {
+      flex: 1 1 100%;
+      margin-top: -.05rem;
+    }
+    .passive-chip .p-from {
+      font-size: .64rem;
+      color: var(--gold);
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .aura-pocket .passive-pocket-scroll:empty::after { content: 'Нет баффов отряда'; }
     .passive-pocket-scroll .passive-chip.active-tip {
       border-color: color-mix(in oklab, var(--gold) 55%, var(--border));
       background: color-mix(in oklab, #222018 90%, #3a3020);
@@ -2102,7 +2192,11 @@
         left: .4rem;
         right: auto;
         bottom: .4rem;
-        width: min(260px, calc(50vw - .8rem));
+        width: min(240px, calc(46vw - .8rem));
+      }
+      .passive-pocket.aura-pocket {
+        left: auto;
+        right: .4rem;
       }
     }
 
@@ -3015,12 +3109,12 @@
     .unit.casting.tg-buster { border-color: #e74c3c !important; box-shadow: 0 0 18px rgba(231,76,60,.65); }
     .unit.casting.tg-aoe { border-color: #c77dff !important; box-shadow: 0 0 18px rgba(199,125,255,.55); }
     .tele-badge {
-      position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
-      font-size: .62rem; font-weight: 700; white-space: nowrap; z-index: 6;
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      font-size: .74rem; font-weight: 800; white-space: nowrap; z-index: 6;
       background: rgba(10,12,16,.96); border: 1px solid var(--gold); border-radius: 999px;
-      padding: 2px 8px; color: var(--gold-bright); pointer-events: none;
-      box-shadow: 0 2px 8px rgba(0,0,0,.55);
-      max-width: 95%; overflow: hidden; text-overflow: ellipsis;
+      padding: 3px 10px; color: var(--gold-bright); pointer-events: none;
+      box-shadow: 0 3px 10px rgba(0,0,0,.6);
+      max-width: 110%; overflow: hidden; text-overflow: ellipsis;
     }
     .tele-badge.buster { border-color: #e74c3c; color: #ff8a80; }
     .tele-badge.aoe { border-color: #c77dff; color: #e0c0ff; }

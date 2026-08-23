@@ -345,6 +345,11 @@
           return;
         }
         pickSpec = el.dataset.id;
+        if (pickClass && pickSpec) {
+          autoPlayPick = { classId: pickClass, specId: pickSpec };
+          try { savePartyProfile(); } catch (_) {}
+          try { renderParty(); } catch (_) {}
+        }
         sg.querySelectorAll('.pick-card').forEach(x => x.classList.toggle('selected', x.dataset.id === pickSpec));
         // баланс: класс + выбранный спек
         if (typeof syncBalanceFilterFromPick === 'function') {
@@ -563,7 +568,7 @@
     ensureSec(entry);
     if (!party.length) party.push(entry);
     else party[0] = Object.assign({}, party[0], entry);
-    autoPlayPick = { classId: h.classId, specId: h.specId };
+    if (!autoPlayPick) autoPlayPick = { classId: h.classId, specId: h.specId };
     if (typeof igorHeroStashGear === 'function') igorHeroStashGear();
   }
   function addToParty() {
@@ -651,7 +656,8 @@
     for (let i = 0; i < getPartySize(); i++) {
       const p = party[i];
       const div = document.createElement('div');
-      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '') + (raidLobby ? ' raid-member' : '') + ((i === 0 && heroPartyOn()) ? ' hero-locked' : '');
+      const youPlay = !!(p && autoPlayPick && p.classId === autoPlayPick.classId && p.specId === autoPlayPick.specId);
+      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '') + (raidLobby ? ' raid-member' : '') + ((i === 0 && heroPartyOn()) ? ' hero-locked' : '') + (youPlay ? ' you-play' : '');
       if (p) {
         ensureSec(p);
         p.gear = normalizeGear(p.gear);
@@ -682,7 +688,9 @@
           <div class="slot-main raid-card">
             ${face}
             <div class="meta">
-              <b>${cls.name} · ${spec.name}${(i === 0 && heroPartyOn()) ? ' · герой' : ''}</b>
+              <b>${(i === 0 && heroPartyOn() && typeof igorHeroGetActive === 'function' && igorHeroGetActive() && igorHeroGetActive().name)
+                ? (igorHeroGetActive().name + ' (' + cls.name + ' · ' + spec.name + ')')
+                : (cls.name + ' · ' + spec.name)}${youPlay ? ' · ты' : ''}</b>
               <span class="${ROLE_CLASS[spec.role]}">${ROLE_LABEL[spec.role]}${res ? ' · ' + res : ''}</span>
             </div>
             <button type="button" class="btn btn-sm party-gear-btn" data-gear-idx="${i}">Шмот</button>
@@ -694,7 +702,9 @@
             <div class="slot-identity">
               ${face}
               <div class="meta">
-                <b>${cls.name} · ${spec.name}</b>
+                <b>${(i === 0 && heroPartyOn() && typeof igorHeroGetActive === 'function' && igorHeroGetActive() && igorHeroGetActive().name)
+                  ? (igorHeroGetActive().name + ' (' + cls.name + ' · ' + spec.name + ')')
+                  : (cls.name + ' · ' + spec.name)}${youPlay ? ' · ты' : ''}</b>
                 <span class="${ROLE_CLASS[spec.role]}">${ROLE_LABEL[spec.role]} · ур. вещей ${avgIlvl(p.gear)} · способностей: ${spec.abilities.length}</span>
                 <div class="res">${primary.icon} ${primary.name}${secondary ? ' · ' + secondary.icon + ' ' + secondary.name : ''}</div>
                 <button type="button" class="btn btn-sm party-gear-btn" data-gear-idx="${i}">Шмот · ${avgIlvl(p.gear) || 0}</button>
@@ -754,12 +764,20 @@
       }
       div.addEventListener('click', () => {
         if (i === 0 && heroPartyOn()) {
-          toast('Слот 1 занят героем таверны');
+          if (p) {
+            autoPlayPick = { classId: p.classId, specId: p.specId };
+            renderParty();
+            savePartyProfile();
+            toast('Играете: ' + (p.fullName || (WOW_MOP.getClass(p.classId)?.name || p.classId) + ' · ' + (WOW_MOP.getSpec(p.classId, p.specId)?.name || p.specId)));
+          } else {
+            toast('Слот 1 занят героем таверны');
+          }
           return;
         }
         editSlot = i;
         if (p) {
           pickClass = p.classId; pickSpec = p.specId;
+          autoPlayPick = { classId: p.classId, specId: p.specId };
           showSpecTab();
           document.querySelectorAll('#class-grid .pick-card').forEach(el => {
             el.classList.toggle('selected', el.dataset.id === pickClass);
@@ -770,7 +788,10 @@
         }
         renderParty();
         updatePreview();
-        toast('Слот ' + (i + 1) + ' — выберите класс/спек и «Добавить»');
+        if (p) savePartyProfile();
+        toast(p
+          ? ('Играете: ' + (WOW_MOP.getClass(p.classId)?.name || p.classId) + ' · ' + (WOW_MOP.getSpec(p.classId, p.specId)?.name || p.specId))
+          : ('Слот ' + (i + 1) + ' — выберите класс/спек и «Добавить»'));
       });
       slots.appendChild(div);
     }
@@ -808,6 +829,25 @@
    * Если в отряде несколько одинаковых класс+спек — суффикс «· 1/2/3»
    * (Recount, портреты, журнал: понятно, кто нанёс урон).
    */
+  function applyHeroNick(p, dup) {
+    if (!p) return false;
+    let nick = p._heroNick;
+    if (!nick && p._isHero && typeof igorHeroGetActive === 'function') {
+      try {
+        const rec = igorHeroGetActive();
+        if (rec && rec.classId === p.classId && rec.specId === p.specId && rec.name) nick = rec.name;
+      } catch (_) {}
+    }
+    if (!nick) return false;
+    p._heroNick = nick;
+    const cls = p.className || 'Герой';
+    const spec = p.specName || '';
+    const inside = spec ? (cls + ' · ' + spec) : cls;
+    p.name = dup ? (nick + ' · ' + dup) : nick;
+    p.fullName = (dup ? (nick + ' · ' + dup) : nick) + ' (' + inside + ')';
+    return true;
+  }
+
   function assignPartyUniqueNames(list) {
     if (!list || !list.length) return list;
     const groups = Object.create(null);
@@ -820,16 +860,16 @@
     for (const p of list) {
       const key = String(p.classId || '') + '|' + String(p.specId || '');
       const g = groups[key] || [p];
+      const dup = g.length > 1 ? (g.indexOf(p) + 1) : 0;
+      p.dupIndex = dup;
+      if (applyHeroNick(p, dup)) continue;
       const cls = p.className || p.name || 'Герой';
       const spec = p.specName || '';
       const baseFull = spec ? (cls + ' (' + spec + ')') : cls;
-      if (g.length > 1) {
-        const n = g.indexOf(p) + 1;
-        p.dupIndex = n;
-        p.name = cls + ' · ' + n;
-        p.fullName = baseFull + ' · ' + n;
+      if (dup) {
+        p.name = cls + ' · ' + dup;
+        p.fullName = baseFull + ' · ' + dup;
       } else {
-        p.dupIndex = 0;
         p.name = cls;
         p.fullName = baseFull;
       }
@@ -946,6 +986,16 @@
     };
     hero._heroLevel = scaleLevel;
     hero._isHero = !!isHeroUnit;
+    if (isHeroUnit) {
+      try {
+        const rec = (typeof igorHeroGetActive === 'function') ? igorHeroGetActive() : null;
+        if (rec && rec.name) {
+          hero._heroNick = rec.name;
+          hero.name = rec.name;
+          hero.fullName = rec.name + ' (' + cls.name + ' · ' + spec.name + ')';
+        }
+      } catch (_) {}
+    }
     if (scaleLevel != null && typeof igorHeroFilterAbilities === 'function') {
       hero.abilities = igorHeroFilterAbilities(hero.abilities, classId, specId, scaleLevel);
     }
@@ -1005,7 +1055,7 @@
       run.timerLeft = Math.max(0, run.timerLeft - 1);
       updateHud();
       if (run.timerLeft % 8 === 0) saveRun();
-      if (run.timerLeft <= 0) endRun(false, 'Время вышло. Ключ провален.');
+      if (run.timerLeft <= 0) endRun(false, run.raid ? 'Время вышло. Рейд провален.' : 'Время вышло. Ключ провален.');
     }, 1000);
   }
 
@@ -1027,7 +1077,7 @@
         : +document.getElementById('key-level').value;
       const affixes = raid ? [] : keyAffixes(keyLevel);
       const timerMax = raid
-        ? (raidDiff === 'heroic' ? 8 * 60 : 10 * 60)
+        ? (typeof raidTimerMax === 'function' ? raidTimerMax(raidDiff) : (raidDiff === 'heroic' ? 10 * 60 : 15 * 60))
         : Math.max(12 * 60, dungeon.timerBase - (keyLevel - 2) * 25);
       run = {
         dungeon, keyLevel, affixes, roomIndex: 0, talents: [], deaths: 0,
@@ -1046,15 +1096,20 @@
       assignPartyUniqueNames(run.party);
       raidPlayerUid = (typeof pickAutoPlayerUid === 'function')
         ? pickAutoPlayerUid()
-        : (run.raid
-          ? (run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid)
-          : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid));
+        : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid);
       raidAutoAllies = true;
+      {
+        const me = (run.party || []).find(p => p && String(p.uid) === String(raidPlayerUid));
+        if (me) {
+          try { toast('Играете: ' + (me.fullName || me.name)); } catch (_) {}
+          try { log('Играете: ' + (me.fullName || me.name) + '. Клик по другому герою — взять его.', 'system'); } catch (_) {}
+        }
+      }
       resetRecount();
       beginRunScreen();
       applyDungeonTheme();
       if (raid) {
-        log(`Рейд 10 · ${typeof raidDiffLabel === 'function' ? raidDiffLabel(raidDiff) : raidDiff}: ${dungeon.name}. Лэй Шэнь толстый. Обычный ≈ 10.6м HP / ~41т. Героический ≈ 19.5м HP. Минутный спринт не закрывает.`, 'system');
+        log(`Рейд 10 · ${typeof raidDiffLabel === 'function' ? raidDiffLabel(raidDiff) : raidDiff}: ${dungeon.name}. Лэй Шэнь толстый. Обычный ≈ 10.6м HP / ~41т, таймер 15:00. Героический ≈ 19.5м HP, таймер 10:00.`, 'system');
         log('Механики: смена танков (Перегрузка ×3) · Проводники СТ · метки молнии · соки сфер · кики кастов · с 40% два зала.', 'system');
         log('Авто-рейд: союзники ходят сами. Клик по герою — взять управление.', 'system');
       } else {
@@ -1136,11 +1191,12 @@
         });
       }
       assignPartyUniqueNames(run.party);
+      if (data.raidPlay && data.raidPlay.classId && data.raidPlay.specId) {
+        autoPlayPick = { classId: data.raidPlay.classId, specId: data.raidPlay.specId };
+      }
       raidPlayerUid = (typeof pickAutoPlayerUid === 'function')
         ? pickAutoPlayerUid()
-        : (run.raid
-          ? (run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid)
-          : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid));
+        : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid);
       raidAutoAllies = true;
       if (run.raid) {
         if (!run.route?.nodes || data.dungeonId === 'throne') {
@@ -1210,7 +1266,7 @@
     const tag = st ? '<span class="rm-tag">СТ</span>' : (n.pack === 'aoe' ? '<span class="rm-tag aoe">AoE</span>' : '');
     return `<div class="${cls}" data-node="${n.id}" title="${n.name}">
       <span class="rm-ico">${m.icon}</span>
-      <span class="rm-name">${n.name}</span>
+      <span class="rm-name">${n.name}${isCur ? ' <em class="rm-you">ты здесь</em>' : ''}</span>
       ${tag}${pct}
     </div>`;
   }
@@ -1243,8 +1299,10 @@
         <div class="rm-line"></div>
         ${routeNodeCard(N.mop3, cur, visited)}`;
     }
+    const here = N[cur];
     list.innerHTML = `
       <div class="route-map">
+        <div class="rm-here">${run.dungeon && run.dungeon.name ? run.dungeon.name : 'Ключ'}${here && here.name ? ' · ' + here.name : ''}</div>
         <div class="rm-forces ${f >= FORCES_TARGET ? 'ok' : ''}">⚔ ${f} / ${FORCES_TARGET}%${need ? ` · ещё ${need}%` : ' · можно закрыть'}</div>
         ${routeNodeCard(N.start, cur, visited)}
         <div class="rm-line"></div>
@@ -1301,6 +1359,14 @@
     const type = node.type;
     const meta = ROOM_META[type] || { icon: '•', name: type };
     document.getElementById('phase-banner').textContent = meta.icon + ' ' + node.name;
+    try {
+      const pd = document.getElementById('place-dungeon');
+      const pr = document.getElementById('place-room');
+      const pt = document.getElementById('place-title');
+      if (pd) pd.textContent = (run.dungeon && run.dungeon.name) || '';
+      if (pr) pr.textContent = (node.name || meta.name || 'Бой');
+      if (pt) pt.classList.remove('hidden');
+    } catch (_) {}
     const f = Math.round(run.forces || 0);
     document.getElementById('phase-sub').textContent =
       type === 'rest'

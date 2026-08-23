@@ -368,21 +368,25 @@
   function hidePassiveTipFloat() {
     const el = document.getElementById('passive-tip-float');
     if (el) el.classList.add('hidden');
-    const panel = document.getElementById('passive-pocket-tip');
-    if (panel) {
+    document.querySelectorAll('.passive-pocket-tip').forEach((panel) => {
       panel.classList.add('hidden');
       panel.replaceChildren();
-    }
+    });
     document.querySelectorAll('.passive-chip.active-tip').forEach(c => c.classList.remove('active-tip'));
   }
 
   /** Описание пассивки в кармане — только нижняя панель, без fixed-окон. */
-  function showPassivePocketTip(name, detail) {
-    const panel = document.getElementById('passive-pocket-tip');
+  function showPassivePocketTip(name, detail, panel) {
+    panel = panel || document.getElementById('passive-pocket-tip');
     if (!panel) return;
-    // не трогаем hidePassiveTipFloat (она гасит panel)
     const float = document.getElementById('passive-tip-float');
     if (float) float.classList.add('hidden');
+    document.querySelectorAll('.passive-pocket-tip').forEach((p) => {
+      if (p !== panel) {
+        p.classList.add('hidden');
+        p.replaceChildren();
+      }
+    });
     panel.replaceChildren();
     const n = document.createElement('div');
     n.className = 'pt-name';
@@ -396,10 +400,10 @@
   }
 
   function showPassiveTipFloat(chip, name, detail) {
-    const pocket = document.getElementById('passive-pocket');
+    const pocket = chip && chip.closest ? chip.closest('.passive-pocket') : null;
     const inPocket = !!(pocket && !pocket.classList.contains('hidden') && chip && pocket.contains(chip));
     if (inPocket) {
-      showPassivePocketTip(name, detail);
+      showPassivePocketTip(name, detail, pocket.querySelector('.passive-pocket-tip'));
       return;
     }
     // Лобби: fixed float
@@ -443,7 +447,7 @@
 
   function bindPassiveChipTips(root) {
     if (!root) return;
-    const pocket = document.getElementById('passive-pocket');
+    const pocket = root.closest ? root.closest('.passive-pocket') : document.getElementById('passive-pocket');
     const inPocket = !!(pocket && pocket.contains(root));
     root.querySelectorAll('.passive-chip').forEach(chip => {
       if (chip.dataset.tipBound) return;
@@ -468,7 +472,7 @@
             c.setAttribute('aria-pressed', 'false');
           });
           if (already) {
-            const panel = document.getElementById('passive-pocket-tip');
+            const panel = pocket ? pocket.querySelector('.passive-pocket-tip') : document.getElementById('passive-pocket-tip');
             if (panel) {
               panel.classList.add('hidden');
               panel.replaceChildren();
@@ -505,76 +509,65 @@
     return s.indexOf('aura_') === 0 || s === 'hunter_aspect';
   }
 
-  function renderPassiveTray(actor, trayEl) {
-    const tray = trayEl || document.getElementById('passive-tray');
-    const pocket = document.getElementById('passive-pocket');
-    if (!tray) return;
-    const listEl = (!trayEl && document.getElementById('passive-list')) || tray;
-    const tipPanel = document.getElementById('passive-pocket-tip');
-    const float = document.getElementById('passive-tip-float');
-    if (float) float.classList.add('hidden');
-    if (tipPanel) {
-      tipPanel.classList.add('hidden');
-      tipPanel.replaceChildren();
-    }
-
-    const auras = (typeof listPartyClassAuras === 'function') ? listPartyClassAuras() : [];
-    const specPass = (actor ? getUnitPassives(actor) : []).filter(p => !isClassAuraPassiveId(p.id));
-    if (!auras.length && !specPass.length) {
-      if (listEl) listEl.innerHTML = '';
-      if (pocket && !trayEl) {
-        pocket.classList.add('hidden', 'collapsed');
-        delete pocket.dataset.userOpened;
-      }
+  function setPocketOpen(pocket, hasItems) {
+    if (!pocket) return;
+    if (!hasItems) {
+      pocket.classList.add('hidden', 'collapsed');
+      delete pocket.dataset.userOpened;
       return;
     }
-
-    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-    const chipHtml = (p, tag) => {
-      const from = p.fromName
-        ? `<div class="p-from">даёт ${esc(p.className || '')}${p.fromName ? ' · ' + esc(p.fromName) : ''}</div>`
-        : '';
-      return `<div class="passive-chip${p.fromName ? ' is-aura' : ''}">
-        <div class="p-head">
-          <span class="p-tag">${esc(tag)}</span>
-          <span class="p-ico">${p.icon || ''}</span>
-          <span class="p-name">${esc(p.name || 'Бафф')}</span>
-        </div>
-        ${from}
-        <div class="p-detail">${esc(p.detail || p.short || 'Нет описания.')}</div>
-      </div>`;
-    };
-
-    let html = '';
-    if (auras.length) {
-      html += '<div class="passive-sec">Баффы отряда</div>';
-      html += auras.map(a => chipHtml(a, 'отряд')).join('');
-    }
-    if (specPass.length) {
-      const who = actor ? (actor.fullName || actor.name || 'герой') : '';
-      html += '<div class="passive-sec">Пассивки · ' + esc(who) + '</div>';
-      html += specPass.map(p => chipHtml(p, 'пассив')).join('');
-    }
-    if (listEl) listEl.innerHTML = html;
-    if (pocket && !trayEl) {
-      pocket.classList.remove('hidden');
-      if (pocket.dataset.userOpened === '0') pocket.classList.add('collapsed');
-      else {
-        pocket.classList.remove('collapsed');
-        pocket.dataset.userOpened = '1';
-      }
+    pocket.classList.remove('hidden');
+    if (pocket.dataset.userOpened === '0') pocket.classList.add('collapsed');
+    else {
+      pocket.classList.remove('collapsed');
+      pocket.dataset.userOpened = '1';
     }
   }
 
-  function hidePassivePocket() {
-    const pocket = document.getElementById('passive-pocket');
-    const list = document.getElementById('passive-list');
+  function renderChipList(listEl, items, kind) {
+    if (!listEl) return;
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    listEl.innerHTML = (items || []).map((p) => {
+      const from = (kind === 'aura' && (p.fromName || p.className))
+        ? `<span class="p-from">${esc(p.className || '')}${p.fromName ? ' · ' + esc(p.fromName) : ''}</span>`
+        : '';
+      return `<div class="passive-chip${kind === 'aura' ? ' is-aura' : ''}" tabindex="0"
+        data-passive-name="${esc(p.name || '')}"
+        data-passive-detail="${esc(p.detail || p.short || 'Нет описания.')}">
+        <span class="p-ico">${p.icon || ''}</span>
+        <span class="p-name">${esc(p.name || 'Бафф')}</span>
+        ${from}
+      </div>`;
+    }).join('');
+    bindPassiveChipTips(listEl);
+  }
+
+  function renderPassiveTray(actor, trayEl) {
     hidePassiveTipFloat();
-    if (list) list.innerHTML = '';
-    if (pocket) {
-      pocket.classList.add('hidden', 'collapsed');
-      delete pocket.dataset.userOpened;
+    const specPass = (actor ? getUnitPassives(actor) : []).filter(p => !isClassAuraPassiveId(p.id));
+    const auras = (typeof listPartyClassAuras === 'function') ? listPartyClassAuras() : [];
+
+    if (trayEl) {
+      renderChipList(trayEl, specPass, 'spec');
+      return;
     }
+
+    const specList = document.getElementById('passive-list');
+    const auraList = document.getElementById('aura-list');
+    renderChipList(specList, specPass, 'spec');
+    renderChipList(auraList, auras, 'aura');
+    setPocketOpen(document.getElementById('passive-pocket'), specPass.length > 0);
+    setPocketOpen(document.getElementById('aura-pocket'), auras.length > 0);
+  }
+
+  function hidePassivePocket() {
+    hidePassiveTipFloat();
+    const specList = document.getElementById('passive-list');
+    const auraList = document.getElementById('aura-list');
+    if (specList) specList.innerHTML = '';
+    if (auraList) auraList.innerHTML = '';
+    setPocketOpen(document.getElementById('passive-pocket'), false);
+    setPocketOpen(document.getElementById('aura-pocket'), false);
   }
 
   function controlledCombatHero() {
@@ -597,16 +590,20 @@
   }
 
   function bindPassivePocketUI() {
-    const pocket = document.getElementById('passive-pocket');
-    if (!pocket || pocket.dataset.bound) return;
-    pocket.dataset.bound = '1';
-    document.getElementById('passive-pocket-toggle')?.addEventListener('click', () => {
-      if (pocket.classList.contains('hidden')) return;
-      pocket.classList.toggle('collapsed');
-      pocket.dataset.userOpened = pocket.classList.contains('collapsed') ? '0' : '1';
-      hidePassiveTipFloat();
+    const pockets = document.querySelectorAll('.passive-pocket');
+    if (!pockets.length) return;
+    pockets.forEach((pocket) => {
+      if (pocket.dataset.bound) return;
+      pocket.dataset.bound = '1';
+      pocket.querySelector('.passive-pocket-toggle')?.addEventListener('click', () => {
+        if (pocket.classList.contains('hidden')) return;
+        pocket.classList.toggle('collapsed');
+        pocket.dataset.userOpened = pocket.classList.contains('collapsed') ? '0' : '1';
+        hidePassiveTipFloat();
+      });
     });
-    // скролл/ресайз — спрятать тултип (позиция устарела)
+    if (bindPassivePocketUI._win) return;
+    bindPassivePocketUI._win = true;
     window.addEventListener('scroll', () => {
       hidePassiveTipFloat();
       hideAbilityTipFloat();

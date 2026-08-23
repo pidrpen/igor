@@ -11,7 +11,7 @@
     id: 'throne',
     name: 'Престол Грома',
     theme: 'jade',
-    timerBase: 10 * 60,
+    timerBase: 15 * 60,
     raid: true,
     midName: '—',
     finalName: 'Лэй Шэнь, Повелитель Грома',
@@ -41,6 +41,10 @@
   }
   function raidDiffLabel(diff) {
     return (diff || getRaidDiff()) === 'heroic' ? 'Героический' : 'Обычный';
+  }
+  /** Стена таймера рейда: обычный 15:00, героический 10:00. */
+  function raidTimerMax(diff) {
+    return (diff || getRaidDiff()) === 'heroic' ? 10 * 60 : 15 * 60;
   }
   function setRaidDiff(diff) {
     raidDifficulty = diff === 'heroic' ? 'heroic' : 'normal';
@@ -670,6 +674,14 @@
     }
     const allyTitle = document.querySelector('#ally-row')?.previousElementSibling;
     if (allyTitle) allyTitle.textContent = 'Рейд (клик — взять управление)';
+    try {
+      const pd = document.getElementById('place-dungeon');
+      const pr = document.getElementById('place-room');
+      const pt = document.getElementById('place-title');
+      if (pd) pd.textContent = 'Рейд 10 · ' + (typeof raidDiffLabel === 'function' ? raidDiffLabel() : '');
+      if (pr) pr.textContent = (typeof raidPhaseTitle === 'function') ? raidPhaseTitle() : 'Престол грома';
+      if (pt) pt.classList.remove('hidden');
+    } catch (_) {}
   }
 
   function showRaidBriefing() {

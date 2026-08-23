@@ -100,7 +100,10 @@
   function onVictory() {
     if (run.finished) return;
     if (run.raid) {
-      endRun(true, 'Лэй Шэнь повержен. Рейд 10 человек выстоял.');
+      try { if (typeof timerInterval !== 'undefined') clearInterval(timerInterval); } catch (_) {}
+      const finish = () => endRun(true, 'Лэй Шэнь повержен. Рейд 10 человек выстоял.');
+      if (typeof openGearDraft === 'function') openGearDraft(finish);
+      else finish();
       return;
     }
     const node = currentRouteNode();

@@ -79,8 +79,47 @@
     if (it.shopSetId) out.shopSetId = it.shopSetId;
     if (it.testBuild) out.testBuild = true;
     if (it.templateId) out.templateId = it.templateId;
-    if (it.special) out.special = { ...it.special };
+    if (it.special) {
+      out.special = { ...it.special };
+      if (it.special.ability) out.special.ability = { ...it.special.ability };
+    }
+    if (it.raid) out.raid = true;
+    if (it.raidDiff) out.raidDiff = it.raidDiff;
     return out;
+  }
+
+  const SHARED_BAG_KEY = 'mythicKeySharedBag_v1';
+  const SHARED_BAG_CAP = 80;
+  function getSharedBag() {
+    try {
+      const raw = localStorage.getItem(SHARED_BAG_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.filter(Boolean).map(cloneGearItem) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  function setSharedBag(items) {
+    const bag = (items || []).filter(Boolean).map(cloneGearItem);
+    while (bag.length > SHARED_BAG_CAP) bag.shift();
+    try {
+      localStorage.setItem(SHARED_BAG_KEY, JSON.stringify(bag));
+    } catch (e) {
+      console.warn('[bag]', e);
+    }
+    return bag;
+  }
+  function addToSharedBag(items) {
+    const bag = getSharedBag();
+    for (const it of (Array.isArray(items) ? items : [items])) {
+      if (it) bag.push(cloneGearItem(it));
+    }
+    return setSharedBag(bag);
+  }
+  function removeFromSharedBag(uid) {
+    const bag = getSharedBag().filter(it => it.uid !== uid);
+    return setSharedBag(bag);
   }
   function gearUid() {
     return 'g_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -304,6 +343,7 @@
       parts.push(`+${rating} рейтинг унив. (~+${fmtGearPct(pct)})`);
     }
     if (speedPts) parts.push(`+${speedPts} скор. (очередь)`);
+    if (it.special && it.special.desc) parts.push(it.special.desc);
     return parts.join(join);
   }
   function rarityLabel(r) {
@@ -379,6 +419,98 @@
 
     // debug helper for UI
     hero._gearBonus = { atk: atkBonus, def: defBonus, hp: hpBonus, gs };
+    injectRaidTrinketAbility(hero);
+  }
+
+  const RAID_TRINKETS = [
+    {
+      id: 'raid_shard_throne',
+      name: 'Осколок Престола',
+      icon: '⚡',
+      click: {
+        id: 'raid_trinket_shield', name: 'Осколок Престола', icon: '⚡',
+        type: 'shield', freeAction: true, cd: 99, school: 'none',
+      },
+    },
+    {
+      id: 'raid_dynasty_seal',
+      name: 'Печать династии',
+      icon: '🏯',
+      click: {
+        id: 'raid_trinket_wall', name: 'Печать династии', icon: '🏯',
+        type: 'buff', freeAction: true, cd: 99, buffTurns: 2, school: 'none',
+      },
+    },
+    {
+      id: 'raid_heaven_spark',
+      name: 'Искра Небесного гнева',
+      icon: '🌩️',
+      click: {
+        id: 'raid_trinket_spark', name: 'Искра Небесного гнева', icon: '🌩️',
+        type: 'buff', freeAction: true, cd: 99, buffTurns: 2, school: 'none',
+      },
+    },
+  ];
+
+  function raidTrinketNumbers(heroic) {
+    return heroic
+      ? { shield: 0.30, wall: 0.50, spark: 0.30, ilvl: 86, rarity: 'epic',
+          stats: { atk: 12, hp: 80, def: 8, crit: 12, mastery: 12, vers: 12, speed: 0 } }
+      : { shield: 0.20, wall: 0.40, spark: 0.20, ilvl: 58, rarity: 'rare',
+          stats: { atk: 8, hp: 50, def: 5, crit: 8, mastery: 8, vers: 8, speed: 0 } };
+  }
+
+  function makeRaidTrinket(tpl, heroic) {
+    const n = raidTrinketNumbers(!!heroic);
+    const click = { ...(tpl.click || {}) };
+    let desc = '';
+    if (click.id === 'raid_trinket_shield') {
+      click.power = n.shield;
+      desc = 'Раз в бой, без хода: щит ' + Math.round(n.shield * 100) + '% максимального здоровья себе.';
+    } else if (click.id === 'raid_trinket_wall') {
+      click.dmgReduce = n.wall;
+      desc = 'Раз в бой, без хода: −' + Math.round(n.wall * 100) + '% входящего на 2 хода себе.';
+    } else if (click.id === 'raid_trinket_spark') {
+      click.atkMod = n.spark;
+      desc = 'Раз в бой, без хода: +' + Math.round(n.spark * 100) + '% атаки на 2 хода.';
+    }
+    click.desc = desc;
+    click.raidTrinket = true;
+    return {
+      uid: gearUid(),
+      slot: 'trinket',
+      name: tpl.name + (heroic ? ' · героический' : ''),
+      icon: tpl.icon,
+      ilvl: n.ilvl,
+      rarity: n.rarity,
+      role: 'any',
+      stats: { ...n.stats },
+      raid: true,
+      raidDiff: heroic ? 'heroic' : 'normal',
+      special: { id: tpl.id, raidClick: true, desc: desc, ability: click },
+    };
+  }
+
+  function injectRaidTrinketAbility(hero) {
+    if (!hero) return;
+    if (Array.isArray(hero.abilities)) {
+      hero.abilities = hero.abilities.filter(a => !a || !a.raidTrinket);
+    }
+    const it = hero.gear && hero.gear.equipped && hero.gear.equipped.trinket;
+    const src = it && it.special && it.special.ability;
+    if (!src || !src.id) return;
+    if (!hero.abilities) return;
+    const ab = {
+      id: src.id, name: src.name, icon: src.icon || '⚡',
+      cost: 0, gen: 0, costSec: 0, genSec: 0, costRunes: null, genRunic: 0,
+      cd: src.cd || 99, baseCd: src.cd || 99, curCd: 0,
+      type: src.type || 'buff', power: src.power || 0, school: src.school || 'none',
+      desc: src.desc || '', freeAction: true, raidTrinket: true,
+    };
+    if (src.dmgReduce != null) ab.dmgReduce = src.dmgReduce;
+    if (src.atkMod != null) ab.atkMod = src.atkMod;
+    if (src.buffTurns != null) ab.buffTurns = src.buffTurns;
+    if (!hero.abilities.some(a => a && a.id === ab.id)) hero.abilities.push(ab);
   }
 
   function applyRunLootToHero(hero) {
@@ -714,49 +846,68 @@
   function openGearDraft(done) {
     const grid = document.getElementById('loot-grid');
     const modal = document.getElementById('loot-modal');
+    const isRaidLoot = !!(run && run.raid);
     const title = modal?.querySelector('h2');
-    if (title) title.textContent = 'Добыча — шмот';
+    if (title) title.textContent = isRaidLoot ? 'Добыча рейда — Лэй Шэнь' : 'Добыча — шмот';
     const hint = modal?.querySelector('.hint');
-    if (hint) hint.innerHTML = 'Выбери <b>1 из 3</b> предметов экипировки (или пропусти).';
+    if (hint) {
+      hint.innerHTML = isRaidLoot
+        ? 'Победа над Лэй Шэнем. Выбери <b>1 из 3</b> аксессуаров. Кнопка в бою (ключ и рейд), без хода, раз за бой. Копия сразу в общую сумку — надень на героя ключа.'
+        : 'Выбери <b>1 из 3</b> предметов экипировки (или пропусти).';
+    }
     lootDoneCb = null; // gear uses own flow
     if (!grid || !modal) { if (typeof done === 'function') done(); return; }
     const keyLevel = run?.keyLevel || 5;
     const node = typeof currentRouteNode === 'function' ? currentRouteNode() : null;
     const roomType = node?.type || 'elite';
+    const raidHeroic = isRaidLoot && run.raidDiff === 'heroic';
     const ilvlBonus = roomType === 'final' ? 4 : roomType === 'boss' ? 2 : 0;
     const members = (run?.party || []).slice();
     const picks = [];
-    const usedSlots = new Set();
-    for (let n = 0; n < 3; n++) {
-      let slot = GEAR_SLOT_IDS[Math.floor(Math.random() * GEAR_SLOT_IDS.length)];
-      let guard = 0;
-      while (usedSlots.has(slot) && guard++ < 8) {
-        slot = GEAR_SLOT_IDS[Math.floor(Math.random() * GEAR_SLOT_IDS.length)];
+    if (isRaidLoot) {
+      RAID_TRINKETS.forEach(tpl => picks.push(makeRaidTrinket(tpl, raidHeroic)));
+    } else {
+      const usedSlots = new Set();
+      for (let n = 0; n < 3; n++) {
+        let slot = GEAR_SLOT_IDS[Math.floor(Math.random() * GEAR_SLOT_IDS.length)];
+        let guard = 0;
+        while (usedSlots.has(slot) && guard++ < 8) {
+          slot = GEAR_SLOT_IDS[Math.floor(Math.random() * GEAR_SLOT_IDS.length)];
+        }
+        usedSlots.add(slot);
+        const who = members.length ? members[n % members.length] : null;
+        const role = who?.role || 'dps';
+        picks.push(generateGearItem({
+          keyLevel,
+          slot,
+          role,
+          lootDraft: true,
+          classId: who?.classId,
+          specId: who?.specId,
+          ilvl: keyToIlvl(keyLevel) + ilvlBonus + Math.floor(Math.random() * 5) - 1,
+          seed: Math.floor(Math.random() * 1e9) + n * 17,
+        }));
       }
-      usedSlots.add(slot);
-      const who = members.length ? members[n % members.length] : null;
-      const role = who?.role || 'dps';
-      picks.push(generateGearItem({
-        keyLevel,
-        slot,
-        role,
-        lootDraft: true,
-        classId: who?.classId,
-        specId: who?.specId,
-        ilvl: keyToIlvl(keyLevel) + ilvlBonus + Math.floor(Math.random() * 5) - 1,
-        seed: Math.floor(Math.random() * 1e9) + n * 17,
-      }));
     }
     grid.innerHTML = '';
     picks.forEach(item => {
       const div = document.createElement('div');
       div.className = 'loot-card';
       const roleTxt = gearRoleLabel(item.role);
+      const raidTag = item.raid
+        ? ' · рейд · ' + (item.raidDiff === 'heroic' ? 'героический' : 'обычный')
+        : '';
       div.innerHTML = `<div class="lc-title rarity-${item.rarity}">${item.icon} ${item.name}</div>
-        <div class="lc-meta">${GEAR_SLOT_MAP[item.slot]?.name || item.slot} · ур. <b>${item.ilvl}</b> · ${rarityLabel(item.rarity)}${roleTxt ? ' · ' + roleTxt : ''}</div>
+        <div class="lc-meta">${GEAR_SLOT_MAP[item.slot]?.name || item.slot} · ур. <b>${item.ilvl}</b> · ${rarityLabel(item.rarity)}${roleTxt ? ' · ' + roleTxt : ''}${raidTag}</div>
         <div class="lc-stats">${formatGearStats(item, '<br>')}</div>`;
       div.onclick = () => {
         modal.classList.add('hidden');
+        if (item.raid && typeof addToSharedBag === 'function') {
+          const bagCopy = cloneGearItem(item);
+          bagCopy.uid = gearUid();
+          addToSharedBag(bagCopy);
+          try { toast('Копия в общей сумке — надень на героя ключа'); } catch (_) {}
+        }
         openGearAssign(item, typeof done === 'function' ? done : null);
       };
       grid.appendChild(div);

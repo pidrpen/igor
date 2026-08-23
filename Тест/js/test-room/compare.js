@@ -1010,7 +1010,168 @@
     aoeRaf = 0;
     busy = false;
     aoeBusy = false;
+    clearFxDemo();
     if (typeof openTestHub === 'function') openTestHub();
+  }
+
+  function demoSchool() {
+    if (!pick) return 'frost';
+    const c = pick.classId;
+    const s = pick.specId;
+    if (c === 'mage') return s === 'fire' ? 'fire' : (s === 'arcane' ? 'arcane' : 'frost');
+    if (c === 'shaman') return s === 'restoration' ? 'heal' : 'nature';
+    if (c === 'monk') return s === 'mistweaver' ? 'heal' : 'chi';
+    if (c === 'paladin') return s === 'holy' ? 'heal' : 'holy';
+    if (c === 'priest') return s === 'shadow' ? 'shadow' : 'heal';
+    if (c === 'warlock') return 'shadow';
+    if (c === 'deathknight') return 'blood';
+    if (c === 'druid') return s === 'balance' ? 'arcane' : (s === 'restoration' ? 'heal' : 'nature');
+    if (c === 'hunter' || c === 'rogue' || c === 'warrior') return 'physical';
+    if (c === 'demonhunter') return 'shadow';
+    if (c === 'engineer') return 'fire';
+    return 'frost';
+  }
+
+  function fxLayer() {
+    return document.getElementById('skill-fx-layer') || $('cmp-fx-layer');
+  }
+
+  function fxPt(el, ox, oy) {
+    if (!el) return { x: 0, y: 0 };
+    const r = el.getBoundingClientRect();
+    return {
+      x: r.left + r.width * (ox == null ? 0.5 : ox),
+      y: r.top + r.height * (oy == null ? 0.42 : oy),
+    };
+  }
+
+  function fxCasterEl() {
+    const port = $('cmp-caster-portrait');
+    if (port && !port.classList.contains('hidden')) return $('cmp-caster-portrait-img') || port;
+    return $('cmp-aoe-caster');
+  }
+
+  function fxDummyEl() {
+    const pack = packDummies();
+    if (pack.length) return pack[Math.min(focusDummy, pack.length - 1)] || pack[0];
+    return document.querySelector('#cmp-stage-aoe .cmp-dummy');
+  }
+
+  function spawnDemo(cls, x, y, life) {
+    const layer = fxLayer();
+    if (!layer) return null;
+    const el = document.createElement('div');
+    el.className = cls;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    layer.appendChild(el);
+    setTimeout(() => { try { el.remove(); } catch (_) {} }, life || 900);
+    return el;
+  }
+
+  function sparkBurst(x, y, school, n) {
+    const count = n || 6;
+    for (let i = 0; i < count; i++) {
+      const sp = spawnDemo('fx-spark school-' + school, x, y, 580);
+      if (!sp) continue;
+      const a = (i / count) * Math.PI * 2;
+      const d = 16 + (i % 3) * 6;
+      sp.style.setProperty('--sx', Math.cos(a) * d + 'px');
+      sp.style.setProperty('--sy', Math.sin(a) * d + 'px');
+    }
+  }
+
+  function clearFxDemo() {
+    packDummies().forEach((el) => el.classList.remove('cmp-fx-dummy-dead', 'cmp-fx-kick'));
+    const caster = fxCasterEl();
+    if (caster) caster.classList.remove('shielded');
+  }
+
+  function demoFx(kind) {
+    const caster = fxCasterEl();
+    const dummy = fxDummyEl();
+    if (!dummy && kind !== 'shield') {
+      setStatus('Нет цели — поставь духов сверху');
+      return;
+    }
+    clearFxDemo();
+    const school = demoSchool();
+    const a = fxPt(caster, 0.72, 0.38);
+    const b = fxPt(dummy, 0.45, 0.42);
+    if (kind === 'bolt') {
+      const el = spawnDemo('fx-orb school-' + school, a.x, a.y, 900);
+      if (!el) return;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const ang = Math.atan2(dy, dx) * 180 / Math.PI;
+      const dur = 520;
+      el.animate([
+        { transform: 'translate(-50%,-50%) rotate(' + ang + 'deg) scale(.5)', opacity: 0.25 },
+        { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) rotate(' + ang + 'deg) scale(1)', opacity: 1 },
+      ], { duration: dur, easing: 'cubic-bezier(.18,.75,.22,1)', fill: 'forwards' });
+      setTimeout(() => {
+        spawnDemo('fx-hit school-' + school, b.x, b.y, 720);
+        spawnDemo('skill-burst ' + school, b.x, b.y, 900);
+        sparkBurst(b.x, b.y, school, 6);
+        hitDummy(dummy);
+      }, dur);
+      setStatus('Снаряд · школа спека, как в бою');
+      return;
+    }
+    if (kind === 'hit') {
+      spawnDemo('skill-slash ' + school, b.x, b.y, 780);
+      spawnDemo('fx-hit school-' + school, b.x, b.y, 720);
+      spawnDemo('skill-burst physical', b.x, b.y, 800);
+      sparkBurst(b.x, b.y, school === 'heal' ? 'physical' : school, 5);
+      hitDummy(dummy);
+      setStatus('Удар в упор');
+      return;
+    }
+    if (kind === 'aoe') {
+      const pack = packDummies();
+      const targets = pack.length ? pack : [dummy];
+      spawnDemo('skill-ring ' + school + ' ground', b.x, b.y, 1100);
+      targets.forEach((el, i) => {
+        setTimeout(() => {
+          const p = fxPt(el, 0.45, 0.42);
+          spawnDemo('fx-hit school-' + school + ' impact-explode', p.x, p.y, 720);
+          spawnDemo('skill-burst aoe impact-explode', p.x, p.y, 900);
+          hitDummy(el);
+        }, i * 70);
+      });
+      setStatus('Область по пачке');
+      return;
+    }
+    if (kind === 'shield') {
+      spawnDemo('skill-ring heal', a.x, a.y, 1100);
+      spawnDemo('skill-burst heal', a.x, a.y, 900);
+      const plus = spawnDemo('chain-plus school-heal', a.x, a.y - 10, 700);
+      if (plus) plus.textContent = '+';
+      if (caster) {
+        caster.classList.add('shielded');
+        setTimeout(() => caster.classList.remove('shielded'), 800);
+      }
+      setStatus('Щит на кастере');
+      return;
+    }
+    if (kind === 'kick') {
+      if (dummy) dummy.classList.add('cmp-fx-kick');
+      spawnDemo('skill-ring holy', b.x, b.y, 900);
+      spawnDemo('skill-burst holy', b.x, b.y, 800);
+      spawnDemo('fx-hit school-holy', b.x, b.y, 720);
+      hitDummy(dummy);
+      setTimeout(() => { if (dummy) dummy.classList.remove('cmp-fx-kick'); }, 900);
+      setStatus('Кик · сбитие каста');
+      return;
+    }
+    if (kind === 'death') {
+      spawnDemo('fx-hit school-shadow impact-explode', b.x, b.y, 720);
+      spawnDemo('skill-burst shadow impact-drain', b.x, b.y, 900);
+      sparkBurst(b.x, b.y, 'shadow', 8);
+      if (dummy) dummy.classList.add('cmp-fx-dummy-dead');
+      setTimeout(() => { if (dummy) dummy.classList.remove('cmp-fx-dummy-dead'); }, 1600);
+      setStatus('Смерть цели');
+    }
   }
 
   function bind() {
@@ -1018,6 +1179,9 @@
     $('btn-cmp-hub')?.addEventListener('click', closeCompare);
     document.querySelectorAll('[data-cmp-n]').forEach((b) => {
       b.addEventListener('click', () => setDummyN(+b.getAttribute('data-cmp-n')));
+    });
+    document.querySelectorAll('[data-cmp-fx]').forEach((b) => {
+      b.addEventListener('click', () => demoFx(b.getAttribute('data-cmp-fx')));
     });
     document.querySelectorAll('[data-cmp-one]').forEach((btn) => {
       btn.addEventListener('click', () => {

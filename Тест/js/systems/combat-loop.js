@@ -89,8 +89,9 @@
   }
   function living(side) {
     if (side === 'ally') {
-      const pillars = (combat?.enemies || []).filter(u => u && u.side === 'ally' && u.alive && u.hp > 0 && (u.healOnly || u.instRole === 'static_pillar'));
-      return [...run.party, ...((combat?.pets) || []), ...pillars].filter(u => u.side === 'ally' && u.alive && u.hp > 0);
+      const extras = (combat?.enemies || []).filter(u => u && u.side === 'ally' && u.alive && u.hp > 0
+        && (u.healOnly || u.instRole === 'static_pillar' || u.instRole === 'jade_echo'));
+      return [...run.party, ...((combat?.pets) || []), ...extras].filter(u => u.side === 'ally' && u.alive && u.hp > 0);
     }
     return (combat?.enemies || []).filter(u => u.alive && u.hp > 0 && !u.vaultAway && u.side !== 'ally' && !u.healOnly && u.instRole !== 'static_pillar');
   }
@@ -114,7 +115,7 @@
     return { atk: Math.round(atk), def: Math.round(def), speed };
   }
   function buildTurnQueue() {
-    const units = allUnits().filter(u => u.alive && u.hp > 0 && u.petKey !== 'jade_serpent' && !u.instObject && !u.healOnly && !u.vaultAway);
+    const units = allUnits().filter(u => u.alive && u.hp > 0 && u.petKey !== 'jade_serpent' && !u.instObject && !u.healOnly && !u.vaultAway && u.instRole !== 'jade_echo');
     units.sort((a, b) => getEff(b).speed - getEff(a).speed);
     combat.turnQueue = units.map(u => u.uid);
     combat.turnIndex = 0;
@@ -263,7 +264,9 @@
           try {
             if (paused || !combat || combat.over || combat._afterBusy) return;
             installAnimAfterAction();
-            if (typeof raidAllyAi === 'function') {
+            if (typeof partyAiAct === 'function') {
+              if (!partyAiAct(actor)) aiAct(actor);
+            } else if (typeof raidAllyAi === 'function') {
               if (!raidAllyAi(actor)) aiAct(actor);
             } else {
               aiAct(actor);

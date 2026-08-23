@@ -522,7 +522,7 @@
         && typeof tryAssignRaidSoak === 'function' && tryAssignRaidSoak(unit)) {
       return;
     }
-    if (raidAutoAllies && combat && !combat.over && unit?.side === 'ally' && !unit.isPet && !unit.healOnly && !unit.instObject && !pendingTarget) {
+    if (raidAutoAllies && combat && !combat.over && unit?.side === 'ally' && !unit.isPet && !unit.healOnly && !unit.instObject && unit.instRole !== 'jade_echo' && !pendingTarget) {
       if (typeof setRaidFocus === 'function') setRaidFocus(unit);
       return;
     }
@@ -545,7 +545,7 @@
       if (unit.side !== 'ally' || (unit.isPet && !unit.healOnly)) return toast('Нужен союзник');
     } else if (rule === 'enemy') {
       if (unit.healOnly || unit.instRole === 'static_pillar') return toast('Столб только лечить');
-      if (unit.side !== 'enemy') return toast('Нужен враг');
+      if (unit.side !== 'enemy' && unit.instRole !== 'jade_echo') return toast('Нужен враг');
     } else if (rule === 'ally_or_enemy') {
       if (unit.isPet) return toast('Не питомец');
       if (unit.side !== 'ally' && unit.side !== 'enemy') return toast('Нужна цель');
@@ -564,6 +564,30 @@
   }
 
 
+  function updateTeleBanner() {
+    const el = document.getElementById('tele-banner');
+    if (!el) return;
+    if (!combat || combat.over) {
+      el.classList.add('hidden');
+      el.textContent = '';
+      return;
+    }
+    const foes = (combat.enemies || []).filter(e => e && e.alive && e.casting);
+    if (!foes.length) {
+      el.classList.add('hidden');
+      el.textContent = '';
+      return;
+    }
+    foes.sort((a, b) => (Number(b.casting.castPrio || b.casting.priority) || 0) - (Number(a.casting.castPrio || a.casting.priority) || 0));
+    const e = foes[0];
+    const c = e.casting;
+    const kind = c.kind || '';
+    const kindRu = kind === 'kick' ? 'Прерывание' : (kind === 'buster' ? 'Удар по танку' : (kind === 'aoe' ? 'По области' : 'Каст'));
+    const turns = Number(c.turns || c.resolveIn || 1);
+    el.className = 'tele-banner on kind-' + (kind || 'cast');
+    el.textContent = kindRu + ' · ' + (e.name || 'Враг') + ' · ' + (c.name || 'Каст') + ' · ' + turns + ' х.';
+  }
+
   function renderCombat() {
     ensureCombatRowClicks();
     if (typeof fieldActive === 'function' && fieldActive()) {
@@ -580,6 +604,7 @@
     updateBossFrame();
     updateVignette();
     if (run?.raid && typeof refreshRaidAlerts === 'function') refreshRaidAlerts();
+    try { updateTeleBanner(); } catch (_) {}
     try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
   }
 
@@ -605,7 +630,7 @@
         const r = abilityTargetRule(ab);
         if (r === 'ally_any') return u.side === 'ally' && !u.isPet;
         if (r === 'enemy') {
-          if (u.side !== 'enemy') return false;
+          if (u.side !== 'enemy' && u.instRole !== 'jade_echo') return false;
           // Молот гнева / казни: только ≤35% HP
           if (EXECUTE_IDS.has(ab.id)) return (u.hp / Math.max(1, u.maxHp)) <= 0.35;
           return true;
@@ -706,7 +731,8 @@
         if (from && from !== to) hideAbilityTipFloat();
       });
     };
-    bind('ally-row', (uid) => (run?.party || []).find(p => p.uid === uid));
+    bind('ally-row', (uid) => (run?.party || []).find(p => p.uid === uid)
+      || (combat?.enemies || []).find(e => e && e.uid === uid && e.instRole === 'jade_echo'));
     bind('enemy-row', (uid) => (combat?.enemies || []).find(p => p.uid === uid));
   }
 
@@ -950,7 +976,8 @@
   function renderAllies() {
     const row = document.getElementById('ally-row');
     if (!row || !run) return;
-    syncUnitRow(row, run.party, currentActor(), true);
+    const extra = (combat?.enemies || []).filter(e => e && e.instRole === 'jade_echo' && (e.alive || (e._deadAt && Date.now() - e._deadAt < 560)));
+    syncUnitRow(row, (run.party || []).concat(extra), currentActor(), true);
   }
 
   function renderEnemies() {
@@ -976,7 +1003,7 @@
     const targeting = pendingTarget && (() => {
       const r = abilityTargetRule(pendingTarget.ability);
       if (r === 'ally_any') return u.side === 'ally' && !u.isPet;
-      if (r === 'enemy') return u.side === 'enemy';
+      if (r === 'enemy') return u.side === 'enemy' || u.instRole === 'jade_echo';
       if (r === 'ally_or_enemy') return !u.isPet && (u.side === 'ally' || u.side === 'enemy');
       return false;
     })();
@@ -989,7 +1016,7 @@
     const focus = (typeof raidFocusClass === 'function') ? raidFocusClass(u) : '';
     const auras = (u.buffs || []).some(b => b && (b.turns == null || b.turns > 0));
     const auraCls = auras ? ' has-auras' : '';
-    return `unit ${u.side === 'ally' ? 'ally' : 'enemy'}${u.alive ? '' : ' dead'}${active ? ' active' : ''}${targeting ? ' selected-target' : ''}${castingCls}${low}${kickPrio}${focus}${auraCls}`;
+    return `unit ${u.side === 'ally' ? 'ally' : 'enemy'}${u.instRole === 'jade_echo' ? ' jade-echo' : ''}${u.alive ? '' : ' dead'}${active ? ' active' : ''}${targeting ? ' selected-target' : ''}${castingCls}${low}${kickPrio}${focus}${auraCls}`;
   }
 
   function runesRowHtml(u) {

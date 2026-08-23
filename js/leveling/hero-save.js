@@ -183,7 +183,7 @@
     opts = opts || {};
     var h = {
       id: newId(),
-      name: opts.name,
+      name: String(opts.name || '').trim().slice(0, 24),
       classId: opts.classId,
       specId: opts.specId,
       level: 1,
@@ -197,6 +197,15 @@
       created: Date.now(),
     };
     return putHero(h);
+  }
+
+  function renameHero(name) {
+    var hero = getActive();
+    if (!hero) return null;
+    var n = String(name || '').trim().slice(0, 24);
+    if (!n) return hero;
+    hero.name = n;
+    return putHero(hero);
   }
 
   function changeSpec(specId) {
@@ -318,6 +327,7 @@
   G.igorHeroAddLevels = addLevels;
   G.igorHeroBlankTalents = blankTalents;
   G.igorHeroChangeSpec = changeSpec;
+  G.igorHeroRename = renameHero;
   G.igorHeroHonestCleared = honestCleared;
   G.igorHeroPersistGear = persistGear;
   G.igorHeroStashGear = stashActiveGear;
