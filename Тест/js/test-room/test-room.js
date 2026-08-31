@@ -7,7 +7,7 @@
   let testActor = null; // mock unit для costLabel / estimateAbility
 
   function hideAllMainScreens() {
-    ['lobby', 'run-screen', 'test-hub', 'test-compare', 'test-picker', 'test-arena', 'test-style', 'test-ink', 'test-brew', 'test-plans'].forEach(id => {
+    ['lobby', 'run-screen', 'test-hub', 'test-compare', 'test-picker', 'test-arena', 'test-style', 'test-ink', 'test-brew', 'test-plans', 'test-live'].forEach(id => {
       document.getElementById(id)?.classList.add('hidden');
     });
   }
@@ -26,8 +26,56 @@
     updateTestLaunchBar();
   }
 
+  function loadScriptOnce(src) {
+    return new Promise((resolve, reject) => {
+      if (src.indexOf('phaser.min.js') >= 0 && window.Phaser) {
+        resolve();
+        return;
+      }
+      if (src.indexOf('live-fight.js') >= 0 && window.bootLiveFight) {
+        resolve();
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error(src));
+      document.head.appendChild(s);
+    });
+  }
+
+  function openLiveFightRoom() {
+    hideAllMainScreens();
+    document.getElementById('end-modal')?.classList.add('hidden');
+    const screen = document.getElementById('test-live');
+    const err = document.getElementById('live-boot-error');
+    if (screen) screen.classList.remove('hidden');
+    document.body.classList.add('live-open');
+    if (err) {
+      err.textContent = '';
+      err.classList.add('hidden');
+    }
+    const phaserSrc = 'phaser-\u0430\u0440\u0435\u043d\u0430/vendor/phaser.min.js';
+    loadScriptOnce(phaserSrc)
+      .then(() => loadScriptOnce('js/test-room/live-inst.js?v=0.9'))
+      .then(() => loadScriptOnce('js/test-room/live-kits.js?v=0.7'))
+      .then(() => loadScriptOnce('js/test-room/live-fight.js?v=0.9'))
+      .then(() => new Promise((r) => requestAnimationFrame(() => r())))
+      .then(() => {
+        if (typeof bootLiveFight === 'function') bootLiveFight();
+        else throw new Error('bootLiveFight missing');
+      })
+      .catch((e) => {
+        if (!err) return;
+        err.textContent = 'Не загрузилось поле. Открой Тест через сервер (не file://). ' + (e && e.message ? e.message : '');
+        err.classList.remove('hidden');
+      });
+  }
+
   function closeTestRoomToLobby() {
     destroyTestArena();
+    try { if (typeof destroyLiveFight === 'function') destroyLiveFight(); } catch (_) {}
+    document.body.classList.remove('live-open');
     hideAllMainScreens();
     document.getElementById('lobby')?.classList.remove('hidden');
   }
@@ -463,9 +511,17 @@
 
     document.getElementById('btn-hub-lobby')?.addEventListener('click', closeTestRoomToLobby);
     document.getElementById('btn-hub-arena')?.addEventListener('click', openTestPicker);
+    document.getElementById('btn-hub-live')?.addEventListener('click', openLiveFightRoom);
+    document.getElementById('btn-live-back')?.addEventListener('click', () => {
+      try { if (typeof destroyLiveFight === 'function') destroyLiveFight(); } catch (_) {}
+      openTestHub();
+    });
     document.getElementById('btn-hub-compare')?.addEventListener('click', () => {
       if (typeof openTestCompare === 'function') openTestCompare();
     });
+    if (/[?&]live=1(?:&|$)/.test(location.search || '')) {
+      setTimeout(openLiveFightRoom, 0);
+    }
     document.getElementById('btn-hub-style')?.addEventListener('click', () => {
       if (typeof openStyleLab === 'function') openStyleLab();
     });
