@@ -1,0 +1,26 @@
+/* Облачные сохранения: блок под «Экспорт / Импорт сейва» и окно входа. Цвета — токены main.css. */
+.cloud-box { margin-top: .6rem; padding: .6rem .7rem; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--panel2) 70%, transparent); display: grid; gap: .45rem; }
+.cloud-head { display: flex; align-items: center; gap: .5rem; font-size: .88rem; color: var(--text); min-width: 0; }
+.cloud-line { overflow-wrap: anywhere; }
+.cloud-dot { width: .55rem; height: .55rem; border-radius: 50%; flex: none; background: var(--fg-subtle); }
+.cloud-box[data-state="ok"] .cloud-dot { background: var(--ok); box-shadow: 0 0 6px color-mix(in oklab, var(--ok) 60%, transparent); }
+.cloud-box[data-state="offline"] .cloud-dot,
+.cloud-box[data-state="conflict"] .cloud-dot { background: var(--kick); }
+.cloud-box[data-state="error"] .cloud-dot { background: var(--danger); }
+.cloud-box[data-state="conflict"] { border-color: color-mix(in oklab, var(--kick) 45%, transparent); }
+.cloud-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.cloud-note { margin: 0; font-size: .8rem; color: var(--muted); line-height: 1.4; }
+.modal.cloud-modal { width: min(440px, 100%); }
+.cloud-form { display: grid; gap: .35rem; }
+.cloud-form label { font-size: .82rem; color: var(--muted); margin-top: .25rem; }
+.cloud-form input { font: inherit; color: var(--text); background: var(--bg-elevated); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); padding: .55rem .65rem; min-height: 40px; }
+.cloud-form input:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.cloud-form .cloud-actions { margin-top: .5rem; }
+.cloud-err { margin: .2rem 0 0; min-height: 1.2em; font-size: .84rem; color: #fca5a5; }
+.cloud-modal .cloud-note { margin-top: .8rem; }
+.cloud-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .5rem; margin-bottom: .8rem; }
+.cloud-opt { display: grid; gap: .2rem; padding: .6rem .7rem; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--panel2); font-size: .86rem; }
+.cloud-opt span { color: var(--muted); }

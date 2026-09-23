@@ -15,6 +15,13 @@
 
   const DIVERGE_LOG = [
     {
+      id: 'cloud-save',
+      name: 'Облачные сохранения',
+      poured: 'no',
+      testVer: '5.4.9.37В',
+      text: 'Вход по логину и паролю, сейв в облако раз в 30 с, спрашивает при расхождении с другим компьютером. Файлы: js/cloud.js, js/cloud-config.js, css/cloud.css, облако/supabase.sql. На основе только экспорт / импорт файлом.',
+    },
+    {
       id: 'raid-focus-pick',
       name: 'Кого играешь (ключ и рейд)',
       poured: 'no',

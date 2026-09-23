@@ -1,0 +1,25 @@
+#include <windows.h>
+#include "version.h"
+1 RT_MANIFEST "launcher.manifest"
+1 VERSIONINFO
+FILEVERSION LAUNCHER_VERSION_RC
+PRODUCTVERSION LAUNCHER_VERSION_RC
+FILEOS 0x40004
+FILETYPE 0x1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "041904B0"
+    BEGIN
+      VALUE "FileDescription", "Mythic Key — лаунчер"
+      VALUE "ProductName", "Mythic Key"
+      VALUE "FileVersion", LAUNCHER_VERSION_A
+      VALUE "ProductVersion", LAUNCHER_VERSION_A
+      VALUE "OriginalFilename", "MythicKey.exe"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x419, 1200
+  END
+END
