@@ -62,6 +62,17 @@ static int g_port = 0;               /* 0 = по каналу: тест 47619, �
 static int g_noSelfUpdate = 0;
 static int g_headless = 0;           /* --headless: без окна, только журнал (для проверок) */
 static int g_noBrowser = 0;          /* --no-browser: скачать и держать сервер */
+static int g_idleCloseSec = 75;      /* нет отметок от страницы столько секунд — игра закрыта */
+static wchar_t g_browserPath[MAX_PATH]; /* browser= в launcher.ini: свой браузер вместо Edge */
+
+/* Страница игры раз в 5 с отмечается у лаунчера (/__mythickey/alive) и при закрытии шлёт «ухожу».
+   Закрытие игры считаем по ним, а не по процессу Edge: Edge может перезапустить сам себя
+   (первый запуск профиля), и окно переедет в другой процесс. */
+static volatile LONG64 g_lastBeat, g_lastBye;
+static const char HEARTBEAT_JS[] =
+    "<script>(function(){function b(){try{fetch('/__mythickey/alive',{cache:'no-store'}).catch(function(){})}"
+    "catch(e){}}b();setInterval(b,5000);addEventListener('pagehide',function(){try{navigator.sendBeacon("
+    "'/__mythickey/bye')}catch(e){}});})();</script>";
 
 static wchar_t g_exePath[MAX_PATH], g_exeDir[MAX_PATH];
 static wchar_t g_root[MAX_PATH];     /* %LOCALAPPDATA%\MythicKey */
@@ -770,6 +781,19 @@ static DWORD WINAPI serve_client(LPVOID arg) {
     closesocket(c);
     return 0;
   }
+  if (!strncmp(target, "/__mythickey/bye", 16)) {
+    InterlockedExchange64(&g_lastBye, (LONG64)GetTickCount64());
+    send_simple(c, 200, "OK", "text/plain", "ok");
+    closesocket(c);
+    return 0;
+  }
+  /* любой запрос страницы — признак, что окно открыто; /ping шлёт только второй лаунчер */
+  if (strncmp(target, "/__mythickey/ping", 17) != 0) InterlockedExchange64(&g_lastBeat, (LONG64)GetTickCount64());
+  if (!strncmp(target, "/__mythickey/alive", 18)) {
+    send_simple(c, 200, "OK", "text/plain", "ok");
+    closesocket(c);
+    return 0;
+  }
   int head = !strcmp(method, "HEAD");
   if (strcmp(method, "GET") && !head) {
     send_simple(c, 405, "Method Not Allowed", "text/plain", "405");
@@ -824,6 +848,35 @@ static DWORD WINAPI serve_client(LPVOID arg) {
   }
   LARGE_INTEGER sz;
   GetFileSizeEx(f, &sz);
+  if (ends_with(rel, ".html") && sz.QuadPart < 8 * 1024 * 1024) {
+    /* в страницы игры вшиваем отметку «окно открыто» перед </body> */
+    CloseHandle(f);
+    DWORD len = 0;
+    char *page = (char *)read_file(disk, &len);
+    if (!page) {
+      send_simple(c, 500, "Error", "text/plain; charset=utf-8", "Не прочитался файл");
+      closesocket(c);
+      return 0;
+    }
+    char *at = NULL;
+    for (char *q2 = page; (q2 = strstr(q2, "</body>")) != NULL; q2++) at = q2;
+    size_t pre = at ? (size_t)(at - page) : len, add = sizeof(HEARTBEAT_JS) - 1;
+    char h2[512];
+    int n2 = snprintf(h2, sizeof(h2),
+                      "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %lld\r\nCache-Control: no-cache\r\n"
+                      "Connection: close\r\n\r\n",
+                      mime_for(rel), (long long)(len + add));
+    send_all(c, h2, n2);
+    if (!head) {
+      send_all(c, page, (int)pre);
+      send_all(c, HEARTBEAT_JS, (int)add);
+      send_all(c, page + pre, (int)(len - pre));
+    }
+    free(page);
+    shutdown(c, SD_SEND);
+    closesocket(c);
+    return 0;
+  }
   char h[512];
   int n = snprintf(h, sizeof(h),
                    "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %lld\r\nCache-Control: no-cache\r\n"
@@ -867,6 +920,7 @@ static int start_server(void) {
   BOOL excl = TRUE;
   setsockopt(g_listen, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char *)&excl, sizeof(excl));
   if (bind(g_listen, (struct sockaddr *)&a, sizeof(a)) == 0 && listen(g_listen, 64) == 0) {
+    InterlockedExchange64(&g_lastBeat, (LONG64)GetTickCount64());
     HANDLE t = CreateThread(NULL, 0, server_loop, NULL, 0, NULL);
     if (t) CloseHandle(t);
     logw(L"сервер: http://127.0.0.1:%d/", g_port);
@@ -916,11 +970,21 @@ static int find_browser(wchar_t *out) {
   return 0;
 }
 
-/* Повторный запуск Edge с тем же профилем отдаёт окно первому процессу и сразу выходит,
-   поэтому закрытие игры считаем только по первому процессу. */
+/* Пока первый процесс браузера жив — игра открыта. Когда он вышел, окно могло переехать
+   в другой процесс (перезапуск Edge), поэтому дальше слушаем отметки страницы. */
 static DWORD WINAPI browser_watch(LPVOID arg) {
   HANDLE h = (HANDLE)arg;
   WaitForSingleObject(h, INFINITE);
+  logw(L"процесс браузера завершился — проверяю, открыто ли окно игры");
+  for (;;) {
+    Sleep(1000);
+    ULONGLONG now = GetTickCount64();
+    LONG64 beat = g_lastBeat, bye = g_lastBye;
+    int saidBye = bye && bye >= beat && now - (ULONGLONG)bye > 8000;
+    int silent = now - (ULONGLONG)beat > (ULONGLONG)g_idleCloseSec * 1000;
+    if (saidBye || silent) break;
+  }
+  logw(L"окно игры закрыто — выключаю сервер");
   if (g_wnd) PostMessageW(g_wnd, WM_APP_BROWSER_GONE, 0, 0);
   return 0;
 }
@@ -929,7 +993,14 @@ static void open_game_window(void) {
   wchar_t url[96];
   _snwprintf(url, 96, L"http://127.0.0.1:%d/", g_port);
   wchar_t exe[MAX_PATH];
-  if (find_browser(exe)) {
+  int found = 0;
+  if (g_browserPath[0] && GetFileAttributesW(g_browserPath) != INVALID_FILE_ATTRIBUTES) {
+    lstrcpynW(exe, g_browserPath, MAX_PATH);
+    found = 1;
+  } else {
+    found = find_browser(exe);
+  }
+  if (found) {
     wchar_t prof[MAX_PATH], cmd[2048];
     _snwprintf(prof, MAX_PATH, L"%s\\browser", g_root);
     CreateDirectoryW(prof, NULL);
@@ -1172,6 +1243,8 @@ static void load_ini(void) {
     else if (!strcmp(k, "test_base")) lstrcpynA(g_testBase, v, sizeof(g_testBase));
     else if (!strcmp(k, "port")) g_port = atoi(v);
     else if (!strcmp(k, "no_self_update")) g_noSelfUpdate = atoi(v);
+    else if (!strcmp(k, "browser") && v[0]) u8_to_w(v, g_browserPath, MAX_PATH);
+    else if (!strcmp(k, "idle_close_sec") && atoi(v) >= 10) g_idleCloseSec = atoi(v);
   }
   free(buf);
 }
