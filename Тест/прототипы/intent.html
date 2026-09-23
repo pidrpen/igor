@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Намерения — проба</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="proto.css?v=1" />
+  <style>
+    .top { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-bottom: .8rem; }
+    .top h1 { font-size: 1.35rem; }
+    .top .where { color: var(--muted); }
+    .top .sp { flex: 1; }
+    .fights { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .fights .btn { min-height: 34px; padding: .3rem .7rem; font-size: .88rem; }
+    .fights .btn.on { border-color: var(--jade); background: color-mix(in oklab, var(--jade) 16%, var(--panel2)); }
+    .fights .stars { color: var(--cast); margin-left: .25rem; letter-spacing: -.05em; }
+    .lesson { background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--jade); border-radius: var(--r);
+      padding: .55rem .8rem; margin-bottom: .9rem; color: var(--gold); max-width: 80ch; }
+    main { min-width: 0; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1rem; align-items: start; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+    .lane-title { font: 600 .72rem/1 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--subtle); margin: 0 0 .45rem; }
+
+    /* враги */
+    .enemies { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: .7rem; margin-bottom: 1.3rem; }
+    .enemy { display: grid; gap: .4rem; background: none; border: 0; padding: 0; text-align: left; }
+    .intent { position: relative; border-radius: var(--r); padding: .5rem .65rem .55rem 2.1rem; min-height: 78px;
+      background: color-mix(in oklab, var(--k, var(--hit)) 14%, var(--panel)); border: 1px solid color-mix(in oklab, var(--k, var(--hit)) 55%, transparent); }
+    .intent .ord { position: absolute; left: .5rem; top: .55rem; width: 1.2rem; height: 1.2rem; border-radius: 50%; display: grid; place-items: center;
+      font-size: .72rem; font-weight: 700; background: var(--k, var(--hit)); color: #0a0b0e; }
+    .intent .kind { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--k, var(--hit)); font-weight: 600; }
+    .intent .what { font-weight: 600; display: block; }
+    .intent .amt { font-size: 1.15rem; font-weight: 700; display: block; }
+    .intent .tgt { font-size: .86rem; color: var(--muted); }
+    .intent .tgt b { color: var(--text); }
+    .intent.k-hit { --k: var(--hit); } .intent.k-cast { --k: var(--cast); } .intent.k-all { --k: var(--aoe); }
+    .intent.k-heal { --k: var(--heal); } .intent.k-calm { --k: var(--subtle); }
+    .intent.off { --k: var(--subtle); opacity: .75; }
+    .intent.off .what, .intent.off .amt { text-decoration: line-through; }
+    .intent .why { font-size: .78rem; color: var(--jade); font-weight: 600; }
+    .ecard { border-radius: var(--r); background: var(--panel); border: 1px solid var(--border); padding: .55rem .65rem; display: grid; gap: .35rem; }
+    .ecard .nm { display: flex; align-items: center; gap: .45rem; font-weight: 600; }
+    .ecard .ic { font-size: 1.35rem; line-height: 1; }
+    .chips { display: flex; flex-wrap: wrap; gap: .25rem; min-height: 1.3rem; }
+    .chip { font-size: .72rem; padding: .08rem .45rem; border-radius: 99px; background: var(--panel2); border: 1px solid var(--border-strong); }
+    .chip.cc { border-color: var(--aoe); color: #d8ccff; } .chip.mk { border-color: var(--cast); color: #ffe3a0; }
+    .enemy.dead { opacity: .32; }
+    .enemy.dead .intent { display: none; }
+    .enemy.pick .ecard { border-color: var(--jade); box-shadow: 0 0 0 2px color-mix(in oklab, var(--jade) 45%, transparent); cursor: pointer; }
+    .enemy.nopick { opacity: .45; }
+    .enemy.flash .ecard { animation: flash .45s ease; }
+    @keyframes flash { 30% { box-shadow: 0 0 0 3px var(--hit); transform: translateY(-3px); } }
+
+    /* полоски */
+    .bar { position: relative; height: 10px; border-radius: 99px; background: #0b0d12; overflow: hidden; border: 1px solid var(--border); }
+    .bar i { position: absolute; inset: 0 auto 0 0; background: var(--fill, #d65a5a); border-radius: 99px; transition: width .3s ease; }
+    .bar .sh { background: rgba(230,236,255,.75); }
+    .bar .loss { background: repeating-linear-gradient(45deg, #ff6b6b 0 4px, #7a1f1f 4px 8px); opacity: .9; }
+    .num { font-size: .8rem; color: var(--muted); display: flex; justify-content: space-between; gap: .4rem; }
+
+    /* герои */
+    .heroes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr)); gap: .7rem; }
+    .hero { text-align: left; border-radius: var(--r); background: var(--panel); border: 1px solid var(--border); padding: .6rem .65rem; display: grid; gap: .35rem;
+      border-top: 3px solid var(--c); }
+    .hero, .enemy, .ecard, .intent, .ab { min-width: 0; }
+    .hero .nm { display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .45rem; }
+    .hero .nm b { font-weight: 600; } .hero .nm span { color: var(--muted); font-size: .8rem; }
+    .hero .fc { font-size: .82rem; min-height: 1.2em; }
+    .hero .fc.hurt { color: #ff9a9a; } .hero .fc.safe { color: var(--jade); }
+    .hero .die { display: inline-block; font-size: .7rem; font-weight: 700; letter-spacing: .06em; padding: .05rem .4rem; border-radius: 6px; background: var(--hit); color: #140404; margin-left: .3rem; }
+    .hero.sel { box-shadow: 0 0 0 2px var(--c); }
+    .hero.acted { opacity: .78; background: #0e1016; }
+    .hero.acted .nm b::after { content: ' · сходил'; font-weight: 400; color: var(--muted); font-size: .8rem; }
+    .hero.dead { opacity: .3; }
+    .hero.pick { box-shadow: 0 0 0 2px var(--jade); cursor: pointer; }
+    .hero .st { font-size: .75rem; color: var(--muted); }
+
+    /* способности */
+    .abar { margin-top: 1rem; background: var(--panel); border: 1px solid var(--border); border-radius: var(--r); padding: .7rem; }
+    .abar .who { margin-bottom: .5rem; }
+    .abs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); gap: .5rem; }
+    .ab { text-align: left; background: var(--panel2); border: 1px solid var(--border-strong); border-radius: 10px; padding: .5rem .6rem; display: grid; gap: .15rem; }
+    .ab .t { display: flex; justify-content: space-between; align-items: flex-start; gap: .4rem; font-weight: 600; }
+    .ab .t kbd { font: 600 .72rem var(--font-body); color: var(--muted); border: 1px solid var(--border-strong); border-radius: 5px; padding: 0 .3rem; }
+    .ab .d { font-size: .8rem; color: var(--muted); }
+    .ab.on { border-color: var(--jade); background: color-mix(in oklab, var(--jade) 14%, var(--panel2)); }
+    .ab:disabled { opacity: .4; cursor: default; }
+    .hint { font-size: .85rem; color: var(--cast); min-height: 1.3em; margin-top: .45rem; }
+
+    /* правая колонка */
+    .side { display: grid; gap: .7rem; position: sticky; top: 12px; }
+    .endturn { width: 100%; min-height: 52px; font-size: 1.05rem; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .log { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r); padding: .6rem .7rem; max-height: 46vh; overflow: auto; font-size: .84rem; }
+    .log p { margin: 0 0 .3rem; }
+    .log:empty { display: none; }
+    .log .r { color: var(--subtle); font-size: .72rem; margin-top: .45rem; }
+    .log .good { color: var(--jade); } .log .bad { color: #ff9a9a; } .log .heal { color: #8dffb0; } .log .warn { color: var(--cast); }
+    .legend { font-size: .8rem; color: var(--muted); display: grid; gap: .2rem; }
+    .legend span::before { content: ""; display: inline-block; width: .6rem; height: .6rem; border-radius: 2px; margin-right: .4rem; background: var(--k); vertical-align: -1px; }
+
+    /* всплывающие числа */
+    .float { position: fixed; pointer-events: none; font-weight: 700; font-size: 1.15rem; animation: up 1s ease forwards; z-index: 20; text-shadow: 0 2px 6px #000; }
+    .float.dmg { color: #ff7b7b; } .float.heal { color: #7dffae; } .float.abs { color: #e8ecff; }
+    @keyframes up { to { transform: translateY(-38px); opacity: 0; } }
+
+    /* итог */
+    .over { position: fixed; inset: 0; background: rgba(4,6,8,.78); display: grid; place-items: center; z-index: 30; padding: 16px; }
+    .over[hidden] { display: none; }
+    .over .card { background: var(--panel); border: 1px solid var(--border-strong); border-radius: 16px; padding: 1.3rem 1.4rem; width: min(460px, 100%); display: grid; gap: .7rem; }
+    .over .big { font-size: 2rem; color: var(--cast); letter-spacing: .1em; }
+    .over dl { display: grid; grid-template-columns: 1fr auto; gap: .25rem .8rem; margin: 0; }
+    .over dt { color: var(--muted); } .over dd { margin: 0; font-weight: 600; text-align: right; }
+    .over .acts { display: flex; flex-wrap: wrap; gap: .5rem; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1>Намерения</h1>
+    <span class="where" id="where"></span>
+    <span class="sp"></span>
+    <nav class="fights" id="fights" aria-label="Бои"></nav>
+    <a class="btn" href="index.html">← Все пробы</a>
+  </header>
+  <p class="lesson" id="lesson"></p>
+
+  <div class="grid">
+    <main>
+      <h2 class="lane-title">Враги и что они сделают в этот ход</h2>
+      <div class="enemies" id="enemies"></div>
+      <h2 class="lane-title">Отряд · прогноз после хода врагов</h2>
+      <div class="heroes" id="heroes"></div>
+      <section class="abar" aria-live="polite">
+        <div class="who" id="who"></div>
+        <div class="abs" id="abs"></div>
+        <div class="hint" id="hint"></div>
+      </section>
+    </main>
+    <aside class="side">
+      <button class="btn btn-main endturn" id="end" type="button">Конец хода</button>
+      <div class="row2">
+        <button class="btn" id="undo" type="button">Отменить</button>
+        <button class="btn" id="restart" type="button">Заново</button>
+      </div>
+      <div class="legend">
+        <span style="--k: var(--hit)">удар — перевести Провокацией, принять щитом</span>
+        <span style="--k: var(--cast)">каст — сбить (Антимагия, Пинок, Глушащий)</span>
+        <span style="--k: var(--aoe)">по всем — не сбить, пережить</span>
+        <span style="--k: var(--heal)">лечит врага — сбить или убить</span>
+      </div>
+      <div class="log" id="log" aria-live="polite"></div>
+    </aside>
+  </div>
+
+  <div class="over" id="over" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="over-t">
+      <h2 id="over-t"></h2>
+      <div class="big" id="over-stars"></div>
+      <dl id="over-dl"></dl>
+      <div class="acts" id="over-acts"></div>
+    </div>
+  </div>
+
+  <script src="intent-logic.js?v=1"></script>
+  <script src="intent-ui.js?v=1"></script>
+</body>
+</html>

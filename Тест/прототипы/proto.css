@@ -1,0 +1,30 @@
+/* Пробы геймплея — общий стиль. Токены и шрифты как у игры (css/main.css). */
+:root {
+  --bg: #08090c; --panel: #12151c; --panel2: #181c26; --elev: #101218;
+  --border: color-mix(in oklab, #e8eaef 12%, transparent);
+  --border-strong: color-mix(in oklab, #e8eaef 24%, transparent);
+  --text: #eceef2; --muted: #8b93a3; --subtle: #6b7383; --gold: #c8d0da;
+  --tank: #5ba8f5; --heal: #3ecf8e; --dps: #f07178;
+  --hit: #ef4444; --cast: #f0b429; --aoe: #a78bfa; --ok: #22c55e; --jade: #34d399;
+  --font-display: "Cinzel", Georgia, serif;
+  --font-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --r: 12px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: radial-gradient(ellipse at 50% -10%, rgba(40,140,80,.22), transparent 55%), var(--bg);
+  color: var(--text); font: 15px/1.45 var(--font-body); font-feature-settings: "tnum" on;
+  padding-inline: 16px; padding-block: 14px 28px;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+a { color: var(--gold); }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing: .02em; margin: 0; text-wrap: balance; }
+.btn { background: var(--panel2); border: 1px solid var(--border-strong); border-radius: 10px; padding: .5rem .9rem; min-height: 40px; }
+.btn:hover:not(:disabled) { border-color: var(--gold); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn-main { background: color-mix(in oklab, var(--jade) 24%, var(--panel2)); border-color: color-mix(in oklab, var(--jade) 55%, transparent); font-weight: 600; }
+.muted { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

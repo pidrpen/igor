@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Пробы геймплея</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="proto.css?v=1" />
+  <style>
+    .wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 1.2rem; }
+    header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem 1.2rem; }
+    header h1 { font-size: 1.8rem; }
+    header p { margin: 0; color: var(--muted); max-width: 62ch; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: .9rem; }
+    .card { display: grid; gap: .55rem; align-content: start; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 1rem 1.1rem 1.1rem; }
+    .card h2 { font-size: 1.2rem; }
+    .card .q { color: var(--gold); font-weight: 500; }
+    .card p { margin: 0; color: var(--muted); }
+    .card ul { margin: 0; padding-left: 1.1rem; color: var(--muted); }
+    .card .go { justify-self: start; text-decoration: none; margin-top: .3rem; }
+    .tag { justify-self: start; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; padding: .15rem .5rem; border-radius: 6px;
+      background: color-mix(in oklab, var(--jade) 18%, var(--panel2)); color: var(--jade); }
+    .tag.soon { background: var(--panel2); color: var(--muted); }
+    .foot { color: var(--muted); font-size: .88rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Пробы геймплея</h1>
+      <p>Маленькие куски игры, каждый про одну идею. Сыграй по 5–10 минут и скажи, от какого не хотелось отрываться — туда и двигаем ключ.</p>
+    </header>
+    <div class="cards">
+      <article class="card">
+        <span class="tag">играбельно</span>
+        <h2>Намерения</h2>
+        <p class="q">Суть — задачка каждый ход.</p>
+        <p>Враги заранее показывают, что сделают и по кому. У тебя пять героев, чтобы ответить: Провокация, кик, Превращение, щит, убить раньше, чем моб сходит. Прогноз показывает, кто умрёт, если ничего не делать.</p>
+        <ul><li>3 боя: Двор фонарей, Хор ритуалистов, Ша Сомнения</li><li>отмена хода, звёзды за чистую игру</li></ul>
+        <a class="btn btn-main go" href="intent.html">Играть</a>
+      </article>
+      <article class="card">
+        <span class="tag soon">в работе</span>
+        <h2>Пулл</h2>
+        <p class="q">Суть — планирование ключа.</p>
+        <p>Карта данжа, таймер, проценты сил. Решаешь, сколько паков тянуть разом, когда жать Героизм и откаты, когда пить, как обойти патруль. Сам бой — за пару секунд.</p>
+      </article>
+      <article class="card">
+        <span class="tag">уже в игре</span>
+        <h2>Живой бой</h2>
+        <p class="q">Суть — реакция в реальном времени.</p>
+        <p>Изометрия, ходьба, способности без очереди ходов. Для сравнения с двумя пробами выше.</p>
+        <a class="btn go" href="../index.html?live=1">Открыть живой бой</a>
+      </article>
+    </div>
+    <p class="foot"><a href="../index.html">← Вернуться в игру</a></p>
+  </div>
+</body>
+</html>
