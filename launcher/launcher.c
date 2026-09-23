@@ -56,7 +56,7 @@
 
 /* ───────────── настройки (launcher.ini рядом с exe, всё необязательно) ───────────── */
 static char g_branch[64] = "main";
-static char g_channel[16] = "test";  /* test = папка Тест/, main = основа (корень) */
+static char g_channel[16] = "test";  /* с чего открыть: test — Тест/, main — основа. Качаются обе */
 static char g_testBase[256] = "";    /* для проверки: http://127.0.0.1:8123 вместо GitHub */
 static int g_port = 0;               /* 0 = по каналу: тест 47619, основа 47620 */
 static int g_noSelfUpdate = 0;
@@ -76,7 +76,7 @@ static const char HEARTBEAT_JS[] =
 
 static wchar_t g_exePath[MAX_PATH], g_exeDir[MAX_PATH];
 static wchar_t g_root[MAX_PATH];     /* %LOCALAPPDATA%\MythicKey */
-static wchar_t g_chanDir[MAX_PATH];  /* ...\test или ...\main */
+static wchar_t g_chanDir[MAX_PATH];  /* ...\igor — обе сборки, как в репозитории */
 static wchar_t g_gameDir[MAX_PATH];  /* ...\game */
 static wchar_t g_logPath[MAX_PATH];
 
@@ -486,36 +486,28 @@ static int is_game_ext(const char *p) {
 }
 static const char TEST_PREFIX[] = "\xD0\xA2\xD0\xB5\xD1\x81\xD1\x82/"; /* «Тест/» в UTF-8 */
 
+/* Качаем репозиторий так, как он лежит на GitHub: основа в корне, Тест в Тест/.
+   Тогда ссылки «🧪 Тестовая версия» (Тест/index.html) и «← Основная игра» (../index.html) работают как есть. */
 static void pick_game_files(void) {
   /* папки рядом с игрой, которые игре не нужны (скрипты, черновики, архив) */
   static const char *skipTest[] = {"tools/", "tests/", "game-parts/",
                                    "\xD0\xBF\xD1\x80\xD0\xB5\xD0\xB4\xD0\xBB\xD0\xBE\xD0\xB6\xD0\xB5\xD0\xBD\xD0\xB8\xD1\x8F \xD0\x98\xD0\x98/", /* предложения ИИ/ */
                                    0};
-  static const char *skipMain[] = {"launcher/", ".grok/", "tests/", "game-parts/", "Тест/",
+  static const char *skipMain[] = {"launcher/", ".grok/", "tools/", "tests/", "game-parts/",
                                    "\xD0\x9A\xD0\xBE\xD0\xBF\xD0\xB8\xD1\x8F \xD0\xBD\xD0\xB5 \xD1\x82\xD1\x80\xD0\xBE\xD0\xB3\xD0\xB0\xD1\x82\xD1\x8C/", /* Копия не трогать/ */
-                                   "\xD0\xBF\xD1\x80\xD0\xBE\xD0\xBA\xD0\xB0\xD1\x87\xD0\xBA\xD0\xB0/", /* прокачка/ */
                                    0};
-  int test = strcmp(g_channel, "main") != 0;
   size_t pl = strlen(TEST_PREFIX);
   for (int i = 0; i < g_nent; i++) {
     Entry *e = &g_ent[i];
-    const char *rel = e->path;
     e->want = 0;
-    if (test) {
-      if (strncmp(rel, TEST_PREFIX, pl) != 0) continue;
-      rel += pl;
-      int skip = 0;
-      for (int k = 0; skipTest[k]; k++)
-        if (!strncmp(rel, skipTest[k], strlen(skipTest[k]))) skip = 1;
-      if (skip) continue;
-    } else {
-      int skip = !strncmp(rel, TEST_PREFIX, pl);
-      for (int k = 0; skipMain[k]; k++)
-        if (!strncmp(rel, skipMain[k], strlen(skipMain[k]))) skip = 1;
-      if (skip) continue;
-    }
-    if (!is_game_ext(rel) || !rel_is_safe(rel)) continue;
-    e->rel = (char *)rel;
+    int inTest = !strncmp(e->path, TEST_PREFIX, pl);
+    const char *sub = inTest ? e->path + pl : e->path;
+    const char **skip = inTest ? skipTest : skipMain;
+    int bad = 0;
+    for (int k = 0; skip[k]; k++)
+      if (!strncmp(sub, skip[k], strlen(skip[k]))) bad = 1;
+    if (bad || !is_game_ext(sub) || !rel_is_safe(e->path)) continue;
+    e->rel = e->path;
     e->want = 1;
   }
 }
@@ -991,7 +983,8 @@ static DWORD WINAPI browser_watch(LPVOID arg) {
 
 static void open_game_window(void) {
   wchar_t url[96];
-  _snwprintf(url, 96, L"http://127.0.0.1:%d/", g_port);
+  /* по умолчанию открываем Тест; channel=main в launcher.ini — основу */
+  _snwprintf(url, 96, L"http://127.0.0.1:%d/%s", g_port, strcmp(g_channel, "main") ? L"%D0%A2%D0%B5%D1%81%D1%82/" : L"");
   wchar_t exe[MAX_PATH];
   int found = 0;
   if (g_browserPath[0] && GetFileAttributesW(g_browserPath) != INVALID_FILE_ATTRIBUTES) {
@@ -1031,9 +1024,12 @@ static void open_game_window(void) {
 }
 
 /* ───────────── основной поток обновления ───────────── */
+static const wchar_t TEST_DIR_W[] = L"\x0422\x0435\x0441\x0442"; /* «Тест» */
+
 static int game_present(void) {
   wchar_t p[MAX_PATH];
-  _snwprintf(p, MAX_PATH, L"%s\\index.html", g_gameDir);
+  if (strcmp(g_channel, "main")) _snwprintf(p, MAX_PATH, L"%s\\%s\\index.html", g_gameDir, TEST_DIR_W);
+  else _snwprintf(p, MAX_PATH, L"%s\\index.html", g_gameDir);
   return GetFileAttributesW(p) != INVALID_FILE_ATTRIBUTES;
 }
 
@@ -1216,6 +1212,42 @@ static LRESULT CALLBACK wnd_proc(HWND h, UINT m, WPARAM w, LPARAM l) {
   return DefWindowProcW(h, m, w, l);
 }
 
+/* Лаунчер 1.0.x качал только Тест в ...\\test\\game. Переносим его в ...\\igor\\game\\Тест,
+   чтобы не качать 230 МБ заново: пути в индексе получают приставку «Тест/». */
+static void migrate_test_only(void) {
+  wchar_t oldDir[MAX_PATH], oldGame[MAX_PATH], oldIdx[MAX_PATH], newIdx[MAX_PATH], dest[MAX_PATH];
+  _snwprintf(oldDir, MAX_PATH, L"%s\\test", g_root);
+  _snwprintf(oldGame, MAX_PATH, L"%s\\game", oldDir);
+  _snwprintf(oldIdx, MAX_PATH, L"%s\\index.txt", oldDir);
+  _snwprintf(newIdx, MAX_PATH, L"%s\\index.txt", g_chanDir);
+  if (GetFileAttributesW(newIdx) != INVALID_FILE_ATTRIBUTES || GetFileAttributesW(oldIdx) == INVALID_FILE_ATTRIBUTES) return;
+  CreateDirectoryW(g_gameDir, NULL);
+  _snwprintf(dest, MAX_PATH, L"%s\\%s", g_gameDir, TEST_DIR_W);
+  if (!MoveFileExW(oldGame, dest, 0)) {
+    logw(L"перенос старой папки Теста не удался (код %lu) — скачаю заново", GetLastError());
+    return;
+  }
+  DWORD len = 0;
+  char *buf = (char *)read_file(oldIdx, &len);
+  size_t cap = (size_t)len * 2 + 4096, n = 0;
+  char *out = (char *)malloc(cap);
+  if (buf && out) {
+    for (char *line = strtok(buf, "\n"); line; line = strtok(NULL, "\n")) {
+      char *tab = strchr(line, '\t');
+      if (!tab || tab - line != 40) continue;
+      *tab = 0;
+      n += (size_t)snprintf(out + n, cap - n, "%s\t%s%s\n", line, TEST_PREFIX, tab + 1);
+      if (n + 600 > cap) break;
+    }
+    write_file_atomic(newIdx, (unsigned char *)out, (DWORD)n);
+    DeleteFileW(oldIdx);
+    RemoveDirectoryW(oldDir);
+    logw(L"старая папка Теста перенесена — повторно качать не нужно");
+  }
+  free(buf);
+  free(out);
+}
+
 /* ───────────── настройки ───────────── */
 static void trim(char *s) {
   char *e = s + strlen(s);
@@ -1266,25 +1298,24 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmdline, int show) {
   (void)cmdline;
   load_ini();
   if (strcmp(g_channel, "main") != 0) lstrcpynA(g_channel, "test", sizeof(g_channel));
-  if (!g_port) g_port = strcmp(g_channel, "main") ? 47619 : 47620;
+  if (!g_port) g_port = 47619; /* один адрес на обе сборки — одни и те же сейвы, как с python -m http.server */
 
   wchar_t local[MAX_PATH];
   if (!GetEnvironmentVariableW(L"LOCALAPPDATA", local, MAX_PATH)) lstrcpynW(local, g_exeDir, MAX_PATH);
   _snwprintf(g_root, MAX_PATH, L"%s\\MythicKey", local);
   CreateDirectoryW(g_root, NULL);
-  wchar_t wch[16];
-  u8_to_w(g_channel, wch, 16);
-  _snwprintf(g_chanDir, MAX_PATH, L"%s\\%s", g_root, wch);
+  _snwprintf(g_logPath, MAX_PATH, L"%s\\launcher.log", g_root);
+  _snwprintf(g_chanDir, MAX_PATH, L"%s\\igor", g_root);
   CreateDirectoryW(g_chanDir, NULL);
   _snwprintf(g_gameDir, MAX_PATH, L"%s\\game", g_chanDir);
+  migrate_test_only();
   CreateDirectoryW(g_gameDir, NULL);
-  _snwprintf(g_logPath, MAX_PATH, L"%s\\launcher.log", g_root);
   {
     wchar_t old[MAX_PATH];
     _snwprintf(old, MAX_PATH, L"%s.old", g_exePath);
     DeleteFileW(old);
   }
-  logw(L"── лаунчер %s · канал %hs · ветка %hs", LAUNCHER_VERSION_W, g_channel, g_branch);
+  logw(L"── лаунчер %s · открыть %s · ветка %hs", LAUNCHER_VERSION_W, strcmp(g_channel, "main") ? L"Тест" : L"основу", g_branch);
 
   if (g_headless) {
     update_thread(NULL);
