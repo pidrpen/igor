@@ -18,7 +18,32 @@
     'barrel', 'barrels', 'barrelsStacked', 'woodenCrate', 'woodenCrates', 'woodenPile', 'chestClosed', 'chestOpen',
     'tableRoundChairs', 'tableShortChairs', 'tableChairsBroken', 'tableRoundItemsChairs', 'chair', 'stoneStep', 'stairs'];
 
+  /* Свои тела юнитов (assets/live/<тело>/<напр>_<idle|run|act>_<NN>.png, 256×512, ступни x=128 y≈458).
+     Рисуются направления 3–7, 0–2 — зеркало. Нет тела или кадров — модель Kenney.
+     Тело из одного кадра (пока только стойка) не бегает: стоит и вздрагивает на ударе. */
+  const LIVE = 'assets/live/';
+  const BODIES = {
+    monk: { dirs: [3, 4, 5, 6, 7], run: 6, act: 4 },
+    mob_disciple: { dirs: [3], run: 0, act: 0 },
+    mob_jade_fighter: { dirs: [3], run: 0, act: 0 },
+    mob_sha_clot: { dirs: [3], run: 0, act: 0 },
+    mob_sha_doubt: { dirs: [3], run: 0, act: 0 },
+  };
+  /* id врага в LiveInst → тело */
+  const MOB_BODY = { disciple: 'mob_disciple', charger: 'mob_jade_fighter', wisp: 'mob_sha_clot', boss: 'mob_sha_doubt' };
+  /* фигура в кадрах assets/live ≈130 px из 512, у Kenney ≈140 из 512 → подгоняем рост */
+  const BODY_SCALE = 0.5 * 140 / 130;
+  const nn = (i) => String(i).padStart(2, '0');
+
   function preload(scene) {
+    Object.keys(BODIES).forEach((b) => {
+      const def = BODIES[b];
+      def.dirs.forEach((d) => {
+        scene.load.image('kb_' + b + '_' + d + '_idle', LIVE + b + '/' + d + '_idle_00.png');
+        for (let i = 0; i < def.run; i++) scene.load.image('kb_' + b + '_' + d + '_run_' + i, LIVE + b + '/' + d + '_run_' + nn(i) + '.png');
+        for (let i = 0; i < def.act; i++) scene.load.image('kb_' + b + '_' + d + '_act_' + i, LIVE + b + '/' + d + '_act_' + nn(i) + '.png');
+      });
+    });
     TILES.forEach((n) => DIRS.forEach((d) => scene.load.image('kt_' + n + '_' + d, K + 'tiles/' + n + '_' + d + '.png')));
     for (let d = 0; d < 8; d++) {
       scene.load.image('km_' + d + '_idle', K + 'male/' + d + '_idle_00.png');
@@ -30,6 +55,17 @@
   }
 
   function makeAnims(scene) {
+    Object.keys(BODIES).forEach((b) => {
+      const def = BODIES[b];
+      def.dirs.forEach((d) => {
+        if (def.run && !scene.anims.exists('kb_' + b + '_run_' + d)) {
+          scene.anims.create({ key: 'kb_' + b + '_run_' + d, frames: [...Array(def.run).keys()].map((i) => ({ key: 'kb_' + b + '_' + d + '_run_' + i })), frameRate: 11, repeat: -1 });
+        }
+        if (def.act && !scene.anims.exists('kb_' + b + '_act_' + d)) {
+          scene.anims.create({ key: 'kb_' + b + '_act_' + d, frames: [...Array(def.act).keys()].map((i) => ({ key: 'kb_' + b + '_' + d + '_act_' + i })), frameRate: 12, repeat: 0 });
+        }
+      });
+    });
     for (let d = 0; d < 8; d++) {
       if (!scene.anims.exists('km_run_' + d)) {
         scene.anims.create({ key: 'km_run_' + d, frames: [...Array(10).keys()].map((i) => ({ key: 'km_' + d + '_run_' + i })), frameRate: 14, repeat: -1 });
@@ -245,6 +281,30 @@
     return (f(r) << 16) | (f(g) << 8) | f(b);
   }
 
+  function bodyOf(u) {
+    const k = u.kit || {};
+    const id = u.side === 'party' && !u.isPet ? k.classId : MOB_BODY[k.id];
+    return id && BODIES[id] ? id : null;
+  }
+
+  /* какое направление рисовать и зеркалить ли: 0↔6, 1↔5, 2↔4 */
+  function view(u) {
+    const def = u._body && BODIES[u._body];
+    if (!def) return { d: u.dir8, flip: false };
+    if (def.dirs.length === 1) return { d: def.dirs[0], flip: false };
+    if (def.dirs.indexOf(u.dir8) >= 0) return { d: u.dir8, flip: false };
+    const m = (6 - u.dir8 + 8) % 8;
+    return { d: def.dirs.indexOf(m) >= 0 ? m : def.dirs[0], flip: true };
+  }
+
+  function keyFor(u, kind) {
+    const v = view(u);
+    if (!u._body) return { key: kind === 'idle' ? 'km_' + v.d + '_idle' : 'km_' + kind + '_' + v.d, flip: false };
+    const def = BODIES[u._body];
+    if (kind !== 'idle' && !def[kind]) return { key: null, flip: v.flip };
+    return { key: kind === 'idle' ? 'kb_' + u._body + '_' + v.d + '_idle' : 'kb_' + u._body + '_' + kind + '_' + v.d, flip: v.flip };
+  }
+
   /* Подменяет у спрайта юнита NES-картинки на модель Kenney: любые setTexture / play / setDisplaySize
      из старого кода превращаются в стойку, бег или жест нужного направления и нужного масштаба. */
   function kenneyize(scene, u) {
@@ -253,11 +313,13 @@
     sp._km = true;
     const S = Phaser.GameObjects.Sprite.prototype;
     if (u.dir8 == null) u.dir8 = u.side === 'party' ? 7 : 3;
+    u._body = bodyOf(u);
     const size = (u.kit && u.kit.size) || 90;
-    const scale = size / 80;
+    const scale = size / 80 * (u._body ? BODY_SCALE : 1);
+    u._kmScale = scale;
     const enemy = u.side !== 'party' && !u.isPet;
     u._kmTint = 0xffffff;
-    if (enemy || u.isPet) {
+    if (!u._body && (enemy || u.isPet)) {
       u._kmTint = mixToWhite(u.kit && u.kit.color, enemy ? 0.3 : 0.45);
       try {
         if (sp.preFX) { const cm = sp.preFX.addColorMatrix(); cm.grayscale(enemy ? 0.85 : 0.6); cm.brightness(1.25, true); }
@@ -266,22 +328,33 @@
     sp.setDisplaySize = function () { return S.setScale.call(sp, scale); };
     sp.setTexture = function (key, frame) {
       if (!sp.scene) return sp;
-      if (!String(key).startsWith('km_')) key = 'km_' + u.dir8 + '_idle';
+      const ks = String(key);
+      if (!ks.startsWith('km_') && !ks.startsWith('kb_')) {
+        const k = keyFor(u, 'idle');
+        key = k.key;
+        S.setFlipX.call(sp, k.flip);
+      }
       return S.setTexture.call(sp, key, frame);
     };
     sp.play = function (key, ignore) {
       if (!sp.scene) return sp;
       const k = typeof key === 'string' ? key : (key && key.key) || '';
-      if (!k.startsWith('km_')) key = 'km_act_' + u.dir8;
+      if (!k.startsWith('km_') && !k.startsWith('kb_')) {
+        const a = keyFor(u, 'act');
+        S.setFlipX.call(sp, a.flip);
+        if (!a.key) return pulse(scene, sp, scale);
+        key = a.key;
+      }
       S.play.call(sp, key, ignore);
       return S.setScale.call(sp, scale);
     };
     sp.setFlipX = function () { return sp; };
     sp.clearTint = function () { return S.setTint.call(sp, u._kmTint); };
     S.setOrigin.call(sp, 0.5, FEET_ORIGIN_Y);
-    S.setFlipX.call(sp, false);
+    const k0 = keyFor(u, 'idle');
+    S.setFlipX.call(sp, k0.flip);
     if (S.stop) S.stop.call(sp);
-    S.setTexture.call(sp, 'km_' + u.dir8 + '_idle');
+    S.setTexture.call(sp, k0.key);
     S.setScale.call(sp, scale);
     S.setTint.call(sp, u._kmTint);
     if (u.shadow && u.shadow.setStrokeStyle) {
@@ -291,6 +364,13 @@
     }
   }
 
+  /* тело без кадров удара: короткий рывок масштабом */
+  function pulse(scene, sp, scale) {
+    Phaser.GameObjects.Sprite.prototype.setScale.call(sp, scale);
+    if (scene && scene.tweens) scene.tweens.add({ targets: sp, scaleX: scale * 1.12, scaleY: scale * 0.92, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
+    return sp;
+  }
+
   function face(u, sx, sy) { u.dir8 = dirFromScreen(sx, sy, u.dir8); }
 
   function idle(scene, u) {
@@ -298,16 +378,20 @@
     if (!sp || !sp.scene) return;
     kenneyize(scene, u);
     if (sp.anims && sp.anims.isPlaying) sp.anims.stop();
-    sp.setTexture('km_' + u.dir8 + '_idle');
+    const k = keyFor(u, 'idle');
+    Phaser.GameObjects.Sprite.prototype.setFlipX.call(sp, k.flip);
+    sp.setTexture(k.key);
   }
 
   function walk(scene, u) {
     if (!u || !u.sprite || !u.sprite.scene) return;
     kenneyize(scene, u);
-    const key = 'km_run_' + u.dir8;
+    const r = keyFor(u, 'run');
+    if (!r.key) return idle(scene, u);
+    Phaser.GameObjects.Sprite.prototype.setFlipX.call(u.sprite, r.flip);
     const cur = u.sprite.anims && u.sprite.anims.currentAnim && u.sprite.anims.currentAnim.key;
-    if (cur !== key || !u.sprite.anims.isPlaying) u.sprite.play(key);
+    if (cur !== r.key || !u.sprite.anims.isPlaying) u.sprite.play(r.key);
   }
 
-  window.LiveDungeon = { preload, makeAnims, build, render, openGates, kenneyize, face, idle, walk, HALLS };
+  window.LiveDungeon = { preload, makeAnims, build, render, openGates, kenneyize, face, idle, walk, HALLS, BODIES };
 })();
