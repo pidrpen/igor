@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Пулл — проба</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="proto.css?v=1" />
+  <style>
+    .top { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-bottom: .7rem; }
+    .top h1 { font-size: 1.35rem; }
+    .top .where { color: var(--muted); }
+    .top .sp { flex: 1; }
+    .hud { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: .6rem; margin-bottom: .8rem; }
+    .meter { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r); padding: .5rem .7rem; display: grid; gap: .3rem; }
+    .meter .lab { display: flex; justify-content: space-between; gap: .5rem; font-size: .82rem; color: var(--muted); }
+    .meter .val { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+    .bar { position: relative; height: 8px; border-radius: 99px; background: #0b0d12; overflow: hidden; border: 1px solid var(--border); }
+    .bar i { position: absolute; inset: 0 auto 0 0; background: var(--fill, var(--jade)); border-radius: 99px; transition: width .25s ease; }
+    .bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text); opacity: .6; }
+    .late .val { color: #ff9a9a; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 1rem; align-items: start; }
+    @media (max-width: 1020px) { .grid { grid-template-columns: 1fr; } }
+    .mapbox { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: .5rem; min-width: 0; }
+    .mapbox svg { display: block; width: 100%; height: auto; }
+    .mapnote { font-size: .82rem; color: var(--muted); padding: .2rem .4rem .1rem; }
+    .node { cursor: pointer; }
+    .node circle.ring { fill: #141821; stroke: color-mix(in oklab, #e8eaef 28%, transparent); stroke-width: 2; }
+    .node.boss circle.ring { stroke: var(--cast); }
+    .node.can circle.ring { stroke: var(--jade); }
+    .node.sel circle.ring { fill: color-mix(in oklab, var(--jade) 30%, #141821); stroke: var(--jade); stroke-width: 4; }
+    .node.done { cursor: default; opacity: .35; }
+    .node.far { opacity: .55; }
+    .node text, .pat text { paint-order: stroke; stroke: #12151c; stroke-width: 5px; stroke-linejoin: round; }
+    .node text { fill: var(--text); font: 600 15px var(--font-body); text-anchor: middle; pointer-events: none; }
+    .node text.sub { fill: var(--muted); font-weight: 500; font-size: 13px; }
+    .node:focus-visible circle.ring { stroke: var(--gold); stroke-width: 4; }
+    .edge { stroke: color-mix(in oklab, #e8eaef 16%, transparent); stroke-width: 3; }
+    .edge.walk { stroke: color-mix(in oklab, var(--jade) 45%, transparent); }
+    .pat-path { stroke: var(--hit); stroke-width: 2; stroke-dasharray: 6 6; fill: none; opacity: .7; }
+    .pat circle { fill: var(--hit); } .pat text { fill: #ffd0d0; font: 600 13px var(--font-body); text-anchor: middle; }
+    .party circle { fill: var(--gold); } .party text { fill: #0a0b0e; font: 700 13px var(--font-body); text-anchor: middle; }
+
+    .side { display: grid; gap: .7rem; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--r); padding: .7rem .8rem; display: grid; gap: .5rem; }
+    .panel h2 { font-size: 1rem; }
+    .comp { font-size: .86rem; color: var(--muted); }
+    .comp b { color: var(--text); font-weight: 600; }
+    .cds { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+    .cd { text-align: left; background: var(--panel2); border: 1px solid var(--border-strong); border-radius: 10px; padding: .4rem .55rem; display: grid; gap: .1rem; font-size: .84rem; }
+    .cd b { font-weight: 600; } .cd span { color: var(--muted); font-size: .76rem; }
+    .cd.on { border-color: var(--jade); background: color-mix(in oklab, var(--jade) 16%, var(--panel2)); }
+    .cd:disabled { opacity: .45; cursor: default; }
+    .fc { display: grid; grid-template-columns: 1fr auto; gap: .2rem .6rem; font-size: .88rem; }
+    .fc dt { color: var(--muted); } .fc dd { margin: 0; text-align: right; font-weight: 600; }
+    .warn { color: #ff9a9a; font-weight: 600; font-size: .9rem; }
+    .okline { color: var(--jade); font-size: .9rem; }
+    .spark { width: 100%; height: 56px; display: block; }
+    .acts { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+    .acts .btn-main { grid-column: 1 / -1; min-height: 48px; font-size: 1.05rem; }
+    .log { max-height: 30vh; overflow: auto; font-size: .84rem; }
+    .log p { margin: 0 0 .3rem; } .log .good { color: var(--jade); } .log .bad { color: #ff9a9a; } .log .warn { color: var(--cast); font-weight: 400; }
+    .log .t { color: var(--subtle); font-variant-numeric: tabular-nums; margin-right: .35rem; }
+    .over { position: fixed; inset: 0; background: rgba(4,6,8,.78); display: grid; place-items: center; z-index: 30; padding: 16px; }
+    .over[hidden] { display: none; }
+    .over .card { background: var(--panel); border: 1px solid var(--border-strong); border-radius: 16px; padding: 1.3rem 1.4rem; width: min(480px, 100%); display: grid; gap: .7rem; }
+    .over .big { font: 700 2.4rem var(--font-display); color: var(--cast); }
+    .over dl { display: grid; grid-template-columns: 1fr auto; gap: .25rem .8rem; margin: 0; }
+    .over dt { color: var(--muted); } .over dd { margin: 0; font-weight: 600; text-align: right; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1>Пулл</h1>
+    <span class="where">Нефритовый Монастырь · ключ на время</span>
+    <span class="sp"></span>
+    <button class="btn" id="restart" type="button">Заново</button>
+    <a class="btn" href="index.html">← Все пробы</a>
+  </header>
+
+  <section class="hud">
+    <div class="meter" id="m-time"><div class="lab"><span>Таймер</span><span id="t-left"></span></div><div class="val" id="t-val"></div><div class="bar"><i id="t-bar"></i><b style="left:60%" title="+3"></b><b style="left:80%" title="+2"></b></div></div>
+    <div class="meter"><div class="lab"><span>Силы врага</span><span>нужно 100%</span></div><div class="val" id="f-val"></div><div class="bar"><i id="f-bar" style="--fill: var(--cast)"></i></div></div>
+    <div class="meter"><div class="lab"><span>Мана жреца</span><span id="d-val"></span></div><div class="val" id="mn-val"></div><div class="bar"><i id="mn-bar" style="--fill: #60a5fa"></i></div></div>
+    <div class="meter"><div class="lab"><span>Боссы</span><span>оба обязательны</span></div><div class="val" id="b-val"></div></div>
+  </section>
+
+  <div class="grid">
+    <div class="mapbox">
+      <svg id="map" viewBox="0 0 1000 600" role="group" aria-label="Карта данжа"></svg>
+      <p class="mapnote">Клик по паку — добавить в пулл (соседние можно тянуть вместе). Зелёная обводка — до пака можно дойти. Красный — патруль: ходит между залами и присоединится, если тянешь зал, где он стоит.</p>
+    </div>
+    <aside class="side">
+      <section class="panel" aria-live="polite">
+        <h2 id="pull-title">Пулл</h2>
+        <div class="comp" id="comp"></div>
+        <div class="cds" id="cds"></div>
+        <div id="forecast"></div>
+        <div class="acts">
+          <button class="btn btn-main" id="go" type="button">Тянуть</button>
+          <button class="btn" id="drink" type="button">Попить</button>
+          <button class="btn" id="wait" type="button" title="Подождать 10 с: откат или уход патруля">Ждать 10 с</button>
+        </div>
+      </section>
+      <section class="panel"><h2>Ход ключа</h2><div class="log" id="log"></div></section>
+    </aside>
+  </div>
+
+  <div class="over" id="over" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="over-t">
+      <h2 id="over-t">Ключ закрыт</h2>
+      <div class="big" id="over-big"></div>
+      <dl id="over-dl"></dl>
+      <div><button class="btn btn-main" id="over-again" type="button">Ещё раз — другой маршрут</button></div>
+    </div>
+  </div>
+
+  <script src="pull-logic.js?v=1"></script>
+  <script src="pull-ui.js?v=1"></script>
+</body>
+</html>
