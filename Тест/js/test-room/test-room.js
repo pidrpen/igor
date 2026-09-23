@@ -59,7 +59,8 @@
     loadScriptOnce(phaserSrc)
       .then(() => loadScriptOnce('js/test-room/live-inst.js?v=0.9'))
       .then(() => loadScriptOnce('js/test-room/live-kits.js?v=0.7'))
-      .then(() => loadScriptOnce('js/test-room/live-fight.js?v=0.9'))
+      .then(() => loadScriptOnce('js/test-room/live-dungeon.js?v=1.0'))
+      .then(() => loadScriptOnce('js/test-room/live-fight.js?v=1.0'))
       .then(() => new Promise((r) => requestAnimationFrame(() => r())))
       .then(() => {
         if (typeof bootLiveFight === 'function') bootLiveFight();

@@ -4,9 +4,11 @@
   const ASSET = 'assets/';
   const COLS = 28;
   const ROWS = 28;
-  const TW = 70;
-  const TH = 36;
-  const HH = 22;
+  /* Данж на тайлах Kenney (live-dungeon.js) — по умолчанию; ?livestyle=pixel — старый пиксельный двор */
+  const KENNEY = !!window.LiveDungeon && !/[?&]livestyle=pixel/.test(location.search || '');
+  const TW = KENNEY ? 128 : 70;
+  const TH = KENNEY ? 64 : 36;
+  const HH = KENNEY ? 0 : 22;
   const ORIGIN_X = COLS * (TW / 2) + 56;
   const ORIGIN_Y = 168;
   const WORLD_W = ORIGIN_X + COLS * (TW / 2) + 64;
@@ -71,6 +73,7 @@
   }
 
   function buildWorld(roomId) {
+    if (KENNEY) return LiveDungeon.build(roomId || 'court', { cell: cell, COLS: COLS, ROWS: ROWS });
     if (window.LiveInst && LiveInst.build) {
       return LiveInst.build(roomId || 'court', { cell: cell, stamp: stamp, COLS: COLS, ROWS: ROWS, HOUSE: HOUSE });
     }
@@ -142,6 +145,7 @@
         if (/_front|_back|ghoul_|nes_|coil_skull|riptide_bolt|flame_orb|heal_spark|dnd_pool|plague_cloud|arrow|slash|war_|pal_|hunt_|rog_|pri_|mage_|lock_|dru_|eng_|dh_/.test(k)) return;
         this.failedLoads.push(k || '?');
       });
+      if (KENNEY) LiveDungeon.preload(this);
       const fx = ASSET + 'sprites/fx/';
       this.load.image('keg_fly', fx + 'keg_fly.png');
       this.load.image('fire_jet', fx + 'fire_jet.png');
@@ -688,6 +692,17 @@
     }
 
     drawMap() {
+      if (KENNEY) {
+        const kroom = this.currentRoom();
+        this.clearWorld();
+        this.house = null;
+        this.houseRoof = null;
+        this.map = buildWorld(kroom.id);
+        LiveDungeon.render(this, this.map, { isoScreen: isoScreen, isoDepth: isoDepth, keep: (o) => this.keepBit(o) });
+        if (!this.hover) this.hover = this.add.graphics();
+        this._houseOpen = false;
+        return;
+      }
       const room = this.currentRoom();
       this.house = room.house || null;
       this.clearWorld();
@@ -758,7 +773,7 @@
       if (!p || !p.sprite) return;
       const cam = this.cameras.main;
       cam.setBounds(0, 0, WORLD_W, WORLD_H);
-      cam.setZoom(0.78);
+      cam.setZoom(KENNEY ? 0.92 : 0.78);
       cam.startFollow(p.sprite, true, 1, 1);
       cam.setFollowOffset(0, 48);
       if (snap) cam.centerOn(p.sprite.x, p.sprite.y + 48);
@@ -829,6 +844,7 @@
     }
 
     placeUnit(u) {
+      if (KENNEY) LiveDungeon.kenneyize(this, u);
       const h = this.heightAt(u.wx, u.wy);
       const p = isoScreen(u.wx, u.wy, h);
       u.sprite.setPosition(Math.round(p.x), Math.round(p.y));
@@ -925,7 +941,7 @@
     }
 
     create() {
-      this.cameras.main.setBackgroundColor('#160e1c');
+      this.cameras.main.setBackgroundColor(KENNEY ? '#0c0b10' : '#160e1c');
       this.cameras.main.roundPixels = true;
       this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H);
       this.scale.on('resize', (gameSize) => {
@@ -940,7 +956,7 @@
         const near = (Phaser.Textures.FilterMode && Phaser.Textures.FilterMode.NEAREST) || 1;
         const keys = this.textures.getTextureKeys ? this.textures.getTextureKeys() : Object.keys(this.textures.list || {});
         keys.forEach((k) => {
-          if (k !== '__DEFAULT' && k !== '__MISSING' && this.texOk(k)) this.textures.get(k).setFilter(near);
+          if (k !== '__DEFAULT' && k !== '__MISSING' && !/^k[tm]_/.test(k) && this.texOk(k)) this.textures.get(k).setFilter(near);
         });
       } catch (_) {}
 
@@ -976,6 +992,7 @@
       this.makeAnim('sham_walk', [0, 1, 2, 3].map((i) => 'sham_walk_' + pad(i)), 8, true);
       this.makeAnim('sham_walk_front', [0, 1, 2, 3].map((i) => 'sham_walk_front_' + pad(i)), 8, true);
       this.makeAnim('sham_walk_back', [0, 1, 2, 3].map((i) => 'sham_walk_back_' + pad(i)), 8, true);
+      if (KENNEY) LiveDungeon.makeAnims(this);
       const nes = (window.LiveKits && LiveKits.NES) || {};
       Object.keys(nes).forEach((cls) => {
         if (cls === 'monk' || cls === 'shaman' || cls === 'deathknight') return;
@@ -1259,6 +1276,7 @@
           }
         }
       }
+      if (KENNEY) LiveDungeon.openGates(this);
     }
 
     tryExit() {
@@ -1325,6 +1343,7 @@
     }
 
     applyIdle(u) {
+      if (KENNEY) { LiveDungeon.idle(this, u); return; }
       if (u.sprite.anims) u.sprite.anims.stop();
       const tex = this.idleTex(u);
       u.sprite.setTexture(tex);
@@ -1343,6 +1362,7 @@
     }
 
     applyWalk(u) {
+      if (KENNEY) { LiveDungeon.walk(this, u); return; }
       const key = this.walkAnim(u);
       if (!key) return;
       if (u.facing === 'side') u.sprite.setFlipX(!!u.flipLeft);
@@ -1356,6 +1376,7 @@
 
     faceFromScreen(u, sx, sy) {
       if (Math.abs(sx) < 0.05 && Math.abs(sy) < 0.05) return;
+      if (KENNEY) LiveDungeon.face(u, sx, sy);
       if (Math.abs(sy) >= Math.abs(sx) * 0.72) {
         u.facing = sy > 0 ? 'front' : 'back';
         u.flipLeft = false;
@@ -2606,12 +2627,13 @@
     }
     window.addEventListener('resize', () => { if (liveGame) liveGame.scale.refresh(); });
     liveGame = new Phaser.Game({
-      type: Phaser.CANVAS,
+      /* данж Kenney: WebGL (оттенки врагов, плавный масштаб); без WebGL Phaser сам откатится на Canvas */
+      type: KENNEY ? Phaser.AUTO : Phaser.CANVAS,
       parent: host,
       width: W,
       height: H,
       backgroundColor: '#0a1410',
-      pixelArt: true,
+      pixelArt: !KENNEY,
       roundPixels: true,
       loader: { imageLoadType: 'HTMLImageElement' },
       scale: {
