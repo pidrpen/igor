@@ -956,7 +956,7 @@
         const near = (Phaser.Textures.FilterMode && Phaser.Textures.FilterMode.NEAREST) || 1;
         const keys = this.textures.getTextureKeys ? this.textures.getTextureKeys() : Object.keys(this.textures.list || {});
         keys.forEach((k) => {
-          if (k !== '__DEFAULT' && k !== '__MISSING' && !/^k[tm]_/.test(k) && this.texOk(k)) this.textures.get(k).setFilter(near);
+          if (k !== '__DEFAULT' && k !== '__MISSING' && !/^k[tmb]_/.test(k) && this.texOk(k)) this.textures.get(k).setFilter(near);
         });
       } catch (_) {}
 

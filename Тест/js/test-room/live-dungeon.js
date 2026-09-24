@@ -18,32 +18,99 @@
     'barrel', 'barrels', 'barrelsStacked', 'woodenCrate', 'woodenCrates', 'woodenPile', 'chestClosed', 'chestOpen',
     'tableRoundChairs', 'tableShortChairs', 'tableChairsBroken', 'tableRoundItemsChairs', 'chair', 'stoneStep', 'stairs'];
 
-  /* Свои тела юнитов (assets/live/<тело>/<напр>_<idle|run|act>_<NN>.png, 256×512, ступни x=128 y≈458).
-     Рисуются направления 3–7, 0–2 — зеркало. Нет тела или кадров — модель Kenney.
-     Тело из одного кадра (пока только стойка) не бегает: стоит и вздрагивает на ударе. */
+  /* Свои тела юнитов: assets/live/<тело>/<напр>_<idle|run|act>_<NN>.png (256×512, ступни x=128 y≈458).
+     Список не ведётся: игра сама ищет папку для каждого юнита на поле (bodyNames) по метке 3_idle_00.png,
+     потом докачивает направления 0–7 и кадры бега / удара, пока идут подряд (00, 01, …).
+     Нет направления — зеркало (0↔6, 1↔5, 2↔4). Нет бега — стоит, нет удара — вздрагивает. Нет папки — модель Kenney.
+     Пока тело качается, юнит бегает моделью Kenney и переодевается, как только кадры готовы. */
   const LIVE = 'assets/live/';
-  const BODIES = {
-    monk: { dirs: [3, 4, 5, 6, 7], run: 6, act: 4 },
-    mob_disciple: { dirs: [3], run: 0, act: 0 },
-    mob_jade_fighter: { dirs: [3], run: 0, act: 0 },
-    mob_sha_clot: { dirs: [3], run: 0, act: 0 },
-    mob_sha_doubt: { dirs: [3], run: 0, act: 0 },
-  };
-  /* id врага в LiveInst → тело */
-  const MOB_BODY = { disciple: 'mob_disciple', charger: 'mob_jade_fighter', wisp: 'mob_sha_clot', boss: 'mob_sha_doubt' };
+  /* старые имена папок, залитые до автопоиска */
+  const MOB_ALIAS = { disciple: 'mob_disciple', charger: 'mob_jade_fighter', wisp: 'mob_sha_clot', boss: 'mob_sha_doubt' };
+  const PET_BY_NAME = { 'Вурдалак': 'pet_ghoul', 'Зверь': 'pet_beast', 'Нюцзао': 'pet_niuzao', 'Тотем потока': 'pet_totem', 'Горгулья': 'pet_gargoyle' };
   /* фигура в кадрах assets/live ≈130 px из 512, у Kenney ≈140 из 512 → подгоняем рост */
   const BODY_SCALE = 0.5 * 140 / 130;
+  const MAX_FRAMES = 16;
   const nn = (i) => String(i).padStart(2, '0');
+  const bodies = {};   /* имя → { name, scale, dirs: { d: { idle, run: [], act: [] } } } — готовые */
+  const asked = {};    /* имя → Promise, чтобы не искать дважды */
+  const units = new Set();
+
+  /* где искать тело юнита, по порядку: спек → класс; у врага — mob_<id>; у питомца — pet_<кто> */
+  function bodyNames(u) {
+    const k = u.kit || {};
+    if (u.isPet) {
+      const n = PET_BY_NAME[k.name];
+      return n ? [n] : [];
+    }
+    if (u.side === 'party') return k.classId ? [k.classId + '_' + k.specId, k.classId] : [];
+    return k.id ? ['mob_' + k.id].concat(MOB_ALIAS[k.id] ? [MOB_ALIAS[k.id]] : []) : [];
+  }
+
+  function probe(src) {
+    return new Promise((res) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = () => res(null);
+      im.src = src;
+    });
+  }
+
+  async function frames(base, kind) {
+    const out = [];
+    for (let i = 0; i < MAX_FRAMES; i++) {
+      const im = await probe(base + kind + '_' + nn(i) + '.png');
+      if (!im) break;
+      out.push(im);
+    }
+    return out;
+  }
+
+  function discover(name) {
+    if (asked[name]) return asked[name];
+    asked[name] = (async () => {
+      const base = LIVE + name + '/';
+      const mark = await probe(base + '3_idle_00.png');
+      if (!mark) return null;
+      const def = { name, scale: BODY_SCALE * 256 / (mark.naturalWidth || 256), dirs: {} };
+      await Promise.all([0, 1, 2, 3, 4, 5, 6, 7].map(async (d) => {
+        const idleIm = d === 3 ? mark : await probe(base + d + '_idle_00.png');
+        if (!idleIm) return;
+        const [run, act] = await Promise.all([frames(base + d + '_', 'run'), frames(base + d + '_', 'act')]);
+        def.dirs[d] = { idle: idleIm, run, act };
+      }));
+      bodies[name] = def;
+      units.forEach((u) => { if (bodyNames(u).indexOf(name) >= 0) redress(u); });
+      return def;
+    })();
+    return asked[name];
+  }
+
+  /* ищем заранее, пока грузится сцена: классы, мобы Нефрита, питомцы. Папки спеков (monk_brewmaster) — когда юнит на поле */
+  const CLASS_IDS = ['warrior', 'paladin', 'hunter', 'rogue', 'priest', 'deathknight', 'shaman', 'mage', 'warlock', 'monk', 'druid', 'engineer', 'demonhunter'];
+  const MOB_IDS = ['guard', 'wisp', 'disciple', 'caster', 'elite', 'boss', 'assassin', 'healer', 'archer', 'brute', 'charger'];
+  CLASS_IDS.forEach(discover);
+  MOB_IDS.forEach((id) => { discover('mob_' + id); if (MOB_ALIAS[id]) discover(MOB_ALIAS[id]); });
+  Object.keys(PET_BY_NAME).forEach((n) => discover(PET_BY_NAME[n]));
+
+  /* кадры тела → текстуры и анимации сцены (у каждой новой игры свой менеджер текстур) */
+  function install(scene, def) {
+    const T = scene.textures, b = def.name;
+    const add = (k, im) => { if (!T.exists(k)) T.addImage(k, im); };
+    Object.keys(def.dirs).forEach((d) => {
+      const e = def.dirs[d];
+      add('kb_' + b + '_' + d + '_idle', e.idle);
+      e.run.forEach((im, i) => add('kb_' + b + '_' + d + '_run_' + i, im));
+      e.act.forEach((im, i) => add('kb_' + b + '_' + d + '_act_' + i, im));
+      if (e.run.length && !scene.anims.exists('kb_' + b + '_run_' + d)) {
+        scene.anims.create({ key: 'kb_' + b + '_run_' + d, frames: e.run.map((_, i) => ({ key: 'kb_' + b + '_' + d + '_run_' + i })), frameRate: 11, repeat: -1 });
+      }
+      if (e.act.length && !scene.anims.exists('kb_' + b + '_act_' + d)) {
+        scene.anims.create({ key: 'kb_' + b + '_act_' + d, frames: e.act.map((_, i) => ({ key: 'kb_' + b + '_' + d + '_act_' + i })), frameRate: 12, repeat: 0 });
+      }
+    });
+  }
 
   function preload(scene) {
-    Object.keys(BODIES).forEach((b) => {
-      const def = BODIES[b];
-      def.dirs.forEach((d) => {
-        scene.load.image('kb_' + b + '_' + d + '_idle', LIVE + b + '/' + d + '_idle_00.png');
-        for (let i = 0; i < def.run; i++) scene.load.image('kb_' + b + '_' + d + '_run_' + i, LIVE + b + '/' + d + '_run_' + nn(i) + '.png');
-        for (let i = 0; i < def.act; i++) scene.load.image('kb_' + b + '_' + d + '_act_' + i, LIVE + b + '/' + d + '_act_' + nn(i) + '.png');
-      });
-    });
     TILES.forEach((n) => DIRS.forEach((d) => scene.load.image('kt_' + n + '_' + d, K + 'tiles/' + n + '_' + d + '.png')));
     for (let d = 0; d < 8; d++) {
       scene.load.image('km_' + d + '_idle', K + 'male/' + d + '_idle_00.png');
@@ -55,17 +122,6 @@
   }
 
   function makeAnims(scene) {
-    Object.keys(BODIES).forEach((b) => {
-      const def = BODIES[b];
-      def.dirs.forEach((d) => {
-        if (def.run && !scene.anims.exists('kb_' + b + '_run_' + d)) {
-          scene.anims.create({ key: 'kb_' + b + '_run_' + d, frames: [...Array(def.run).keys()].map((i) => ({ key: 'kb_' + b + '_' + d + '_run_' + i })), frameRate: 11, repeat: -1 });
-        }
-        if (def.act && !scene.anims.exists('kb_' + b + '_act_' + d)) {
-          scene.anims.create({ key: 'kb_' + b + '_act_' + d, frames: [...Array(def.act).keys()].map((i) => ({ key: 'kb_' + b + '_' + d + '_act_' + i })), frameRate: 12, repeat: 0 });
-        }
-      });
-    });
     for (let d = 0; d < 8; d++) {
       if (!scene.anims.exists('km_run_' + d)) {
         scene.anims.create({ key: 'km_run_' + d, frames: [...Array(10).keys()].map((i) => ({ key: 'km_' + d + '_run_' + i })), frameRate: 14, repeat: -1 });
@@ -282,27 +338,52 @@
   }
 
   function bodyOf(u) {
-    const k = u.kit || {};
-    const id = u.side === 'party' && !u.isPet ? k.classId : MOB_BODY[k.id];
-    return id && BODIES[id] ? id : null;
+    const names = bodyNames(u);
+    names.forEach(discover);
+    for (const n of names) if (bodies[n]) return n;
+    return null;
+  }
+
+  /* тело появилось (или сменилось) — масштаб, тон, текстура */
+  function redress(u) {
+    const sp = u && u.sprite;
+    if (!sp || !sp.scene) { units.delete(u); return; }
+    if (!sp._km) return;
+    const b = bodyOf(u);
+    if (b === u._body) return;
+    const S = Phaser.GameObjects.Sprite.prototype;
+    u._body = b;
+    if (b) {
+      install(sp.scene, bodies[b]);
+      u._kmTint = 0xffffff;
+      try { if (sp.preFX) sp.preFX.clear(); } catch (_) {}
+    }
+    u._kmScale = u._kmBase * (b ? bodies[b].scale : 1);
+    S.setScale.call(sp, u._kmScale);
+    S.setTint.call(sp, u._kmTint);
+    if (!(sp.anims && sp.anims.isPlaying)) {
+      const k = keyFor(u, 'idle');
+      S.setFlipX.call(sp, k.flip);
+      S.setTexture.call(sp, k.key);
+    }
   }
 
   /* какое направление рисовать и зеркалить ли: 0↔6, 1↔5, 2↔4 */
   function view(u) {
-    const def = u._body && BODIES[u._body];
-    if (!def) return { d: u.dir8, flip: false };
-    if (def.dirs.length === 1) return { d: def.dirs[0], flip: false };
-    if (def.dirs.indexOf(u.dir8) >= 0) return { d: u.dir8, flip: false };
+    const def = u._body && bodies[u._body];
+    if (!def) return { d: u.dir8, flip: false, e: null };
+    const has = (d) => def.dirs[d];
+    if (has(u.dir8)) return { d: u.dir8, flip: false, e: def.dirs[u.dir8] };
     const m = (6 - u.dir8 + 8) % 8;
-    return { d: def.dirs.indexOf(m) >= 0 ? m : def.dirs[0], flip: true };
+    if (has(m)) return { d: m, flip: true, e: def.dirs[m] };
+    return { d: 3, flip: false, e: def.dirs[3] };
   }
 
   function keyFor(u, kind) {
     const v = view(u);
-    if (!u._body) return { key: kind === 'idle' ? 'km_' + v.d + '_idle' : 'km_' + kind + '_' + v.d, flip: false };
-    const def = BODIES[u._body];
-    if (kind !== 'idle' && !def[kind]) return { key: null, flip: v.flip };
-    return { key: kind === 'idle' ? 'kb_' + u._body + '_' + v.d + '_idle' : 'kb_' + u._body + '_' + kind + '_' + v.d, flip: v.flip };
+    if (!v.e) return { key: kind === 'idle' ? 'km_' + v.d + '_idle' : 'km_' + kind + '_' + v.d, flip: false };
+    if (kind === 'idle') return { key: 'kb_' + u._body + '_' + v.d + '_idle', flip: v.flip };
+    return { key: v.e[kind].length ? 'kb_' + u._body + '_' + kind + '_' + v.d : null, flip: v.flip };
   }
 
   /* Подменяет у спрайта юнита NES-картинки на модель Kenney: любые setTexture / play / setDisplaySize
@@ -314,9 +395,12 @@
     const S = Phaser.GameObjects.Sprite.prototype;
     if (u.dir8 == null) u.dir8 = u.side === 'party' ? 7 : 3;
     u._body = bodyOf(u);
+    if (u._body) install(scene, bodies[u._body]);
+    units.forEach((x) => { if (!x.sprite || !x.sprite.scene) units.delete(x); });
+    units.add(u);
     const size = (u.kit && u.kit.size) || 90;
-    const scale = size / 80 * (u._body ? BODY_SCALE : 1);
-    u._kmScale = scale;
+    u._kmBase = size / 80;
+    u._kmScale = u._kmBase * (u._body ? bodies[u._body].scale : 1);
     const enemy = u.side !== 'party' && !u.isPet;
     u._kmTint = 0xffffff;
     if (!u._body && (enemy || u.isPet)) {
@@ -325,7 +409,7 @@
         if (sp.preFX) { const cm = sp.preFX.addColorMatrix(); cm.grayscale(enemy ? 0.85 : 0.6); cm.brightness(1.25, true); }
       } catch (_) {}
     }
-    sp.setDisplaySize = function () { return S.setScale.call(sp, scale); };
+    sp.setDisplaySize = function () { return S.setScale.call(sp, u._kmScale); };
     sp.setTexture = function (key, frame) {
       if (!sp.scene) return sp;
       const ks = String(key);
@@ -342,11 +426,11 @@
       if (!k.startsWith('km_') && !k.startsWith('kb_')) {
         const a = keyFor(u, 'act');
         S.setFlipX.call(sp, a.flip);
-        if (!a.key) return pulse(scene, sp, scale);
+        if (!a.key) return pulse(scene, sp, u._kmScale);
         key = a.key;
       }
       S.play.call(sp, key, ignore);
-      return S.setScale.call(sp, scale);
+      return S.setScale.call(sp, u._kmScale);
     };
     sp.setFlipX = function () { return sp; };
     sp.clearTint = function () { return S.setTint.call(sp, u._kmTint); };
@@ -355,12 +439,12 @@
     S.setFlipX.call(sp, k0.flip);
     if (S.stop) S.stop.call(sp);
     S.setTexture.call(sp, k0.key);
-    S.setScale.call(sp, scale);
+    S.setScale.call(sp, u._kmScale);
     S.setTint.call(sp, u._kmTint);
     if (u.shadow && u.shadow.setStrokeStyle) {
       const ring = enemy ? 0xe0524a : Phaser.Display.Color.HexStringToColor((u.kit && u.kit.color) || '#3ecf8e').color;
       u.shadow.setStrokeStyle(2, ring, 0.9);
-      u.shadow.setSize(44 * scale, 18 * scale);
+      u.shadow.setSize(44 * u._kmBase, 18 * u._kmBase);
     }
   }
 
@@ -393,5 +477,5 @@
     if (cur !== r.key || !u.sprite.anims.isPlaying) u.sprite.play(r.key);
   }
 
-  window.LiveDungeon = { preload, makeAnims, build, render, openGates, kenneyize, face, idle, walk, HALLS, BODIES };
+  window.LiveDungeon = { preload, makeAnims, build, render, openGates, kenneyize, face, idle, walk, HALLS, bodies, bodyNames };
 })();
