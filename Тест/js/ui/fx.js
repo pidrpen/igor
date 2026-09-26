@@ -23,6 +23,110 @@
     if (!el) return;
     el.className = crit ? 'crit on' : 'on';
     setTimeout(() => { el.className = ''; }, 60);
+    if (crit) shakeArena(7);
+  }
+
+  // ── Сочность боя (5.4.9.41В): выпад, встряска, тряска поля, смерть ──
+  // Web Animations, не классы: patchUnitStack перезаписывает className и
+  // срезал бы анимацию на полпути.
+  function waapiOk(el) {
+    return !!(el && typeof el.animate === 'function' && juiceOk());
+  }
+  let arenaShakeAt = 0;
+  function shakeArena(px) {
+    const el = document.getElementById('battle-area');
+    if (!waapiOk(el)) return;
+    const now = Date.now();
+    if (now - arenaShakeAt < 220) return;
+    arenaShakeAt = now;
+    const a = Math.max(2, Number(px) || 6);
+    el.animate([
+      { translate: '0 0' },
+      { translate: `${-a}px ${a * 0.4}px` },
+      { translate: `${a * 0.8}px ${-a * 0.3}px` },
+      { translate: `${-a * 0.5}px ${a * 0.2}px` },
+      { translate: `${a * 0.25}px 0` },
+      { translate: '0 0' },
+    ], { duration: 320, easing: 'ease-out' });
+  }
+  /** Карточка атакующего делает выпад в сторону цели и возвращается. */
+  function lungeUnit(actorUid, targetUid) {
+    const card = unitEl(actorUid);
+    if (!waapiOk(card)) return;
+    const el = card.closest('.unit-stack') || card;
+    const a = card.getBoundingClientRect();
+    const t = targetUid && targetUid !== actorUid ? unitEl(targetUid) : null;
+    let dx = 0;
+    let dy = card.classList.contains('enemy') ? 1 : -1;
+    if (t) {
+      const b = t.getBoundingClientRect();
+      const vx = (b.left + b.width / 2) - (a.left + a.width / 2);
+      const vy = (b.top + b.height / 2) - (a.top + a.height / 2);
+      const len = Math.hypot(vx, vy);
+      if (len > 1) { dx = vx / len; dy = vy / len; }
+    }
+    const d = 18;
+    el.animate([
+      { translate: '0 0', offset: 0 },
+      { translate: `${-dx * 4}px ${-dy * 4}px`, offset: 0.18 },
+      { translate: `${dx * d}px ${dy * d}px`, offset: 0.42 },
+      { translate: '0 0', offset: 1 },
+    ], { duration: 360, easing: 'cubic-bezier(.3,.7,.3,1)' });
+  }
+  /** Цель дёргается от удара. */
+  function shakeUnit(uid, strong) {
+    const el = unitEl(uid);
+    if (!waapiOk(el) || el.classList.contains('pet-port')) return;
+    const a = strong ? 7 : 4;
+    el.animate([
+      { translate: '0 0' },
+      { translate: `${a}px -1px` },
+      { translate: `${-a * 0.8}px 1px` },
+      { translate: `${a * 0.5}px 0` },
+      { translate: `${-a * 0.25}px 0` },
+      { translate: '0 0' },
+    ], { duration: strong ? 360 : 280, easing: 'ease-out' });
+  }
+  /** Враг гаснет и оседает, из карточки летит пепел. Карточку уберёт renderCombat (~580 мс). */
+  function playDeathFx(uid) {
+    const el = unitEl(uid);
+    if (!waapiOk(el) || el.classList.contains('pet-port')) return;
+    // Герой остаётся «трупом» (.dead) под воскрешение — гаснет до его вида, не в ноль.
+    // Враг гаснет в ноль; через 700 мс анимацию снимаем, если карточку не убрали (ожил).
+    const ally = el.classList.contains('ally');
+    const anim = el.animate([
+      { opacity: 1, transform: 'scale(1)', filter: 'brightness(1.8) saturate(0)' },
+      { opacity: 0.85, transform: 'scale(1.03)', filter: 'brightness(1.1) grayscale(.6)', offset: 0.18 },
+      ally
+        ? { opacity: 0.3, transform: 'scale(.95)', filter: 'grayscale(1)' }
+        : { opacity: 0, transform: 'scale(.82) translateY(18px)', filter: 'grayscale(1) brightness(.4)' },
+    ], { duration: 560, easing: 'ease-in', fill: ally ? 'none' : 'forwards' });
+    if (!ally) setTimeout(() => { try { anim.cancel(); } catch (_) {} }, 700);
+    const layer = document.getElementById('skill-fx-layer');
+    const c = unitCenter(uid);
+    if (!layer || !c) return;
+    const r = c.el.getBoundingClientRect();
+    const isEnemy = c.el.classList.contains('enemy');
+    for (let i = 0; i < 16; i++) {
+      const p = document.createElement('div');
+      p.className = 'death-ash' + (isEnemy ? '' : ' ally');
+      const x = r.left + r.width * (0.15 + Math.random() * 0.7);
+      const y = r.top + r.height * (0.25 + Math.random() * 0.55);
+      p.style.left = x + 'px';
+      p.style.top = y + 'px';
+      const sz = 3 + Math.random() * 5;
+      p.style.width = sz + 'px';
+      p.style.height = sz + 'px';
+      layer.appendChild(p);
+      const dx = (Math.random() - 0.5) * 70;
+      const dy = -30 - Math.random() * 70;
+      const life = 600 + Math.random() * 500;
+      p.animate([
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 0.95 },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.3)`, opacity: 0 },
+      ], { duration: life, delay: Math.random() * 120, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'forwards' });
+      setTimeout(() => p.remove(), life + 160);
+    }
   }
   /** Hero card or pet portrait under owner */
   function unitEl(uid) {
@@ -33,10 +137,12 @@
     const el = unitEl(uid);
     if (!el) return;
     // pet portraits only support hit/active styles
+    if (cls === 'dying' && !el.classList.contains('pet-port')) { playDeathFx(uid); return; }
     const useCls = el.classList.contains('pet-port') && cls !== 'hit' ? 'hit' : cls;
     el.classList.remove(useCls);
     void el.offsetWidth;
     el.classList.add(useCls);
+    if (useCls === 'hit') shakeUnit(uid, false);
     const ms = (useCls === 'parried' || useCls === 'blocked' || useCls === 'dodged') ? 560 : 400;
     setTimeout(() => el.classList.remove(useCls), ms);
   }
@@ -1127,6 +1233,11 @@
 
     pulseUnit(actor.uid, 'casting-skill');
     pulseUnit(actor.uid, 'attacking');
+    {
+      const t0 = list[0];
+      const offensive = !(type === 'heal' || type === 'heal_aoe' || type === 'shield' || type === 'buff' || school === 'heal');
+      if (offensive) lungeUnit(actor.uid, t0 && t0.uid);
+    }
     if (school) {
       const el = unitEl(actor.uid);
       if (el) {

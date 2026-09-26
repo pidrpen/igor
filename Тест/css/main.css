@@ -3396,3 +3396,69 @@
       background: color-mix(in oklab, var(--kick) 18%, var(--panel2)) !important;
       animation: kickPulse 1.2s ease-in-out infinite;
     }
+
+    /* ── Сочность боя и читаемость (5.4.9.41В) ── */
+    .bar.hp { position: relative; z-index: 0; }
+    .bar.hp > i { position: relative; z-index: 1; }
+    .bar.hp > .hp-trail {
+      position: absolute; left: 0; top: 0; bottom: 0; z-index: 0;
+      background: linear-gradient(180deg, #fff3c4, #e8b04a);
+      opacity: .9; border-radius: 2px;
+      transition: width .55s cubic-bezier(.4,0,.2,1) .32s;
+    }
+    .bar.hp.enemy-hp > .hp-trail { background: linear-gradient(180deg, #fff0d0, #f0a060); }
+    .unit.hit .portrait { box-shadow: 0 0 0 2px rgba(255, 90, 70, .85), 0 0 18px rgba(255, 60, 40, .55); }
+    .death-ash {
+      position: fixed; z-index: 60; pointer-events: none; border-radius: 50%;
+      background: radial-gradient(circle, #ffd9a0 0%, #a04030 55%, transparent 70%);
+      box-shadow: 0 0 6px rgba(255, 140, 60, .7);
+    }
+    .death-ash.ally { background: radial-gradient(circle, #e8f0ff 0%, #6080c0 55%, transparent 70%); box-shadow: 0 0 6px rgba(140, 180, 255, .7); }
+
+    /* Кого бьёт враг: портрет + имя цели */
+    .threat-chip {
+      display: inline-flex; align-items: center; gap: .22rem;
+      max-width: calc(100% - 12px); padding: .1rem .35rem .1rem .2rem;
+      white-space: nowrap; overflow: hidden;
+    }
+    .threat-chip .tc-arrow { font-size: .6rem; opacity: .85; }
+    .threat-chip .tc-face {
+      width: 16px; height: 16px; border-radius: 50%; object-fit: cover; flex: 0 0 16px;
+      border: 1px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-size: .6rem;
+    }
+    .threat-chip .tc-name { overflow: hidden; text-overflow: ellipsis; font-size: .6rem; }
+    .threat-chip.off-tank {
+      border-color: #ef4444; color: #fecaca;
+      background: color-mix(in oklab, #ef4444 30%, #0a0a0c);
+      animation: offTankPulse 1.1s ease-in-out infinite;
+    }
+    @keyframes offTankPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, .0); }
+      50% { box-shadow: 0 0 10px 2px rgba(239, 68, 68, .55); }
+    }
+
+    /* Заголовок комнаты читается на светлом фоне */
+    #battle-area .place-dungeon,
+    #battle-area .place-room,
+    #battle-area .phase-banner,
+    #battle-area .phase-sub,
+    #battle-area > div > .section-title {
+      text-shadow: 0 1px 2px #000, 0 0 10px rgba(0, 0, 0, .95), 0 0 22px rgba(0, 0, 0, .7);
+    }
+    #battle-area .phase-sub { color: #d6dbe4; }
+    #battle-area > div > .section-title { color: #e8dcb0; }
+
+    /* Кнопки 1–9: строка по высоте текста, цена не налезает на «Тип» */
+    .ability-bar { grid-auto-rows: minmax(52px, max-content); }
+    .ability .a-cost {
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+      overflow: hidden;
+    }
+
+    /* Магазин не закрывает «Сдаться» и авто */
+    body:has(.shop-fab) #run-screen .run-top { padding-right: 190px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .threat-chip.off-tank { animation: none; }
+      .bar.hp > .hp-trail { transition: none; }
+    }

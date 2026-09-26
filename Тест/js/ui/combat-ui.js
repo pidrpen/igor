@@ -600,12 +600,33 @@
       renderEnemies();
     }
     bindUnitCardClicks();
+    fitUnitRows();
     updateUnitSelectionOnly();
     updateBossFrame();
     updateVignette();
     if (run?.raid && typeof refreshRaidAlerts === 'function') refreshRaidAlerts();
     try { updateTeleBanner(); } catch (_) {}
     try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
+  }
+
+  /**
+   * Ряд карточек шире поля (ноутбук, иконки баффов слева) — ужать ряд целиком,
+   * а не резать крайнюю карточку. Влез — без обрезки, чтобы выпад не упирался в край.
+   */
+  function fitUnitRows() {
+    if (run?.raid) return;
+    ['enemy-row', 'ally-row'].forEach((id) => {
+      const row = document.getElementById(id);
+      if (!row) return;
+      row.style.zoom = '';
+      const have = row.clientWidth;
+      const need = row.scrollWidth;
+      let z = 1;
+      if (have > 0 && need > have + 1) z = Math.max(0.72, (have - 2) / need);
+      row.style.zoom = z < 1 ? String(Math.round(z * 1000) / 1000) : '';
+      row.style.overflowX = (z < 1 && need * z > have + 1) ? '' : 'visible';
+      row.style.overflowY = row.style.overflowX === 'visible' ? 'visible' : '';
+    });
   }
 
   function bindUnitCardClicks() {
@@ -786,6 +807,8 @@
     ].join('');
   }
 
+  const UNIT_FLASH_CLS = new Set(['hit', 'healed', 'shielded', 'parried', 'blocked', 'dodged', 'casting-skill', 'attacking']);
+
   function patchUnitStack(stack, u, actor, withPets) {
     const card = stack.querySelector(':scope > .unit');
     if (!card || stack.dataset.struct !== unitStructSig(u)) {
@@ -797,11 +820,22 @@
       stack.replaceWith(fresh);
       return fresh;
     }
+    // Короткие вспышки (удар, хил, щит) не срезать перерисовкой на полпути
+    const flashes = [...card.classList].filter(c => UNIT_FLASH_CLS.has(c) || c.indexOf('school-flash-') === 0);
     card.className = unitClassName(u, actor);
+    flashes.forEach(c => card.classList.add(c));
     card.style.setProperty('--cc', unitAccent(u));
     const hpPct = clamp(u.hp / Math.max(1, u.maxHp) * 100, 0, 100);
     const hpI = card.querySelector('.bar.hp > i');
     if (hpI) hpI.style.width = hpPct + '%';
+    setHpTrail(card, hpPct);
+    const chip = card.querySelector(':scope > .threat-chip');
+    const chipSig = threatChipSig(u);
+    if (chip && chip.dataset.sig !== chipSig) {
+      const w = document.createElement('div');
+      w.innerHTML = threatChipHtml(u);
+      if (w.firstElementChild) chip.replaceWith(w.firstElementChild);
+    }
     const hpLab = card.querySelector('.bar.hp')?.parentElement?.querySelector('.bar-label');
     if (hpLab) hpLab.textContent = fmt(u.hp) + '/' + fmt(u.maxHp);
     const isDk = !!(u.res?.runes && u.res.secondary?.type === 'runic_power');
@@ -1193,6 +1227,46 @@
     positionUiTipFloat(tip, anchor);
   }
 
+  /**
+   * Кого бьёт враг: мини-портрет и имя цели по угрозе (та же цель, что берёт ИИ врага).
+   * Синий — держит танк, красный — враг ушёл с танка.
+   */
+  function threatChipSig(u) {
+    if (u.side !== 'enemy') return '';
+    const uid = topThreatUid(u);
+    return uid || '';
+  }
+  function threatChipHtml(u) {
+    const uid = threatChipSig(u);
+    if (!uid) return '';
+    const t = (run?.party || []).find(p => p.uid === uid)
+      || (typeof allUnits === 'function' ? allUnits().find(x => x.uid === uid) : null);
+    if (!t) return '';
+    const isTank = t.role === 'tank';
+    const nm = t.name || t.fullName || '';
+    const src = portraitSrc(t);
+    const face = src
+      ? `<img class="tc-face" src="${escAttr(src)}" alt="" onerror="this.remove()">`
+      : `<span class="tc-face tc-ico">${t.icon || '⚔'}</span>`;
+    const tip = (isTank ? 'Держит танк: ' : 'Ушёл с танка, бьёт: ') + (t.fullName || nm);
+    return `<div class="threat-chip${isTank ? ' tanking' : ' off-tank'}" data-sig="${escAttr(uid)}" title="${escAttr(tip)}">` +
+      `<span class="tc-arrow">⚔</span>${face}<span class="tc-name">${escAttr(nm)}</span></div>`;
+  }
+  /** Полоска «следа»: кусок снятого HP тает с задержкой, лечение сразу. */
+  function setHpTrail(card, hpPct) {
+    const trail = card && card.querySelector('.bar.hp > .hp-trail');
+    if (!trail) return;
+    const prev = parseFloat(trail.style.width);
+    if (!Number.isFinite(prev) || hpPct >= prev) {
+      trail.style.transition = 'none';
+      trail.style.width = hpPct + '%';
+      void trail.offsetWidth;
+      trail.style.transition = '';
+    } else {
+      trail.style.width = hpPct + '%';
+    }
+  }
+
   function unitCard(u, actor) {
     const hpPct = clamp(u.hp / u.maxHp * 100, 0, 100);
     const isDkRunes = !!(u.res?.runes && u.res.secondary?.type === 'runic_power');
@@ -1213,11 +1287,7 @@
     const teleHtml = u.casting
       ? `<div class="tele-badge ${castKind === 'buster' ? 'buster' : castKind === 'aoe' ? 'aoe' : 'kick'}">${telegraphLabel(u.casting)}</div>`
       : '';
-    const topThreat = u.side === 'enemy' ? topThreatUid(u) : null;
-    const tankUids = new Set((run?.party || []).filter(p => p.role === 'tank').map(p => p.uid));
-    const threatHtml = (u.side === 'enemy' && topThreat)
-      ? `<div class="threat-chip${tankUids.has(topThreat) ? ' tanking' : ''}">${tankUids.has(topThreat) ? 'ТАНК' : 'ВТОР.'}</div>`
-      : '';
+    const threatHtml = threatChipHtml(u);
     const burstHtml = (u.burstStacks || 0) > 0
       ? `<div class="burst-chip">💥${u.burstStacks}</div>` : '';
     const runesHtml = runesRowHtml(u);
@@ -1248,7 +1318,7 @@
       <div class="u-name" title="${u.fullName || u.name}">${u.fullName || u.name}</div>
       <div class="u-role ${ROLE_CLASS[u.role] || ''}">${roleLabel}</div>
       <div class="bar-wrap">
-        <div class="bar hp${u.side === 'enemy' ? ' enemy-hp' : ''}"><i style="width:${hpPct}%"></i></div>
+        <div class="bar hp${u.side === 'enemy' ? ' enemy-hp' : ''}"><b class="hp-trail" style="width:${hpPct}%"></b><i style="width:${hpPct}%"></i></div>
         <span class="bar-label">${fmt(u.hp)}/${fmt(u.maxHp)}</span>
       </div>
       ${shieldHtml}

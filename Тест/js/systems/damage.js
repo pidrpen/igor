@@ -402,6 +402,7 @@
     floatText(target.uid, (crit ? 'КРИТ ' : '') + '−' + fmt(dmg), crit ? 'crit' : (blockedHit ? 'block-dmg' : 'dmg'));
     pulseUnit(target.uid, blockedHit ? 'blocked' : 'hit');
     if (crit) flashScreen(true);
+    else if (!blockedHit && dmg >= target.maxHp * 0.22) try { shakeArena(4); } catch (_) {}
     if (!blockedHit) sfx(crit ? 'crit' : 'hit');
     // Prot warrior: +3 rage per direct hit taken (not DoTs / dealTrue)
     if (
