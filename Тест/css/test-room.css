@@ -1639,7 +1639,7 @@ body.raid-run #ally-row .slot-runes {
   --aura-pad: 5px;
   --aura-w: calc(var(--aura-ico) * 2 + var(--aura-gap) + var(--aura-pad) * 2);
   display: grid;
-  grid-template-columns: var(--aura-w) max-content;
+  grid-template-columns: auto max-content;
   grid-template-rows: auto auto;
   align-items: stretch;
   width: max-content;
@@ -1675,8 +1675,10 @@ body.raid-run #run-screen #enemy-row .unit-stack { --aura-ico: 20px; }
   grid-column: 1;
   grid-row: 1;
   align-self: stretch;
-  width: var(--aura-w);
-  min-width: var(--aura-w);
+  /* 5.4.9.41В: столбик по числу иконок (1 или 2), не всегда на две — ряд не вылезает за поле */
+  width: auto;
+  min-width: calc(var(--aura-ico) + var(--aura-pad) * 2);
+  max-width: var(--aura-w);
   height: auto;
   min-height: 100%;
   flex-direction: column;
@@ -1728,7 +1730,8 @@ body.need-target #run-screen .unit-stack {
   flex-direction: row;
   align-content: flex-start;
   gap: var(--aura-gap, 2px);
-  width: calc(var(--aura-ico, 22px) * 2 + var(--aura-gap, 2px));
+  width: auto;
+  max-width: calc(var(--aura-ico, 22px) * 2 + var(--aura-gap, 2px));
   max-height: calc(var(--aura-ico, 22px) * 6 + var(--aura-gap, 2px) * 5);
   overflow: hidden;
 }

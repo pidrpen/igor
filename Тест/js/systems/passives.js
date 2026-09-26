@@ -665,7 +665,9 @@
       return;
     }
     pocket.classList.remove('hidden');
-    if (pocket.dataset.userOpened === '0') pocket.classList.add('collapsed');
+    // Баффы отряда по умолчанию свёрнуты: раскрытые закрывают журнал и кнопки 1–9 на ноутбуке
+    const auraDefault = pocket.dataset.userOpened == null && pocket.classList.contains('aura-pocket');
+    if (pocket.dataset.userOpened === '0' || auraDefault) pocket.classList.add('collapsed');
     else {
       pocket.classList.remove('collapsed');
       pocket.dataset.userOpened = '1';
