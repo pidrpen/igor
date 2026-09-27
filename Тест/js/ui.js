@@ -66,6 +66,14 @@
     document.getElementById('tab-class').addEventListener('click', () => showClassTab());
     document.getElementById('tab-spec').addEventListener('click', () => { if (pickClass) showSpecTab(); });
     document.getElementById('btn-add').addEventListener('click', addToParty);
+    const deckChk = document.getElementById('chk-deck-mode');
+    if (deckChk && typeof deckModeOn === 'function') {
+      deckChk.checked = deckModeOn();
+      deckChk.addEventListener('change', () => {
+        setDeckMode(deckChk.checked);
+        toast(deckChk.checked ? 'Колода: способности приходят картами' : 'Колода выключена — все способности на панели');
+      });
+    }
     const heroChk = document.getElementById('chk-hero-party');
     if (heroChk) {
       heroChk.addEventListener('change', () => { syncHeroPartySlot(); renderParty(); savePartyProfile(); });

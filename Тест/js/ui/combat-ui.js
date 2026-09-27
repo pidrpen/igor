@@ -22,6 +22,11 @@
     return '';
   }
   function orderedAbilities(u) {
+    // Режим «Колода»: панель 1–9 — только карты на руке (и всегда-под-рукой)
+    if (typeof deckActiveFor === 'function' && deckActiveFor(u)) {
+      const hand = deckHandAbilities(u);
+      if (hand) return hand;
+    }
     const abs = (u && u.abilities) ? u.abilities.slice() : [];
     const ord = u && u.abilityOrder;
     if (!ord || !ord.length) return abs;
@@ -55,6 +60,35 @@
       else renderPassiveTray(actor);
     } catch (e) { console.error(e); }
     if (!bar) return;
+    const deckOn = typeof deckModeOn === 'function' && deckModeOn() && actor && actor.side === 'ally' && !actor.isPet && combat?.waitingPlayer;
+    if (deckOn) {
+      try { deckStartTurn(actor); } catch (e) { console.error('[deck]', e); }
+    }
+    bar.classList.toggle('deck-hand', !!deckOn);
+    if (deckOn && actions) {
+      const info = deckInfo(actor);
+      if (info) {
+        const wrap = document.createElement('span');
+        wrap.className = 'deck-info';
+        wrap.title = 'Колода: карт в колоде / в сбросе. Рука добирается до 5 в начале твоего хода.';
+        wrap.textContent = '🂠 ' + info.draw + ' · сброс ' + info.discard;
+        actions.appendChild(wrap);
+        const mb = document.createElement('button');
+        mb.type = 'button';
+        mb.className = 'btn btn-sm deck-mulligan';
+        mb.textContent = 'Сбросить руку (' + info.mulligans + ')';
+        mb.disabled = info.mulligans <= 0;
+        mb.title = 'Вся рука в сброс, новые 5 карт. Раз за бой, хода не тратит.';
+        mb.onclick = () => {
+          if (deckMulligan(actor)) {
+            toast('Новая рука');
+            pendingTarget = null;
+            showAbilities(actor);
+          }
+        };
+        actions.appendChild(mb);
+      }
+    }
     function persistOrder(u, ids) {
       u.abilityOrder = ids.slice();
       let idx = -1;
@@ -73,6 +107,7 @@
       try { if (typeof savePartyProfile === 'function') savePartyProfile(); } catch (_) {}
     }
     function reorderAbility(u, fromId, toId) {
+      if (deckOn) return; // рука меняется каждый ход — порядок кнопок не сохраняем
       if (!fromId || !toId || fromId === toId) return;
       const list = orderedAbilities(u);
       const from = list.findIndex((a) => a.id === fromId);
@@ -171,6 +206,14 @@
         `</span>` +
         `<span class="a-school ${schoolCss}">${schoolNote || 'Тип: —'}</span>` +
         cdHtml;
+      if (deckOn) {
+        const copies = deckCopiesInHand(actor, ab.id);
+        if (copies > 1) btn.insertAdjacentHTML('beforeend', `<span class="deck-copies" title="Копий на руке">×${copies}</span>`);
+        if (deckAlwaysInHand(ab)) {
+          btn.classList.add('deck-fixed');
+          btn.insertAdjacentHTML('beforeend', '<span class="deck-fixed-tag" title="Всегда под рукой, не из колоды">всегда</span>');
+        }
+      }
       const icoEl = btn.querySelector('.a-ico');
       const showTip = (e) => {
         if (e) e.stopPropagation();

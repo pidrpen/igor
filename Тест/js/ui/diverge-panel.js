@@ -15,6 +15,13 @@
 
   const DIVERGE_LOG = [
     {
+      id: 'card-deck',
+      name: 'Колода: способности картами',
+      poured: 'no',
+      testVer: '5.4.9.42В',
+      text: 'Галочка «Колода» в лобби (localStorage igorDeckMode_v1). Рука 5 из колоды кита, добор до 5 каждый твой ход, сброс руки раз за бой, прерывание и Провокация всегда под рукой. Файл js/systems/card-deck.js; крючки: combat-loop.js (deckStartTurn, runPlayerCast → deckOnCast), combat-ui.js (orderedAbilities → рука, кнопка «Сбросить руку»), ui.js (галочка). Авто-союзники не затронуты.',
+    },
+    {
       id: 'combat-juice',
       name: 'Сочность боя и цель врага',
       poured: 'no',

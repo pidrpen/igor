@@ -3449,7 +3449,10 @@
     #battle-area > div > .section-title { color: #e8dcb0; }
 
     /* Кнопки 1–9: строка по высоте текста, цена не налезает на «Тип» */
-    .ability-bar { grid-auto-rows: minmax(52px, max-content); }
+    .ability-bar { grid-auto-rows: max-content; max-height: min(30vh, 240px); }
+    /* «Тип» (overflow:hidden) сжимался в 1 px под рядом 52 px — держим высоту под имя + 2 строки цены + тип */
+    .ability-bar:not(.deck-hand) .ability { min-height: 68px; }
+    .ability .a-school { min-height: .75rem; }
     .ability .a-cost {
       display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
       overflow: hidden;
@@ -3461,4 +3464,63 @@
     @media (prefers-reduced-motion: reduce) {
       .threat-chip.off-tank { animation: none; }
       .bar.hp > .hp-trail { transition: none; }
+    }
+
+    /* ── Режим «Колода» (5.4.9.42В): панель 1–9 — рука карт ── */
+    .ability-bar.deck-hand {
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: center;
+      align-items: stretch;
+      gap: .5rem;
+      padding-top: .75rem;
+      overflow-x: auto;
+    }
+    .ability-bar.deck-hand .ability { flex: 0 1 170px; min-width: 104px; width: auto; }
+    .ability-bar.deck-hand .ability {
+      min-height: 96px;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto 1fr auto;
+      justify-items: center;
+      text-align: center;
+      border-radius: 10px !important;
+      border: 2px solid #8a7440 !important;
+      background: linear-gradient(170deg, #2a2618 0%, #15130c 70%) !important;
+      box-shadow: 0 6px 14px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,230,160,.08) !important;
+      transition: transform .14s ease, box-shadow .14s ease;
+      animation: deckDraw .32s ease-out backwards;
+    }
+    .ability-bar.deck-hand .ability:nth-child(2) { animation-delay: .04s; }
+    .ability-bar.deck-hand .ability:nth-child(3) { animation-delay: .08s; }
+    .ability-bar.deck-hand .ability:nth-child(4) { animation-delay: .12s; }
+    .ability-bar.deck-hand .ability:nth-child(5) { animation-delay: .16s; }
+    .ability-bar.deck-hand .ability:nth-child(6) { animation-delay: .2s; }
+    .ability-bar.deck-hand .ability:hover:not(.is-disabled) {
+      transform: translateY(-8px) scale(1.03);
+      box-shadow: 0 12px 22px rgba(0,0,0,.55), 0 0 16px rgba(224,192,96,.35) !important;
+    }
+    .ability-bar.deck-hand .ability .a-ico { grid-column: 1; grid-row: 1; width: 40px; height: 40px; }
+    .ability-bar.deck-hand .ability .a-body { grid-column: 1; grid-row: 2; padding-right: 0; align-items: center; }
+    .ability-bar.deck-hand .ability .a-school { grid-column: 1; grid-row: 3; padding-right: 0; }
+    .ability-bar.deck-hand .ability.deck-fixed {
+      border-color: #5a7aa0 !important;
+      background: linear-gradient(170deg, #1a2230 0%, #0e131c 70%) !important;
+    }
+    .ability .deck-copies {
+      position: absolute; top: 3px; left: 5px; z-index: 2;
+      font-size: .66rem; font-weight: 800; color: #1a1408;
+      background: #f0c14b; border-radius: 999px; padding: 0 .35rem;
+    }
+    .ability .deck-fixed-tag {
+      position: absolute; top: 3px; left: 5px; z-index: 2;
+      font-size: .56rem; font-weight: 700; color: #cfe2ff; letter-spacing: .03em;
+      background: rgba(60, 90, 140, .6); border-radius: 4px; padding: 0 .3rem;
+    }
+    .deck-info { font-size: .74rem; color: var(--muted); margin-right: .4rem; font-variant-numeric: tabular-nums; }
+    @keyframes deckDraw {
+      0% { opacity: 0; transform: translateY(26px) rotate(-4deg) scale(.9); }
+      100% { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ability-bar.deck-hand .ability { animation: none; transition: none; }
     }

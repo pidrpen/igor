@@ -287,6 +287,7 @@
       combat.waitingPlayer = true;
       combat._keepPlayerTurn = false;
       actor._debugUsedThisTurn = false;
+      try { if (typeof deckStartTurn === 'function') deckStartTurn(actor); } catch (e) { console.error('[deck]', e); }
       showAbilities(actor);
     } else {
       combat.waitingPlayer = false;
@@ -593,7 +594,10 @@
   function runPlayerCast(actor, ability, target) {
     installAnimAfterAction();
     if (!combat || combat.over || combat._afterBusy) return;
+    // Режим «Колода»: карта уходит в сброс, только если каст проходит
+    const deckPlay = typeof deckOnCast === 'function' && combat.waitingPlayer && canPay(actor, ability, target);
     combat.waitingPlayer = false;
+    if (deckPlay) try { deckOnCast(actor, ability); } catch (e) { console.error('[deck]', e); }
     try {
       const bar = document.getElementById('ability-bar');
       if (bar) bar.innerHTML = '';
