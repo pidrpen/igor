@@ -1,80 +1,53 @@
 # Mythic Key — Mists of Pandaria lite
 
-Пошаговый мифик-ключ (5 человек), классы/спеки MoP.
+Пошаговый мифик-ключ на 5 человек и рейд на 10 (Лэй Шэнь), классы и специализации эпохи Туманов Пандарии.
 
-## Запуск
+## Играть
 
-Из этой папки подними локальный сервер и открой `index.html`:
+- **Лаунчер:** скачай `launcher/MythicKey.exe` и запусти. Он сам скачает игру и откроет её в отдельном окне. Подробности — `launcher/README.md`.
+- **Из исходников:** в корне репозитория подними сервер и открой страницу:
 
 ```bash
 python -m http.server 8080
-# → http://localhost:8080/
+# основа: http://localhost:8080/   тестовая сборка: http://localhost:8080/Тест/
 ```
 
-Карта файлов и договор работы (Тест / основа / перелив): см. `../.grok/skills/mythic-key/SKILL.md` и `../.grok/skills/mythic-key/references/карта.md`. Ниже — краткий скелет основы.
+`file://` не подойдёт: браузер не даст загрузить скрипты и картинки.
+
+## Что внутри
+
+- **Ключ 5:** шесть подземелий, маршрут с развилками, боссы с фазами, аффиксы недели, кики, угроза, драфт шмота 1 из 3.
+- **Рейд 10:** Лэй Шэнь, обычный и героический, катакомбы, столбы, лут рейда.
+- **Таверна:** герой 1–40, дерево талантов, смена спека.
+- **Бой:** способность (или 1–9) → клик по цели. Союзники ходят сами, клик по герою — взять управление.
+- **Тестовая сборка** (`Тест/`) сверх этого: магазин шмота, живой бой в реальном времени, облачный сейв.
 
 ## Структура
 
 ```
-index.html                 # shell: разметка + порядок <script>
-css/main.css
+index.html            разметка + порядок <script>
+css/                  main.css, raid.css, theme-controls.css
 js/
-  state.js                 # run/combat/party + STAT/мастерство константы
-  core.js                  # цвета классов, портреты, темы данжей
-  ui/
-    balance-panel.js       # история баланса + панель в лобби
-    fx.js                  # VFX скиллов
-    combat-ui.js           # ability bar, unit cards, render боя
-  systems/
-    telegraph-loot.js      # телеграфы, лут, key powers
-    stats.js               # крит / иск / унив
-    passives.js            # пассивки спеков
-    meter.js               # Recount
-    ability-data.js        # PET/HoT/школы/описания
-    resources.js           # ресурсы + charges
-    combat-loop.js         # startCombat / processTurn / endRound
-    abilities.js           # castAbility
-    damage.js              # dealDmg / heal / block-parry-revenge
-    ai.js                  # ИИ
-    combat-flow.js         # afterAction, victory, rest
+  state.js core.js    состояние, цвета, портреты, темы
   enemies.js route.js gear.js save.js ui.js
-  combat.js                # shim (не подключается)
-wow-mop-data.js
-class-balance/
-assets/
-tests/
+  dungeon-inst.js     инсты ключа
+  raid*.js            рейд 10
+  systems/            бой: ход, каст, урон, ИИ, ресурсы, пассивки
+  ui/                 карточки боя, ролики способностей, журнал патчей
+  leveling/           таверна
+class-balance/        цифры и киты классов
+wow-mop-data.js       скелет данных классов
+assets/               портреты, фоны
+tests/                дым-тесты без браузера
+Тест/                 рабочая копия (та же структура + магазин, живой бой, облако)
+launcher/             MythicKey.exe
 ```
 
-Зоны правок: **цифры скилла** → `class-balance/`; **блок/парир/реванш** → `systems/damage.js`; **заряды** → `systems/resources.js`; **пассивки** → `systems/passives.js`; **changelog UI** → `ui/balance-panel.js`.
-
-
-
-Бэкап монолита (до разбиения): `index.html.monolith.bak`.
-
-## Class-balance (контракт)
-
-Каждый пакет регистрирует:
-
-```js
-CLASS_BALANCE_PACKS.push({ id: 'warrior', apply(classes) { /* ... */ } });
-```
-
-`apply-all.js` применяет все пакеты к `WOW_MOP.classes`.  
-Legacy-глобалы (`WOW_WARRIOR_BALANCE`, `PALADIN_BALANCE`, …) по-прежнему понимаются.
+Правила работы с кодом и подробная карта файлов — `AGENTS.md`.
 
 ## Тесты
 
 ```bash
-python tests/run-smoke.py
-# или: node tests/load-check.js && node tests/balance-smoke.js
+node tests/load-check.js && node tests/balance-smoke.js
+# или без Node: python tests/run-smoke.py
 ```
-
-## Upgrade pack (v2)
-
-1. **Boss mechanics** — mid-боссы и 3-фазные финалы на каждое подземелье (кик/бастер/адды)
-2. **Weekly affixes** — ротация недели + новые: Кровавый, Тяжёлый, Сотрясающий, Бесплотный, Страждущий
-3. **Kick windows** — приоритет кастов (P1–P4), цветные телеграфы, эскалация за пропущенный кик
-4. **Threat / tank** — таблица угрозы, провокация, бастеры по не-танку больнее, метки TANK/OT
-5. **Play-style loot** — Lust, battle-rez, обход trash, щит отряда, метка, kick-CD, активные тринкеты
-6. **Route variety** — случайные элит-ветки, optional risk room, side path
-7. **UI refresh** — тёмная editorial-палитра, Cinzel + DM Sans, threat chips, week badge

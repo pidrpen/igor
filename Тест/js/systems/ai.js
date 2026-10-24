@@ -450,8 +450,11 @@
     }
     // Prefer strongest affordable non-execute damage (not first in list)
     const dmgPool = usable.filter(a => (a.type === 'damage' || a.type === 'dot') && !EXECUTE_IDS.has(a.id));
+    // Союзник без ресурса не крутит бесплатное действие (Нарезка и т.п.) по кругу — пропускает ход
+    const pool = actor.side === 'ally' ? usable.filter(a => !a.freeAction) : usable;
     const dmg = dmgPool.slice().sort((a, b) => (b.power || 0) - (a.power || 0))[0]
-      || usable.find(a => a.type === 'damage') || usable[0];
+      || pool.find(a => a.type === 'damage') || pool[0];
+    if (!dmg) return;
     castAbility(actor, dmg, target);
   }
 

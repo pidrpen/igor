@@ -35,7 +35,7 @@ def main() -> int:
         "/index.html",
         "/js/core.js",
         "/js/ui.js",
-        "/js/combat.js",
+        "/js/systems/combat-loop.js",
         "/js/save.js",
         "/css/main.css",
         "/wow-mop-data.js",

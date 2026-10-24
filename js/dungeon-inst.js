@@ -1507,7 +1507,7 @@
         const sh = p.shield || 0;
         p._plateIgnore = (p._plateIgnore || 0) + 1;
         if (sh > 0 && p._plateIgnore >= 2 && !p._plateClicked) {
-          p.shield = 0;
+          clearUnitShields(p); // слои тоже: иначе щит вернётся при пересчёте
           livingHeroes().forEach(h => {
             const raw = Math.round(getEff(p).atk * 0.70);
             dealDmg(h, raw, p, { type: 'aoe', isAoe: true, abilityName: 'Клев плиты' });
@@ -1522,12 +1522,15 @@
         p._skinIgnore = (p._skinIgnore || 0) + 1;
         if (p.shield > 0 && p._skinIgnore >= 2 && !p._skinClicked) {
           partyTrue(0.08, p, 'Отзвук кожи', 'shadow');
-          p.shield = 0;
+          clearUnitShields(p);
           p.buffs = (p.buffs || []).filter(b => b.id !== 'crypt_bone_skin');
           log('Костяная кожа провисела — Отзвук кожи 8% max HP', 'enemy');
         }
         p._skinClicked = false;
         void skin;
+        // Откат Костяной кожи тикает, только пока щит сбит. Иначе щит 40% max HP перевешивается раньше, чем его собьют, и страж бессмертен
+        const wall = (p.abilities || []).find(a => a.instFlag === 'crypt_bone_skin');
+        if (wall && p.shield > 0) wall.curCd = Math.max(wall.curCd || 0, wall.cd || 3);
       });
       const urn = (combat.enemies || []).find(e => e.alive && e.instRole === 'crypt_urn');
       if (urn && r >= 2 && r % 3 === 0) openSoak(1, 'urn', 'Урна тишины · ровно 1');

@@ -565,7 +565,7 @@
     for (var i = 0; i < abs.length; i++) {
       var a = abs[i];
       if (!a || !a.id) continue;
-      if (a.id.indexOf('pct_') === 0 || a.id === 'debug_mode' || a.id === 'cheat') continue;
+      if (a.id === 'debug_mode') continue;
       if (a.applyDot || a.type === 'dot') kit.dots.push(a.id);
       if (isHotAb(a)) kit.hots.push(a.id);
       if (a.type === 'aoe') kit.aoe.push(a.id);
@@ -633,7 +633,7 @@
   function usableList(actor) {
     return (actor.abilities || []).filter(function (a) {
       if (!a || !a.id) return false;
-      if (a.id.indexOf('pct_') === 0 || a.id === 'debug_mode') return false;
+      if (a.id === 'debug_mode') return false;
       return canAfford(actor, a);
     });
   }

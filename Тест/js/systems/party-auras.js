@@ -66,10 +66,6 @@
       atkMod: 0.05,
       critMod: 0.04,
     },
-    cheat: {
-      id: 'aura_cheat', name: 'Отладка', icon: '🧪',
-      tip: 'Читер: без баффа отряда.',
-    },
   };
 
   var HUNTER_PET = {

@@ -30,7 +30,8 @@ const required = [
   'js/enemies.js',
   'js/route.js',
   'js/gear.js',
-  'js/combat.js',
+  'js/systems/combat-loop.js',
+  'js/systems/abilities.js',
   'js/save.js',
   'js/ui.js',
   'wow-mop-data.js',
@@ -45,7 +46,7 @@ console.log('[load-check] index wiring');
 const index = read('index.html');
 if (index.includes('css/main.css')) ok('css link');
 else bad('index missing css/main.css');
-for (const s of ['core', 'enemies', 'route', 'gear', 'combat', 'save', 'ui']) {
+for (const s of ['core', 'enemies', 'route', 'gear', 'systems/combat-loop', 'systems/abilities', 'save', 'ui']) {
   if (index.includes(`js/${s}.js`)) ok(`script ${s}.js`);
   else bad(`index missing js/${s}.js`);
 }
@@ -64,8 +65,8 @@ const checks = [
   ['js/route.js', 'function generateRoute'],
   ['js/gear.js', 'function emptyGear'],
   ['js/gear.js', 'function generateGearItem'],
-  ['js/combat.js', 'function startCombat'],
-  ['js/combat.js', 'function castAbility'],
+  ['js/systems/combat-loop.js', 'function startCombat'],
+  ['js/systems/abilities.js', 'function castAbility'],
   ['js/save.js', 'function serializeRun'],
   ['js/save.js', 'function exportSaveFile'],
   ['js/ui.js', 'function initLobby'],

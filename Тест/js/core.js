@@ -17,7 +17,6 @@
     shaman: 'var(--shaman)', mage: 'var(--mage)', warlock: 'var(--warlock)',
     monk: 'var(--monk)', druid: 'var(--druid)', engineer: 'var(--engineer)',
     demonhunter: 'var(--dh)',
-    cheat: '#ff4dd2',
   };
   /** Спек-оверрайд цвета контура (отряд / портрет). Unholy DK — зелёный. */
   const SPEC_ACCENT_CSS = {
@@ -49,9 +48,8 @@
     'druid:balance', 'druid:feral', 'druid:guardian', 'druid:restoration',
     'engineer:mechanist', 'engineer:sapper', 'engineer:tinkerer',
     'demonhunter:vengeance', 'demonhunter:havoc',
-    'cheat:debug',
   ]);
-  const TEST_SPECS = new Set(['cheat:debug']);
+  const TEST_SPECS = new Set();
   function isTestSpec(classId, specId) {
     return TEST_SPECS.has(classId + ':' + specId);
   }
@@ -92,7 +90,9 @@
     classP(id) { return this.base + 'portraits/classes/' + id + '.png'; },
     specP(classId, specId) { return this.base + 'portraits/specs/' + classId + '_' + specId + '.png'; },
     enemyP(id) { return this.base + 'portraits/enemies/' + id + '.png'; },
-    petP(id) { return this.base + 'portraits/pets/' + id + '.png'; },
+    /** Питомцы без своего портрета берут общий (три зверя охотника → hunter_pet). */
+    petAlias: { hunter_bear: 'hunter_pet', hunter_hawk: 'hunter_pet', hunter_raptor: 'hunter_pet' },
+    petP(id) { return this.base + 'portraits/pets/' + (this.petAlias[id] || id) + '.png'; },
     /** Per-room battle backdrop: assets/backgrounds/{theme}/{loc}.png → fallback theme.png */
     bg(theme, loc) {
       const t = theme || 'crypt';

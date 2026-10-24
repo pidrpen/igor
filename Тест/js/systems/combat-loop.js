@@ -188,6 +188,44 @@
     }, Math.max(0, delay == null ? 60 : delay));
   }
 
+  /** Союзник ходит сам: авто-ключ / авто-рейд (не тот, кем играешь) или поле. */
+  function isAutoAlly(actor) {
+    if (!actor || actor.side !== 'ally' || actor.isPet) return false;
+    return (typeof shouldRaidAuto === 'function' && shouldRaidAuto(actor))
+      || (typeof fieldShouldAuto === 'function' && fieldShouldAuto(actor));
+  }
+
+  function runAutoAllyTurn(actor) {
+    combat.waitingPlayer = false;
+    document.getElementById('ability-bar').innerHTML = '';
+    try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
+    document.getElementById('combat-actions').innerHTML =
+      `<span style="color:var(--muted)">Авто · ${actor.fullName || actor.name}…</span>`;
+    clearTimeout(aiTimer);
+    aiTimer = setTimeout(() => {
+      try {
+        if (paused || !combat || combat.over || combat._afterBusy) return;
+        installAnimAfterAction();
+        if (typeof partyAiAct === 'function') {
+          if (!partyAiAct(actor)) aiAct(actor);
+        } else if (typeof raidAllyAi === 'function') {
+          if (!raidAllyAi(actor)) aiAct(actor);
+        } else {
+          aiAct(actor);
+        }
+        combat._aiAnimWait = true;
+        afterAction();
+      } catch (err) {
+        console.error('[raidAi]', err);
+        if (combat) {
+          combat._keepPlayerTurn = false;
+          combat._aiAnimWait = true;
+        }
+        afterAction();
+      }
+    }, Math.max(40, Math.round(aiDelay() * 0.55)));
+  }
+
   function processTurn() {
     installAnimAfterAction();
     if (!combat || combat.over || run.finished) return;
@@ -252,42 +290,13 @@
     if (paused) return;
     // Player only controls heroes; pets auto-act
     if (actor.side === 'ally' && !actor.isPet) {
-      if ((typeof shouldRaidAuto === 'function' && shouldRaidAuto(actor))
-          || (typeof fieldShouldAuto === 'function' && fieldShouldAuto(actor))) {
-        combat.waitingPlayer = false;
-        document.getElementById('ability-bar').innerHTML = '';
-        try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
-        document.getElementById('combat-actions').innerHTML =
-          `<span style="color:var(--muted)">Авто · ${actor.fullName || actor.name}…</span>`;
-        clearTimeout(aiTimer);
-        aiTimer = setTimeout(() => {
-          try {
-            if (paused || !combat || combat.over || combat._afterBusy) return;
-            installAnimAfterAction();
-            if (typeof partyAiAct === 'function') {
-              if (!partyAiAct(actor)) aiAct(actor);
-            } else if (typeof raidAllyAi === 'function') {
-              if (!raidAllyAi(actor)) aiAct(actor);
-            } else {
-              aiAct(actor);
-            }
-            combat._aiAnimWait = true;
-            afterAction();
-          } catch (err) {
-            console.error('[raidAi]', err);
-            if (combat) {
-              combat._keepPlayerTurn = false;
-              combat._aiAnimWait = true;
-            }
-            afterAction();
-          }
-        }, Math.max(40, Math.round(aiDelay() * 0.55)));
+      if (isAutoAlly(actor)) {
+        runAutoAllyTurn(actor);
         return;
       }
       combat.waitingPlayer = true;
       combat._keepPlayerTurn = false;
       actor._debugUsedThisTurn = false;
-      try { if (typeof deckStartTurn === 'function') deckStartTurn(actor); } catch (e) { console.error('[deck]', e); }
       showAbilities(actor);
     } else {
       combat.waitingPlayer = false;
@@ -594,10 +603,7 @@
   function runPlayerCast(actor, ability, target) {
     installAnimAfterAction();
     if (!combat || combat.over || combat._afterBusy) return;
-    // Режим «Колода»: карта уходит в сброс, только если каст проходит
-    const deckPlay = typeof deckOnCast === 'function' && combat.waitingPlayer && canPay(actor, ability, target);
     combat.waitingPlayer = false;
-    if (deckPlay) try { deckOnCast(actor, ability); } catch (e) { console.error('[deck]', e); }
     try {
       const bar = document.getElementById('ability-bar');
       if (bar) bar.innerHTML = '';

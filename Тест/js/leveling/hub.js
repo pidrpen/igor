@@ -98,7 +98,7 @@
   function patchedClasses() {
     if (typeof WOW_MOP === 'undefined') return [];
     return (WOW_MOP.classes || []).filter(function (c) {
-      if (!c || c.id === 'cheat') return false;
+      if (!c) return false;
       return typeof isClassPatched !== 'function' || isClassPatched(c.id);
     });
   }

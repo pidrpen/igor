@@ -186,6 +186,41 @@
     }, Math.max(0, delay == null ? 60 : delay));
   }
 
+  /** Союзник ходит сам: авто-ключ / авто-рейд (не тот, кем играешь). */
+  function isAutoAlly(actor) {
+    if (!actor || actor.side !== 'ally' || actor.isPet) return false;
+    return typeof shouldRaidAuto === 'function' && shouldRaidAuto(actor);
+  }
+
+  function runAutoAllyTurn(actor) {
+    combat.waitingPlayer = false;
+    document.getElementById('ability-bar').innerHTML = '';
+    try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
+    document.getElementById('combat-actions').innerHTML =
+      `<span style="color:var(--muted)">Авто · ${actor.fullName || actor.name}…</span>`;
+    clearTimeout(aiTimer);
+    aiTimer = setTimeout(() => {
+      try {
+        if (paused || !combat || combat.over || combat._afterBusy) return;
+        installAnimAfterAction();
+        if (typeof raidAllyAi === 'function') {
+          if (!raidAllyAi(actor)) aiAct(actor);
+        } else {
+          aiAct(actor);
+        }
+        combat._aiAnimWait = true;
+        afterAction();
+      } catch (err) {
+        console.error('[raidAi]', err);
+        if (combat) {
+          combat._keepPlayerTurn = false;
+          combat._aiAnimWait = true;
+        }
+        afterAction();
+      }
+    }, Math.max(40, Math.round(aiDelay() * 0.55)));
+  }
+
   function processTurn() {
     installAnimAfterAction();
     if (!combat || combat.over || run.finished) return;
@@ -249,33 +284,8 @@
     if (paused) return;
     // Player only controls heroes; pets auto-act
     if (actor.side === 'ally' && !actor.isPet) {
-      if (typeof shouldRaidAuto === 'function' && shouldRaidAuto(actor)) {
-        combat.waitingPlayer = false;
-        document.getElementById('ability-bar').innerHTML = '';
-        try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
-        document.getElementById('combat-actions').innerHTML =
-          `<span style="color:var(--muted)">Авто · ${actor.fullName || actor.name}…</span>`;
-        clearTimeout(aiTimer);
-        aiTimer = setTimeout(() => {
-          try {
-            if (paused || !combat || combat.over || combat._afterBusy) return;
-            installAnimAfterAction();
-            if (typeof raidAllyAi === 'function') {
-              if (!raidAllyAi(actor)) aiAct(actor);
-            } else {
-              aiAct(actor);
-            }
-            combat._aiAnimWait = true;
-            afterAction();
-          } catch (err) {
-            console.error('[raidAi]', err);
-            if (combat) {
-              combat._keepPlayerTurn = false;
-              combat._aiAnimWait = true;
-            }
-            afterAction();
-          }
-        }, Math.max(40, Math.round(aiDelay() * 0.55)));
+      if (isAutoAlly(actor)) {
+        runAutoAllyTurn(actor);
         return;
       }
       combat.waitingPlayer = true;

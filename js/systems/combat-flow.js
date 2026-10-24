@@ -11,15 +11,25 @@
       if (checkEnd()) return;
       const actor = currentActor();
       if (actor && actor.side === 'ally' && !actor.isPet && actor.alive) {
-        combat.waitingPlayer = true;
-        try {
-          renderCombat();
-          showAbilities(actor);
-          saveRun();
-          return;
-        } catch (err) {
-          console.error('[afterAction freeAction]', err);
-          // не зависаем — обычный конец хода
+        if (typeof isAutoAlly === 'function' && isAutoAlly(actor)) {
+          // Авто-союзник доигрывает ход сам, а не отдаёт его игроку. Больше 2 бесплатных подряд — конец хода
+          combat._autoFreeChain = (combat._autoFreeChain || 0) + 1;
+          if (combat._autoFreeChain <= 2) {
+            try { renderCombat(); } catch (_) {}
+            runAutoAllyTurn(actor);
+            return;
+          }
+        } else {
+          combat.waitingPlayer = true;
+          try {
+            renderCombat();
+            showAbilities(actor);
+            saveRun();
+            return;
+          } catch (err) {
+            console.error('[afterAction freeAction]', err);
+            // не зависаем — обычный конец хода
+          }
         }
       }
       // keep не удался (нет актора / ошибка UI) → проваливаемся в обычный afterAction
@@ -32,6 +42,7 @@
     } catch (e) { console.error(e); }
 
     combat.waitingPlayer = false;
+    combat._autoFreeChain = 0;
     const bar = document.getElementById('ability-bar');
     const actions = document.getElementById('combat-actions');
     if (bar) bar.innerHTML = '';

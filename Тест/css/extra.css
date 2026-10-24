@@ -1,0 +1,1745 @@
+/* Дополнения к main.css: магазин, карта маршрута, шмот, рейд 10, поле боя */
+
+/* ═══ Магазин FAB + modal ═══ */
+.shop-fab {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 9000;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .55rem .9rem;
+  border-radius: 999px;
+  border: 2px solid #fbbf24;
+  background: linear-gradient(135deg, #7c3aed 0%, #db2777 55%, #f59e0b 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: .92rem;
+  letter-spacing: .02em;
+  cursor: pointer;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, .35), 0 10px 28px rgba(0, 0, 0, .45);
+  animation: shop-fab-pulse 2.2s ease-in-out infinite;
+}
+.shop-fab:hover {
+  transform: scale(1.04);
+  filter: brightness(1.08);
+}
+.shop-fab-count {
+  min-width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .35);
+  font-size: .75rem;
+  display: grid;
+  place-items: center;
+  padding: 0 .3rem;
+}
+@keyframes shop-fab-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(251, 191, 36, .35), 0 10px 28px rgba(0, 0, 0, .45); }
+  50% { box-shadow: 0 0 0 6px rgba(167, 139, 250, .4), 0 12px 32px rgba(0, 0, 0, .5); }
+}
+
+/* ═══ Карта маршрута (спуск по данжу) ═══ */
+.route-map {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  font-size: .74rem;
+}
+.rm-forces {
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: .28rem .4rem;
+  margin-bottom: .45rem;
+  border-radius: 8px;
+  background: color-mix(in oklab, #3a70b0 18%, var(--panel2));
+  border: 1px solid color-mix(in oklab, #9b5fd4 40%, var(--border));
+  color: #d8c8ff;
+}
+.rm-forces.ok {
+  background: color-mix(in oklab, #2a8a55 22%, var(--panel2));
+  border-color: color-mix(in oklab, #3dd68c 45%, transparent);
+  color: #b8f0d0;
+}
+.rm-node {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr) auto auto;
+  gap: .22rem .3rem;
+  align-items: center;
+  padding: .28rem .38rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--panel2) 80%, #000);
+  color: var(--muted);
+}
+.rm-node .rm-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 600;
+  font-size: .72rem;
+}
+.rm-node .rm-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+  font-weight: 700;
+  font-size: .68rem;
+}
+.rm-node .rm-pct-0 { color: var(--muted); font-weight: 500; }
+.rm-node .rm-tag {
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  padding: .05rem .28rem;
+  border-radius: 4px;
+  background: color-mix(in oklab, #e07040 25%, #1a1010);
+  border: 1px solid #c06030;
+  color: #ffd0b0;
+}
+.rm-node .rm-tag.aoe {
+  background: color-mix(in oklab, #5080d0 22%, #10141a);
+  border-color: #4a70b0;
+  color: #c8dcff;
+}
+.rm-here {
+  text-align: center;
+  font-family: Cinzel, serif;
+  font-weight: 700;
+  font-size: .82rem;
+  color: var(--gold-bright);
+  letter-spacing: .03em;
+  padding: .2rem .3rem .35rem;
+  line-height: 1.25;
+}
+.rm-you {
+  font-style: normal;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: #081018;
+  background: var(--gold-bright);
+  border-radius: 4px;
+  padding: .02rem .28rem;
+  margin-left: .25rem;
+  vertical-align: middle;
+}
+.rm-node.current {
+  border-color: var(--gold);
+  box-shadow: inset 3px 0 0 var(--gold), 0 0 12px rgba(224,192,96,.18);
+  background: color-mix(in oklab, var(--gold) 14%, var(--panel2));
+}
+.rm-node.current .rm-name {
+  font-size: .8rem;
+  white-space: normal;
+  background: linear-gradient(90deg, rgba(224,192,96,.16), transparent);
+  color: var(--text);
+}
+.rm-node.done { opacity: .48; }
+.rm-node.is-st { border-left: 3px solid #d07040; }
+.rm-node.is-boss { border-left: 3px solid #c04040; }
+.rm-node.is-mop { opacity: .9; }
+.rm-line {
+  width: 2px;
+  height: 8px;
+  margin: 1px auto;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--gold) 35%, transparent), color-mix(in oklab, var(--gold) 15%, transparent));
+  border-radius: 2px;
+}
+.rm-fork {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: .25rem;
+  align-items: stretch;
+}
+.rm-fork .rm-node { font-size: .68rem; }
+.rm-or {
+  align-self: center;
+  font-size: .58rem;
+  color: var(--muted);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: .08em;
+}
+.rm-mop-label {
+  text-align: center;
+  font-size: .62rem;
+  color: var(--muted);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin: .15rem 0;
+}
+/* ═══ Gear modal: scroll body + sticky footer ═══ */
+.gear-modal-panel {
+  max-width: 480px !important;
+  width: min(480px, 96vw);
+  max-height: min(88vh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0 !important;
+}
+.gear-modal-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: .35rem;
+  -webkit-overflow-scrolling: touch;
+}
+.gear-modal-footer {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  gap: .4rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 0 -0.15rem;
+  padding: .7rem .35rem .85rem;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  background:
+    linear-gradient(180deg, rgba(22, 22, 30, .92), rgba(14, 14, 20, .98));
+  box-shadow: 0 -8px 20px rgba(0, 0, 0, .35);
+  backdrop-filter: blur(6px);
+}
+
+.shop-modal-panel {
+  max-width: min(920px, 96vw) !important;
+  max-height: 88vh;
+  overflow: auto;
+}
+.shop-bag-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  gap: .45rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: .65rem;
+  padding: .65rem .25rem .2rem;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+  background: linear-gradient(180deg, transparent, rgba(14, 14, 20, .95) 28%);
+}
+.shop-sell-all {
+  border-color: rgba(248, 113, 113, .45) !important;
+  color: #fecaca !important;
+}
+.shop-sell-all:hover {
+  background: rgba(127, 29, 29, .35) !important;
+}
+.shop-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .35rem;
+}
+.shop-modal-head h2 { margin: 0; }
+.shop-test-badge {
+  font-size: .7rem;
+  vertical-align: middle;
+  padding: .12rem .4rem;
+  border-radius: 999px;
+  background: rgba(109, 40, 217, .55);
+  border: 1px solid rgba(196, 181, 253, .5);
+}
+.shop-key-row, .shop-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin: .45rem 0;
+}
+.shop-key-btn.on, .shop-tabs .btn.on {
+  outline: 2px solid #fbbf24;
+}
+.shop-hint {
+  font-size: .8rem;
+  opacity: .88;
+  margin: .25rem 0 .5rem;
+}
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: .55rem;
+}
+.shop-grid-trinkets {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.shop-card {
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 12px;
+  padding: .65rem .7rem;
+  background: color-mix(in srgb, #16161f 92%, #000);
+  display: flex;
+  flex-direction: column;
+  gap: .28rem;
+}
+.shop-card.rarity-epic { border-color: rgba(192, 132, 252, .45); }
+.shop-card.rarity-rare { border-color: rgba(96, 165, 250, .4); }
+.shop-card.rarity-uncommon { border-color: rgba(74, 222, 128, .35); }
+.shop-card-ico { font-size: 1.4rem; }
+.shop-card-title { font-weight: 700; font-size: .86rem; line-height: 1.25; }
+.shop-card-meta { font-size: .68rem; opacity: .7; }
+.shop-card-stats { font-size: .7rem; color: var(--muted, #a0a0b0); }
+.shop-special {
+  font-size: .72rem;
+  color: #fde68a;
+  background: rgba(80, 50, 10, .35);
+  border-radius: 8px;
+  padding: .3rem .4rem;
+  line-height: 1.3;
+}
+.shop-special-inline {
+  display: block;
+  font-size: .68rem;
+  color: #fde68a;
+  opacity: .9;
+}
+.shop-bag-list { display: flex; flex-direction: column; gap: .35rem; }
+.shop-bag-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem .5rem;
+  padding: .4rem .5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(0, 0, 0, .2);
+}
+.shop-bag-meta { font-size: .7rem; opacity: .7; }
+
+/* ── Рейд 10: лобби + бой (Тест) ──────────────────────── */
+
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .4rem;
+  margin: 0 0 .65rem;
+}
+.mode-toggle .btn {
+  width: 100%;
+  padding: .5rem .4rem;
+  font-weight: 650;
+  letter-spacing: .02em;
+}
+.mode-toggle .btn.on {
+  background: linear-gradient(180deg, #1d4f7a, #12324e);
+  border-color: #6ec8ff;
+  color: #e8f6ff;
+  box-shadow: 0 0 0 1px rgba(110, 200, 255, .35), inset 0 1px 0 rgba(255,255,255,.12);
+}
+#btn-mode-raid.on {
+  background: linear-gradient(180deg, #5a2a12, #3a1608);
+  border-color: #f0b060;
+  color: #fff4e4;
+  box-shadow: 0 0 0 1px rgba(240, 176, 96, .4), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+#raid-hint {
+  border: 1px solid rgba(240, 176, 96, .35);
+  background: rgba(80, 36, 10, .35);
+  border-radius: 10px;
+  padding: .55rem .65rem;
+  line-height: 1.4;
+  color: #f6e2c4;
+}
+#btn-fill-raid {
+  background: linear-gradient(180deg, #6a3214, #3e1a08);
+  border-color: #e0a050;
+}
+
+body.raid-lobby .party-slots,
+.party-slots.raid-slots {
+  display: flex;
+  flex-direction: column;
+  gap: .32rem;
+  margin-bottom: .45rem;
+}
+body.raid-lobby .party-slots .slot,
+.party-slots.raid-slots .slot,
+body.raid-lobby .slot.raid-member {
+  padding: .28rem .4rem .28rem .32rem;
+  min-height: 0;
+  overflow: hidden;
+}
+body.raid-lobby .slot.raid-member .slot-main,
+body.raid-lobby .raid-card {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  grid-template-columns: none;
+  padding-right: 1.25rem;
+  min-width: 0;
+}
+body.raid-lobby .slot.raid-member .slot-divider,
+body.raid-lobby .slot.raid-member .slot-sec-wrap,
+body.raid-lobby .raid-card .slot-divider,
+body.raid-lobby .raid-card .slot-sec-wrap {
+  display: none !important;
+}
+body.raid-lobby .slot.raid-member .slot-portrait,
+.party-slots.raid-slots .slot-portrait {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 8px;
+}
+body.raid-lobby .slot.raid-member .meta {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+body.raid-lobby .slot.raid-member .meta b {
+  display: block;
+  font-size: .82rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.raid-lobby .slot.raid-member .meta span {
+  display: block;
+  font-size: .68rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.raid-lobby .slot.raid-member .party-gear-btn {
+  flex: 0 0 auto;
+  padding: .18rem .4rem;
+  font-size: .68rem;
+}
+body.raid-lobby .lobby-party-col .section-title {
+  font-size: .82rem;
+}
+body.raid-lobby .lobby-wrap {
+  grid-template-columns: minmax(180px, .55fr) minmax(0, 1fr) minmax(380px, 1.25fr);
+}
+body.raid-lobby .raid-affix-block {
+  display: none;
+}
+
+.lobby-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+.lobby-fx.on {
+  pointer-events: auto;
+  opacity: 1;
+  visibility: visible;
+}
+.lobby-fx canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+body.lobby-fx-playing #lobby.screen::before {
+  opacity: 0;
+}
+body.lobby-fx-playing #lobby .lobby-hero,
+body.lobby-fx-playing #lobby .subtitle,
+body.lobby-fx-playing #lobby .lobby-wrap,
+body.lobby-fx-playing #lobby .src-note {
+  opacity: 0;
+  pointer-events: none;
+}
+body.lobby-fx-playing #btn-lobby-chrome {
+  opacity: 0;
+  pointer-events: none;
+}
+body.lobby-fx-playing .mode-toggle .btn {
+  pointer-events: none;
+}
+
+body.raid-lobby #lobby.screen {
+  position: relative;
+  isolation: isolate;
+  background-color: #07090c;
+  background-image: url('../assets/backgrounds/lobby-leishen.jpg');
+  background-size: cover;
+  background-position: center 42%;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+}
+body.raid-lobby #lobby.screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(6, 10, 12, .58) 0%, rgba(8, 12, 14, .36) 42%, rgba(6, 8, 10, .62) 100%);
+  opacity: 1;
+  transition: opacity 1.1s ease;
+}
+body.raid-lobby #lobby .lobby-hero,
+body.raid-lobby #lobby .subtitle,
+body.raid-lobby #lobby .lobby-wrap,
+body.raid-lobby #lobby .src-note {
+  position: relative;
+  z-index: 1;
+  transition: opacity .55s ease;
+}
+#btn-lobby-chrome {
+  display: none;
+  position: fixed;
+  top: .65rem;
+  left: .65rem;
+  z-index: 50;
+  min-height: 32px;
+}
+body:has(#lobby.screen:not(.hidden)) #btn-lobby-chrome {
+  display: inline-flex;
+}
+body.lobby-chrome-hidden #lobby.screen::before {
+  opacity: 0;
+}
+body.lobby-chrome-hidden #lobby .lobby-hero,
+body.lobby-chrome-hidden #lobby .subtitle,
+body.lobby-chrome-hidden #lobby .lobby-wrap,
+body.lobby-chrome-hidden #lobby .src-note {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.unit.raid-focus {
+  outline: 2px solid #7ad0ff;
+  box-shadow: 0 0 0 3px rgba(122, 208, 255, .28), 0 0 18px rgba(80, 170, 230, .35);
+  position: relative;
+}
+.unit.raid-focus::after {
+  content: 'ВЫ';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: #081018;
+  background: #7ad0ff;
+  border-radius: 4px;
+  padding: .05rem .28rem;
+}
+
+/* Raid combat: packed roster, fitted portraits, skills stay on screen */
+body.raid-run #run-screen {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+body.raid-run .run-top {
+  flex: 0 0 auto;
+  gap: .28rem .45rem;
+  padding: .22rem .55rem;
+}
+body.raid-run .run-top .stat-pill {
+  font-size: .74rem;
+  padding: .12rem .4rem;
+}
+body.raid-run .run-top .btn-sm {
+  min-height: 28px;
+  padding: .18rem .5rem;
+  font-size: .74rem;
+}
+body.raid-run #hud-forces,
+body.raid-run .forces-bar {
+  display: none !important;
+}
+body.raid-run .timer-bar {
+  flex: 0 0 auto;
+  height: 3px;
+}
+body.raid-run .run-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: hidden;
+}
+body.raid-run #battle-area.battle-area,
+#battle-area.has-raid-bg {
+  overflow: hidden;
+  justify-content: flex-start;
+  gap: .4rem;
+  padding: .2rem .45rem .28rem;
+  background-image:
+    linear-gradient(180deg, rgba(10, 16, 12, .38), rgba(8, 12, 10, .52)),
+    var(--battle-bg, none) !important;
+  background-size: cover !important;
+  background-position: center 40% !important;
+  background-repeat: no-repeat !important;
+}
+body.raid-run #battle-area.theme-jade {
+  --theme-glow: rgba(60, 140, 80, .18);
+}
+body.raid-run .phase-banner,
+body.raid-run .phase-sub,
+body.raid-run #battle-area > div > .section-title {
+  display: none !important;
+}
+body.raid-run .place-title { display: block; }
+body.raid-run .place-room { font-size: 1.2rem; }
+.boss-flank {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+.boss-flank-slot {
+  flex: 0 0 108px;
+  min-height: 0;
+}
+.boss-flank:not(.has-pillars) .boss-flank-slot { flex-basis: 0; width: 0; overflow: hidden; }
+.boss-flank-card {
+  padding: 6px 6px 5px;
+  background: rgba(8, 14, 22, 0.88);
+  border: 1px solid #3a7aaa;
+  box-shadow: 0 0 12px rgba(80, 180, 255, 0.25);
+  cursor: pointer;
+  text-align: center;
+}
+.boss-flank-art {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto 4px;
+}
+.boss-flank-name { font-size: 11px; color: #d6eefc; line-height: 1.2; }
+.boss-flank-bar {
+  height: 7px;
+  margin: 4px 0 2px;
+  background: #1a2834;
+}
+.boss-flank-bar i { display: block; height: 100%; background: #3ec6ff; }
+.boss-flank-hp { font-size: 10px; color: #9fd4f0; }
+.boss-flank-hint { font-size: 9px; color: #e0c060; margin-top: 2px; }
+body.raid-run #boss-frame {
+  flex: 0 0 auto;
+  padding: .12rem .45rem .14rem;
+  margin: 0 auto .08rem;
+}
+body.raid-run #boss-frame .bf-name {
+  font-size: .78rem;
+  margin-bottom: .08rem;
+}
+body.raid-run #boss-frame .bf-bar {
+  height: 14px;
+}
+body.raid-run #boss-frame .bf-text {
+  font-size: .68rem;
+}
+body.raid-run #boss-frame .bf-phases {
+  margin-top: .08rem;
+}
+body.raid-run #enemy-row.unit-row {
+  justify-content: center;
+  flex-wrap: wrap;
+  overflow: visible;
+  padding-top: 4px;
+  padding-bottom: 8px;
+}
+body.raid-run #enemy-row .unit {
+  width: 118px;
+  flex: 0 0 118px;
+}
+body.raid-run #battle-area > div:has(#enemy-row) {
+  flex: 0 0 auto;
+  margin-bottom: .35rem;
+}
+body.raid-run #battle-area > div:has(#ally-row) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin-top: .55rem;
+  padding-top: .35rem;
+  padding-bottom: 12px;
+}
+body.raid-run #ally-row.unit-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center;
+  align-items: flex-start;
+  align-content: flex-start;
+  row-gap: .55rem;
+  column-gap: .4rem;
+  overflow: visible;
+  padding-bottom: 0 !important;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+body.raid-run #ally-row .unit-stack {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  flex: 0 0 auto;
+}
+body.raid-run #enemy-row .unit-stack {
+  width: auto;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+body.raid-run #ally-row .unit-stack .pet-row[aria-hidden="true"] {
+  display: none;
+}
+body.raid-run #ally-row .unit {
+  width: 112px !important;
+  min-width: 112px !important;
+  max-width: 112px !important;
+  flex: none !important;
+  padding: .22rem .18rem .28rem;
+  box-sizing: border-box;
+}
+body.raid-run #ally-row .unit .portrait.art-wrap {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  min-height: 52px !important;
+  flex: 0 0 52px !important;
+  margin: 0 auto .12rem;
+  border-radius: 50%;
+  overflow: hidden;
+  display: block;
+}
+body.raid-run #ally-row .unit .portrait.art-wrap .art-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center 18%;
+  border-radius: 50%;
+}
+body.raid-run #ally-row .u-name {
+  font-size: .62rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+}
+body.raid-run #ally-row .u-role {
+  display: none;
+}
+body.raid-run #ally-row .bar-wrap {
+  min-height: 0;
+  margin: .08rem 0 0;
+}
+body.raid-run #ally-row .slot-sec,
+body.raid-run #ally-row .slot-runes {
+  margin-top: .08rem;
+}
+#run-screen #ally-row {
+  padding-bottom: 8px;
+}
+#run-screen .unit .buffs,
+#run-screen .mark-chip {
+  display: none !important;
+}
+#run-screen .unit-stack {
+  --aura-ico: 22px;
+  --aura-gap: 2px;
+  --aura-pad: 5px;
+  --aura-w: calc(var(--aura-ico) * 2 + var(--aura-gap) + var(--aura-pad) * 2);
+  display: grid;
+  grid-template-columns: auto max-content;
+  grid-template-rows: auto auto;
+  align-items: stretch;
+  width: max-content;
+  min-width: 0;
+  max-width: none;
+  flex: 0 0 auto;
+  position: relative;
+  overflow: visible;
+}
+@media (min-width: 1200px) {
+  #run-screen .unit-stack { --aura-ico: 24px; }
+}
+@media (max-width: 900px) {
+  #run-screen .unit-stack { --aura-ico: 20px; }
+}
+body.raid-run #run-screen #ally-row .unit-stack { --aura-ico: 18px; }
+body.raid-run #run-screen #enemy-row .unit-stack { --aura-ico: 20px; }
+#run-screen .unit-stack:not(.has-auras) {
+  grid-template-columns: max-content;
+}
+#run-screen .unit-stack:not(.has-auras) > .unit {
+  grid-column: 1;
+}
+#run-screen .unit-stack:not(.has-auras) .pet-row {
+  grid-column: 1;
+}
+#run-screen .unit-aura {
+  display: none;
+}
+#run-screen .unit-stack.has-auras > .unit-aura,
+#run-screen .unit-aura.is-on {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: stretch;
+  /* 5.4.9.41В: столбик по числу иконок (1 или 2), не всегда на две — ряд не вылезает за поле */
+  width: auto;
+  min-width: calc(var(--aura-ico) + var(--aura-pad) * 2);
+  max-width: var(--aura-w);
+  height: auto;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: var(--aura-pad);
+  box-sizing: border-box;
+  pointer-events: auto;
+  z-index: 4;
+  margin-right: -8px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 12px;
+  box-shadow: inset -8px 0 10px -8px rgba(0, 0, 0, 0.35);
+}
+#run-screen .unit-stack > .unit {
+  grid-column: 2;
+  grid-row: 1;
+  cursor: pointer;
+  position: relative;
+  z-index: 6;
+}
+body.need-target #run-screen .unit.selected-target {
+  border-color: #ff6b6b !important;
+  box-shadow: 0 0 14px rgba(255, 100, 100, .55);
+  cursor: pointer;
+}
+body.need-target #run-screen .unit-stack {
+  cursor: pointer;
+}
+#run-screen .unit-stack .pet-row {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  margin: 4px auto 0;
+  width: max-content;
+  max-width: 100%;
+  height: auto;
+  z-index: 3;
+}
+#run-screen .unit-stack .pet-row[aria-hidden="true"] {
+  display: none;
+}
+#run-screen .aura-rail {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  align-content: flex-start;
+  gap: var(--aura-gap, 2px);
+  width: auto;
+  max-width: calc(var(--aura-ico, 22px) * 2 + var(--aura-gap, 2px));
+  max-height: calc(var(--aura-ico, 22px) * 6 + var(--aura-gap, 2px) * 5);
+  overflow: hidden;
+}
+#run-screen .aura-rail-good {
+  margin-bottom: 2px;
+}
+#run-screen .aura-rail-bad {
+  margin-top: auto;
+  align-content: flex-end;
+}
+#run-screen .aura-rail:empty {
+  display: none;
+}
+#run-screen .aura-ico {
+  width: var(--aura-ico, 22px);
+  height: var(--aura-ico, 22px);
+  min-width: var(--aura-ico, 22px);
+  min-height: var(--aura-ico, 22px);
+  padding: 0;
+  font-size: .82rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  overflow: hidden;
+  flex: 0 0 var(--aura-ico, 22px);
+  position: relative;
+  border-radius: 4px;
+}
+#run-screen .aura-ico .buff-n {
+  position: absolute;
+  right: -1px;
+  bottom: -2px;
+  font-size: .48rem;
+  padding: 0 1px;
+  min-width: 7px;
+  line-height: 1;
+  background: rgba(0, 0, 0, .7);
+}
+#run-screen .aura-ico.is-linked {
+  box-shadow: 0 0 6px #f0c14b;
+  border-color: #f0c14b;
+}
+.ability-tip-float .pt-detail.pt-dmg {
+  color: #f0c8a0;
+  font-weight: 700;
+}
+body.raid-run .ability-zone {
+  flex: 0 0 auto;
+  margin-top: auto;
+  z-index: 6;
+}
+body.raid-run .combat-actions {
+  flex: 0 0 auto;
+}
+/* Как в ключе: отдельная рамка пассивок, в рейде слева снизу (recount чуть выше) */
+body.raid-run .passive-pocket {
+  left: .55rem;
+  right: auto;
+  bottom: .55rem;
+  z-index: 80;
+  width: min(280px, calc(42vw - 1rem));
+}
+body.raid-run .passive-pocket.aura-pocket {
+  left: auto;
+  right: .55rem;
+}
+body.raid-run .recount-panel {
+  left: .55rem;
+  right: auto;
+  bottom: 3.2rem;
+  z-index: 79;
+  width: min(280px, calc(42vw - 1rem));
+}
+
+.mark-chip {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  font-size: .58rem;
+  font-weight: 700;
+  background: rgba(40, 80, 160, .85);
+  color: #d8ecff;
+  border-radius: 4px;
+  padding: .05rem .28rem;
+}
+
+#btn-raid-auto.on {
+  background: linear-gradient(180deg, #1d4f7a, #12324e);
+  border-color: #6ec8ff;
+  color: #e8f6ff;
+}
+
+@media (max-width: 720px) {
+  body.raid-run #ally-row.unit-row {
+    max-width: none;
+  }
+  body.raid-run #ally-row .unit {
+    width: calc(50% - .2rem) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 calc(50% - .2rem) !important;
+  }
+  body.raid-lobby .party-slots,
+  .party-slots.raid-slots {
+    grid-template-columns: 1fr;
+  }
+  body.raid-lobby .lobby-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.raid-run .raid-phase-hud {
+  text-align: center;
+  margin: 0 0 .08rem;
+  flex: 0 0 auto;
+}
+body.raid-run .raid-phase-name {
+  display: none;
+}
+body.raid-run .raid-alerts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .16rem;
+  justify-content: center;
+  margin-top: 0;
+}
+body.raid-run .raid-alert {
+  font-size: .62rem;
+  padding: .06rem .32rem;
+  border-radius: 999px;
+  background: rgba(20, 28, 22, .72);
+  border: 1px solid rgba(180, 200, 160, .25);
+}
+body.raid-run .raid-alert.warn { border-color: #c9a227; color: #f0d78c; }
+body.raid-run .raid-alert.danger { border-color: #c44; color: #f8a0a0; }
+body.raid-run .raid-alert.soak { border-color: #4ac; color: #9de; }
+
+.raid-cast-dock {
+  position: absolute;
+  top: .45rem;
+  left: .45rem;
+  z-index: 8;
+  display: flex;
+  gap: .55rem;
+  align-items: center;
+  padding: .5rem .65rem;
+  background: rgba(8, 12, 10, .88);
+  border: 1px solid rgba(120, 180, 100, .45);
+  border-radius: 10px;
+  max-width: 320px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .45);
+}
+.raid-cast-dock.hidden { display: none; }
+.raid-cast-dock img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #6a8;
+}
+.raid-cast-meta { flex: 1; min-width: 0; }
+#raid-cast-title { font-size: .82rem; color: #cde; font-weight: 700; }
+#raid-cast-spell { font-size: .84rem; color: #d4e05a; margin: .12rem 0 .28rem; font-weight: 800; }
+.raid-cast-bar {
+  height: 10px;
+  background: #1a2018;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.raid-cast-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #2a6a3a, #d4e05a);
+  transition: width .25s ease;
+}
+
+.raid-fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+}
+.raid-fx-layer.hidden { display: none; }
+.raid-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, #fff 0%, #c8f0a0 30%, transparent 70%);
+  animation: raidFlash .45s ease-out forwards;
+}
+@keyframes raidFlash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.raid-shatter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+}
+.raid-shatter i {
+  background-repeat: no-repeat;
+  animation: raidTile .85s ease-in forwards;
+}
+@keyframes raidTile {
+  to {
+    transform: translate(var(--dx, 40px), var(--dy, 80px)) rotate(var(--rot, 15deg));
+    opacity: 0;
+  }
+}
+.raid-boss-fall {
+  position: fixed;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid #8c8;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+  transition: left .75s ease, top .75s cubic-bezier(.4, 0, .2, 1.3), width .75s ease, height .75s ease, transform .75s ease;
+  z-index: 81;
+}
+
+#battle-area { position: relative; }
+
+/* Lei Shen split: two halls, two backgrounds */
+.raid-split-stage {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  gap: .35rem;
+  align-items: stretch;
+}
+body.raid-split-on .raid-split-stage {
+  display: grid;
+  grid-template-columns: 1fr 72px 1fr;
+}
+body.raid-split-on #battle-area > div:has(#enemy-row),
+body.raid-split-on #battle-area > div:has(#ally-row) {
+  display: none !important;
+}
+.raid-split-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: .28rem;
+  min-width: 0;
+  padding: .35rem .4rem .45rem;
+  border-radius: 12px;
+  border: 1px solid rgba(160, 190, 170, .22);
+  overflow: hidden;
+  background-image:
+    linear-gradient(180deg, rgba(8, 12, 14, .55), rgba(6, 8, 10, .72)),
+    var(--split-bg, none);
+  background-size: cover;
+  background-position: center 38%;
+}
+.raid-split-col[data-room="azure"] {
+  box-shadow: inset 0 0 0 1px rgba(80, 160, 220, .25);
+}
+.raid-split-col[data-room="gold"] {
+  box-shadow: inset 0 0 0 1px rgba(210, 170, 70, .28);
+}
+.raid-split-col.is-player {
+  outline: 2px solid #7ad0ff;
+  outline-offset: -2px;
+}
+.raid-split-col[data-room="gold"].is-player {
+  outline-color: #e0c05a;
+}
+.raid-split-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .2rem .4rem;
+  align-items: baseline;
+  z-index: 1;
+}
+.raid-split-title {
+  font-size: .72rem;
+  font-weight: 700;
+  color: #e8f0ea;
+}
+.raid-split-task {
+  font-size: .62rem;
+  color: #c9d8b8;
+}
+.raid-split-you {
+  margin-left: auto;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  color: #081018;
+  background: #7ad0ff;
+  border-radius: 4px;
+  padding: .04rem .28rem;
+}
+.raid-split-col[data-room="gold"] .raid-split-you {
+  background: #e0c05a;
+}
+.raid-split-col:not(.is-player) .raid-split-you {
+  background: rgba(20, 24, 28, .72);
+  color: #9aa;
+}
+.raid-split-foes,
+.raid-split-friends {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .28rem .32rem;
+  z-index: 1;
+}
+.raid-split-foes { min-height: 72px; }
+.raid-split-friends { flex: 1 1 auto; }
+body.raid-run .raid-split-friends .unit,
+body.raid-run .raid-split-foes .unit {
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+}
+body.raid-run .raid-split-friends .unit .portrait.art-wrap,
+body.raid-run .raid-split-foes .unit .portrait.art-wrap {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  flex: 0 0 46px !important;
+}
+.unit-stack[data-raid-tint="azure"] > .unit {
+  box-shadow: 0 0 0 2px rgba(80, 168, 232, .7);
+}
+.unit-stack[data-raid-tint="gold"] > .unit {
+  box-shadow: 0 0 0 2px rgba(212, 176, 74, .75);
+}
+.raid-split-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  z-index: 2;
+}
+.raid-split-wire {
+  width: 4px;
+  height: 42%;
+  min-height: 48px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #4aa8e8, #e0c05a);
+  box-shadow: 0 0 10px rgba(120, 200, 255, .45);
+  opacity: .55;
+}
+.raid-split-wire.pulse {
+  animation: raidWirePulse .55s ease-out;
+}
+@keyframes raidWirePulse {
+  0% { opacity: 1; transform: scaleX(2.4); box-shadow: 0 0 22px #fff; }
+  100% { opacity: .55; transform: scaleX(1); }
+}
+.raid-split-mid .btn { width: 100%; font-size: .62rem; padding: .2rem .25rem; }
+.raid-alert.split { border-color: #7ad0ff; color: #bfe6ff; }
+
+@media (max-width: 900px) {
+  body.raid-split-on .raid-split-stage {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    overflow: auto;
+  }
+  .raid-split-mid {
+    flex-direction: row;
+    order: 3;
+  }
+  .raid-split-wire {
+    width: 28%;
+    height: 4px;
+    min-height: 0;
+  }
+}
+
+/* Lei Shen finale chase — overlay, no display:none on lobby cards */
+#raid-finale.raid-finale {
+  position: fixed;
+  inset: 0;
+  z-index: 88;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+#raid-finale.raid-finale.on {
+  pointer-events: auto;
+  opacity: 1;
+  visibility: visible;
+}
+.raid-finale-bg {
+  position: absolute;
+  inset: 0;
+  background-color: #07090c;
+  background-size: cover;
+  background-position: center 42%;
+  filter: saturate(1.12) contrast(1.08) hue-rotate(-12deg) brightness(0.78);
+}
+.raid-finale-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 18%, #fff 0%, #c8e8ff 28%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+.raid-finale-flash.go {
+  animation: raidFinaleFlash .55s ease-out forwards;
+}
+@keyframes raidFinaleFlash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.raid-finale-bolts {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.raid-finale-blown {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.raid-finale-ghost {
+  position: fixed;
+  box-sizing: border-box;
+  animation: raidFinaleBlow .95s ease-in forwards;
+  transform-origin: 50% 40%;
+}
+@keyframes raidFinaleBlow {
+  to {
+    transform: translate(var(--dx, 40px), var(--dy, 120px)) rotate(var(--rot, 18deg)) scale(0.82);
+    opacity: 0;
+  }
+}
+.raid-finale-stage {
+  position: absolute;
+  inset: 0;
+}
+.raid-finale-stage.hidden,
+.raid-finale-cine.hidden {
+  display: none;
+}
+.raid-finale-boss {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 3;
+  pointer-events: none;
+}
+.raid-finale-boss-art {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid #9de;
+  box-shadow: 0 0 28px rgba(140, 210, 255, .55), 0 10px 28px rgba(0, 0, 0, .55);
+}
+.raid-finale-boss-name {
+  margin-top: .28rem;
+  font-size: .78rem;
+  font-weight: 700;
+  color: #e8f4ff;
+  text-shadow: 0 1px 4px #000;
+}
+.raid-finale-path {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 22%;
+  bottom: 28%;
+  border: 0;
+  padding: 0;
+  background:
+    linear-gradient(180deg, rgba(180, 220, 255, .08), transparent 18%, transparent 82%, rgba(180, 220, 255, .06));
+  cursor: pointer;
+  border-radius: 18px;
+}
+.raid-finale-path:focus-visible {
+  outline: 2px solid #9de;
+  outline-offset: 2px;
+}
+.raid-finale-raid {
+  position: absolute;
+  left: 50%;
+  bottom: calc(22% + (38% * var(--run, 0)));
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .22rem;
+  width: min(420px, 70vw);
+  z-index: 4;
+  pointer-events: none;
+  transition: bottom .4s ease;
+}
+.raid-finale-raid.lunge {
+  animation: raidFinaleLunge .38s ease;
+}
+@keyframes raidFinaleLunge {
+  40% { transform: translateX(-50%) translateY(-10px); }
+}
+.raid-finale-token {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid rgba(220, 236, 255, .55);
+  background: #12161c;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .8rem;
+}
+.raid-finale-token img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.raid-finale-token.dead {
+  opacity: .35;
+  filter: grayscale(1);
+}
+.raid-finale-hud {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  width: min(420px, 92vw);
+  text-align: center;
+  z-index: 5;
+  padding: .55rem .7rem .65rem;
+  border-radius: 12px;
+  background: rgba(8, 12, 14, .78);
+  border: 1px solid rgba(160, 200, 180, .28);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+}
+.raid-finale-cast-label {
+  font-size: .72rem;
+  color: #f0d78c;
+  margin-bottom: .18rem;
+}
+.raid-finale-cast-bar {
+  height: 8px;
+  background: #1a2018;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.raid-finale-cast-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #2a6a9a, #d4e05a);
+  transition: width .25s ease;
+}
+.raid-finale-dist {
+  margin: .35rem 0 .4rem;
+  font-size: .78rem;
+  color: #dce8dc;
+}
+.raid-finale-run {
+  min-width: 8.5rem;
+}
+.raid-finale-hint {
+  margin-top: .35rem;
+  font-size: .62rem;
+  color: #9aa89a;
+  line-height: 1.35;
+}
+.raid-finale-turn {
+  margin-top: .4rem;
+  height: 4px;
+  background: #1a2018;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.raid-finale-turn i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #7ad0ff, #e0c05a);
+}
+@keyframes raidFinaleTurn {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+.raid-finale-cine {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+}
+.raid-finale-cine-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 40%;
+  filter: saturate(1.05) brightness(0.92);
+}
+.raid-finale-cine-veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 42%, transparent 20%, rgba(4, 6, 8, .55) 100%);
+  animation: raidFinaleVeil 2.8s ease forwards;
+}
+@keyframes raidFinaleVeil {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.raid-finale-cine-text {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  text-shadow: 0 2px 12px #000;
+}
+.raid-finale-cine-title {
+  font-family: Cinzel, serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #f4e6b0;
+  letter-spacing: .04em;
+}
+.raid-finale-cine-sub {
+  margin-top: .4rem;
+  font-size: .92rem;
+  color: #d5dece;
+}
+.raid-finale-skip {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+}
+body.raid-finale-on #ally-row .unit-stack,
+body.raid-finale-on #enemy-row .unit-stack,
+body.raid-finale-on #boss-frame,
+body.raid-finale-on #ability-bar,
+body.raid-finale-on #combat-actions,
+body.raid-finale-on #raid-phase-hud,
+body.raid-finale-on #raid-cast-dock,
+body.raid-finale-on .raid-split-stage,
+body.raid-finale-on .turn-banner,
+body.raid-finale-on #phase-banner,
+body.raid-finale-on #phase-sub {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .raid-finale-flash.go,
+  .raid-finale-ghost,
+  .raid-finale-raid,
+  .raid-finale-raid.lunge,
+  .raid-finale-cine-veil,
+  .raid-finale-turn i {
+    animation: none !important;
+    transition: none !important;
+  }
+  .raid-finale-ghost { opacity: 0; }
+}
+
+.raid-place {
+  position: fixed;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  z-index: 86;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.raid-place.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+.raid-place-name {
+  font-size: 28px;
+  letter-spacing: 0.08em;
+  color: #e8f4ff;
+  text-shadow: 0 0 18px #4db8ff, 0 2px 8px #000;
+  font-weight: 700;
+}
+.raid-place-sub {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #b7d4ee;
+  text-shadow: 0 1px 6px #000;
+}
+.raid-cata-pick {
+  position: fixed;
+  inset: 0;
+  z-index: 87;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 8, 14, 0.72);
+}
+.raid-cata-pick.on { display: flex; }
+.raid-cata-pick-box {
+  width: min(820px, 92vw);
+  padding: 18px 20px 16px;
+  border: 1px solid #3a6a90;
+  background: rgba(10, 16, 24, 0.94);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+}
+.raid-cata-pick-title { font-size: 22px; color: #e8f4ff; margin-bottom: 6px; }
+.raid-cata-pick-hint { font-size: 13px; color: #9bb4c8; margin-bottom: 14px; }
+.raid-cata-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.raid-cata-col { min-height: 160px; padding: 8px; border: 1px solid #2a4a66; background: rgba(20, 36, 52, 0.6); }
+.raid-cata-col-h { font-size: 13px; color: #cfe6ff; margin-bottom: 8px; }
+.raid-cata-hero {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 4px 6px;
+  background: #162432;
+  color: #dce8f2;
+  border: 1px solid #35566e;
+  cursor: pointer;
+}
+.raid-cata-hero img { width: 28px; height: 28px; object-fit: cover; }
+.raid-cata-hero.you { border-color: #e0c060; }
+.raid-cata-other {
+  position: fixed;
+  left: 10px;
+  top: 86px;
+  width: 196px;
+  z-index: 40;
+  padding: 8px 10px;
+  background: rgba(8, 12, 18, 0.82);
+  border: 1px solid #2e4d66;
+  display: none;
+}
+.raid-cata-other.on { display: block; }
+.raid-cata-other-h { font-size: 12px; color: #cfe6ff; margin-bottom: 2px; }
+.raid-cata-owave { font-size: 12px; color: #e0c060; margin-bottom: 8px; }
+.raid-cata-oname { font-size: 11px; color: #d0dde8; }
+.raid-cata-ohp, .raid-cata-ores {
+  height: 5px;
+  background: #1a2430;
+  margin: 2px 0 6px;
+}
+.raid-cata-ohp i { display: block; height: 100%; background: #3dd68c; }
+.raid-cata-ores i { display: block; height: 100%; background: #4da3ff; }
+.raid-cata-ghost {
+  position: fixed;
+  z-index: 85;
+  animation: raidCataFall 1.15s ease-in forwards;
+  pointer-events: none;
+}
+@keyframes raidCataFall {
+  to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.35); opacity: 0; }
+}
+.lei-fx-ring {
+  position: fixed;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid #cfeeff;
+  border-radius: 50%;
+  box-shadow: 0 0 14px #7ec8ff;
+  animation: leiRing 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 71;
+}
+.lei-fx-ring.buster { border-color: #ffe08a; box-shadow: 0 0 16px #ffb020; }
+@keyframes leiRing {
+  to { transform: scale(4.2); opacity: 0; }
+}
+.lei-fx-name {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  color: #eaf6ff;
+  font-size: 13px;
+  text-shadow: 0 0 10px #4db8ff;
+  pointer-events: none;
+  z-index: 72;
+}
+
+/* Поле боя 3×2 */
+body.has-field #legacy-enemy-wrap,
+body.has-field #legacy-ally-wrap {
+  display: none !important;
+}
+body.has-field #battle-area.battle-area {
+  overflow: hidden;
+  justify-content: flex-start;
+}
+body.has-field .ability-zone {
+  flex: 0 0 auto;
+  min-height: 132px;
+  max-height: min(34vh, 260px);
+  margin-top: .15rem;
+  z-index: 8;
+}
+body.has-field .ability-bar {
+  flex: 0 1 auto;
+  min-height: 120px;
+  max-height: min(34vh, 260px);
+}
+body.has-field .combat-actions {
+  flex: 0 0 auto;
+}
+.battle-field {
+  width: 100%;
+  margin: .15rem 0 .2rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.battle-field.hidden { display: none !important; }
+.bf-halls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .45rem;
+}
+.battle-field.is-split .bf-halls {
+  grid-template-columns: 1fr 1fr;
+}
+.battle-field:not(.is-split) .bf-hall[data-hall="B"] { display: none; }
+.bf-hall {
+  background: linear-gradient(180deg, #16140f, #0c0b08);
+  border: 1px solid #5a5030;
+  border-radius: 10px;
+  padding: .35rem .4rem .45rem;
+  min-width: 0;
+}
+.bf-hall[data-hall="B"] { border-color: #3a5a70; }
+.bf-head {
+  text-align: center;
+  font-size: .72rem;
+  letter-spacing: .06em;
+  color: var(--gold);
+  margin-bottom: .25rem;
+  text-transform: uppercase;
+}
+.bf-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: .3rem;
+  min-height: 0;
+}
+.bf-cell {
+  min-height: 48px;
+  border: 1px dashed #3a3628;
+  border-radius: 8px;
+  padding: .15rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .2rem;
+  justify-content: center;
+  align-items: flex-start;
+  background: rgba(0,0,0,.18);
+  cursor: pointer;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.bf-cell[data-side="ally"]:hover {
+  border-color: var(--gold);
+  background: rgba(224,192,96,.08);
+}
+.bf-cell[data-rank="front"][data-side="enemy"] { background: rgba(80,20,16,.2); }
+.bf-cell[data-rank="front"][data-side="ally"] { background: rgba(40,48,24,.22); }
+.bf-midline {
+  text-align: center;
+  font-size: .62rem;
+  color: #6a6248;
+  letter-spacing: .12em;
+  padding: .12rem 0;
+  border-top: 1px solid #3a3628;
+  border-bottom: 1px solid #3a3628;
+  margin: .15rem 0;
+}
+.has-field .bf-cell .unit {
+  min-width: 96px;
+  max-width: 140px;
+}
+.has-field .bf-cell .unit-stack { max-width: 150px; }
+.bf-cell.drop-ok {
+  border-color: #8ec8ff;
+  box-shadow: inset 0 0 10px rgba(142,200,255,.18);
+}
+@keyframes fieldSlide {
+  from { transform: translateY(8px); opacity: .4; }
+  to { transform: none; opacity: 1; }
+}
+.bf-cell .unit-stack { animation: fieldSlide .22s ease-out; }
+body.need-target .bf-cell[data-side="ally"] { cursor: default; }
+

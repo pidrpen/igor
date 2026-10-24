@@ -30,7 +30,8 @@ def load_check() -> None:
         "js/enemies.js",
         "js/route.js",
         "js/gear.js",
-        "js/combat.js",
+        "js/systems/combat-loop.js",
+        "js/systems/abilities.js",
         "js/save.js",
         "js/ui.js",
         "wow-mop-data.js",
@@ -49,7 +50,7 @@ def load_check() -> None:
         ok("css link")
     else:
         bad("index missing css/main.css")
-    for name in ("core", "enemies", "route", "gear", "combat", "save", "ui"):
+    for name in ("core", "enemies", "route", "gear", "systems/combat-loop", "systems/abilities", "save", "ui"):
         if f"js/{name}.js" in index:
             ok(f"script {name}.js")
         else:
@@ -72,8 +73,8 @@ def load_check() -> None:
         ("js/route.js", "function generateRoute"),
         ("js/gear.js", "function emptyGear"),
         ("js/gear.js", "function generateGearItem"),
-        ("js/combat.js", "function startCombat"),
-        ("js/combat.js", "function castAbility"),
+        ("js/systems/combat-loop.js", "function startCombat"),
+        ("js/systems/abilities.js", "function castAbility"),
         ("js/save.js", "function serializeRun"),
         ("js/save.js", "function exportSaveFile"),
         ("js/ui.js", "function initLobby"),
