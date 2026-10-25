@@ -62,7 +62,7 @@
 | Телеграфы, кик, лут-силы | `js/systems/telegraph-loot.js` |
 | Описания способностей | `js/systems/ability-data.js` |
 | Recount | `js/systems/meter.js` |
-| Карточки боя, панель 1–9 | `js/ui/combat-ui.js` |
+| Карточки боя, панель 1–9 | `js/ui/combat-ui.js` (Тест: портрет врага — тон подземелья, рамка ранга, значок роли — `foeFaceHtml`, стили `.foe-face` в `css/extra.css`) |
 | Ролики способностей | `js/ui/fx.js` + `js/ui/skill-fx-*.js` |
 | Лобби, отряд, старт | `js/ui.js` |
 | Таверна, герой 1–40 | `js/leveling/` (сейв `igorHero_v1`) |

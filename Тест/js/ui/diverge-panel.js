@@ -14,6 +14,13 @@
 
   const DIVERGE_LOG = [
     {
+      id: 'foe-portraits',
+      name: 'Портреты врагов: тон и ранг',
+      poured: 'no',
+      testVer: '5.4.9.45В',
+      text: 'combat-ui.js foeFaceHtml / foeRank (обёртка .foe-face вокруг портрета врага), стили в css/extra.css (.foe-face, .tone-*, .rank-*, .foe-rank, .foe-role). На основе портреты как раньше.',
+    },
+    {
       id: 'hero-talents-all',
       name: 'Таланты всем классам',
       poured: 'no',

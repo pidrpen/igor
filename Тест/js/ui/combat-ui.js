@@ -1032,6 +1032,32 @@
     return CLASS_CSS[u.classId] || (u.side === 'enemy' ? '#a04040' : 'var(--gold)');
   }
 
+  /** Портрет врага: тон подземелья, рамка ранга (обычный / элита / чемпион / босс), значок роли. */
+  const FOE_RANK_LABEL = { normal: 'Обычный', elite: 'Элита', champ: 'Чемпион', boss: 'Босс' };
+  const FOE_ROLE_SVG = {
+    tank: '<path d="M16 4l10 4v8c0 6-4.5 10-10 12-5.5-2-10-6-10-12V8z"/>',
+    healer: '<path d="M16 7v18M7 16h18"/>',
+    dps: '<path d="M26 4L12 18M8 16l8 8M6 26l4-4"/>',
+  };
+  function foeRank(u) {
+    if (u.isBoss || u.raidBoss) return 'boss';
+    if (u.isElite && / · СТ$/.test(String(u.name || ''))) return 'champ';
+    if (u.isElite) return 'elite';
+    return 'normal';
+  }
+  function foeFaceHtml(u, inner) {
+    if (!u || u.side !== 'enemy' || u.instObject || u.healOnly) return inner;
+    const rank = foeRank(u);
+    const tone = !run?.raid && run?.dungeon?.theme ? ' tone-' + run.dungeon.theme : '';
+    const role = FOE_ROLE_SVG[u.role] ? u.role : 'dps';
+    // Знак ранга — кружок слева снизу (сверху над портретом сидит значок угрозы)
+    const mark = rank === 'boss'
+      ? '<span class="foe-rank" aria-hidden="true"><svg viewBox="0 0 30 20"><path d="M2 18L4 5l7 6 4-9 4 9 7-6 2 13z"/></svg></span>'
+      : (rank === 'champ' || rank === 'elite' ? '<span class="foe-rank" aria-hidden="true">◆</span>' : '');
+    return `<span class="foe-face rank-${rank}${tone}" title="${FOE_RANK_LABEL[rank]} · ${ROLE_LABEL[role] || role}">${inner}${mark}`
+      + `<span class="foe-role role-${role}" aria-hidden="true"><svg viewBox="0 0 32 32">${FOE_ROLE_SVG[role]}</svg></span></span>`;
+  }
+
   function unitClassName(u, actor) {
     const active = actor && actor.uid === u.uid;
     const targeting = pendingTarget && (() => {
@@ -1306,9 +1332,9 @@
     const ico = u.side === 'ally' ? (u.icon || '⚔') : (u.icon || '💀');
     const roleLabel = (u.isElite ? '◆ Элита · ' : '') + (ROLE_LABEL[u.role] || u.role) + (u.enraged ? ' 🔥' : '');
     const pSrc = portraitSrc(u);
-    const portraitHtml = pSrc
+    const portraitHtml = foeFaceHtml(u, pSrc
       ? artHtml(pSrc, ico, 'portrait')
-      : `<div class="portrait"><span>${ico}</span></div>`;
+      : `<div class="portrait"><span>${ico}</span></div>`);
     const resBarTitle = isDkRunes
       ? `title="Сила рун ${Math.floor(u.res.secondary.current)}/${u.res.secondary.max}"`
       : '';
