@@ -1339,6 +1339,17 @@
       return noteSkillAnimMs(Math.max(animMs, 260 + staggerMs(40, hitList.length)));
     }
 
+    // Фирменные ролики ключевых способностей (js/ui/skill-fx-signature.js)
+    if (typeof playSignatureFx === 'function') {
+      const sigMs = playSignatureFx({
+        layer, from, list, ability, actor, type, school: drawnSchool, impact: fx.impact,
+        hit: (t, to, imp) => { spawnDrawnHit(to.x, to.y, imp || fx.impact); hitPulse(t); },
+        burst: (x, y, imp) => spawnDrawnHit(x, y, imp || fx.impact),
+        pulse: hitPulse,
+      });
+      if (sigMs) return noteSkillAnimMs(Math.max(animMs, sigMs));
+    }
+
     const shamMs = playShamanSkillFx(layer, from, list, ability, hitPulse, actor);
     if (shamMs) return noteSkillAnimMs(Math.max(animMs, shamMs));
 

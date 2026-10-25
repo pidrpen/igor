@@ -992,3 +992,310 @@ a.test-build-link:focus-visible {
   20% { opacity: 1; }
   100% { opacity: 0; transform: translate(var(--mx, 0), var(--my, -50px)) scale(1); }
 }
+
+/* ═══ Школа Скверны (охотник на демонов): цвет и все примитивы ═══ */
+#skill-fx-layer .school-fel { --fxc: #6ee03a; --fxl: #eaffc8; }
+.fx-hit.school-fel { background: radial-gradient(circle, rgba(234, 255, 200, .95), rgba(110, 224, 58, .42) 42%, transparent 70%); }
+.fx-spark.school-fel { background: #b8ff70; box-shadow: 0 0 8px #6ee03a; }
+.fx-orb.school-fel {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #9cff50 45%, #2a7a10);
+  box-shadow: 0 0 16px #6ee03a;
+}
+.skill-slash.fel { background: linear-gradient(90deg, transparent, #eaffc8 35%, #6ee03a 70%, transparent); box-shadow: 0 0 14px #6ee03a, 0 0 6px #fff; }
+.skill-ring.fel { border-color: rgba(110, 224, 58, .85); box-shadow: 0 0 14px #6ee03a; }
+.skill-beam.fel { background: linear-gradient(90deg, #6ee03a, #eaffc8, transparent); box-shadow: 0 0 10px #6ee03a; }
+.skill-orbit.fel { background: #9cff50; box-shadow: 0 0 10px #6ee03a; }
+.skill-swirl.fel { border-color: #6ee03a; box-shadow: 0 0 14px #6ee03a; }
+.skill-burst.fel { border-color: #6ee03a; box-shadow: 0 0 18px #6ee03a; }
+.skill-arc.fel { border-top-color: #6ee03a; border-right-color: #eaffc8; box-shadow: 0 0 12px #6ee03a; }
+.skill-pierce.fel { background: linear-gradient(90deg, #eaffc8, #6ee03a, transparent); box-shadow: 0 0 8px #6ee03a; }
+.skill-rain-drop.fel { background: linear-gradient(#eaffc8, #3a9a10); box-shadow: 0 0 6px #6ee03a; }
+.unit.school-flash-fel { box-shadow: 0 0 18px #6ee03a !important; }
+
+/* ═══ Фаза 3: фирменные ролики (js/ui/skill-fx-signature.js) ═══ */
+/* метеор: сгусток, снаряд со следом, выжженная земля */
+.sig-charge {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+  background: radial-gradient(circle, var(--fxl, #fff) 0 20%, var(--fxc, #f0c14b) 45%, transparent 72%);
+  animation: sig-charge .42s ease-in forwards;
+}
+@keyframes sig-charge {
+  0% { opacity: 0; transform: scale(2.2); }
+  70% { opacity: 1; transform: scale(.9); }
+  100% { opacity: 0; transform: scale(.6); }
+}
+.sig-meteor {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 32px; height: 32px; margin: -16px 0 0 -16px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, var(--fxl, #fff) 0 18%, var(--fxc, #f0c14b) 48%, transparent 72%);
+  box-shadow: 0 0 22px var(--fxc, #f0c14b), 0 0 40px var(--fxc, #f0c14b);
+}
+.sig-trail {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  background: radial-gradient(circle, var(--fxl, #fff), var(--fxc, #f0c14b) 50%, transparent 72%);
+  animation: sig-trail .44s ease-out forwards;
+}
+@keyframes sig-trail {
+  0% { opacity: .9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.25); }
+}
+.sig-scorch {
+  position: fixed; z-index: 70; pointer-events: none;
+  width: 120px; height: 36px; margin: -18px 0 0 -60px; border-radius: 50%;
+  background: radial-gradient(ellipse, var(--fxc, #f0c14b) 0%, color-mix(in srgb, var(--fxc, #f0c14b) 35%, transparent) 45%, transparent 72%);
+  animation: sig-scorch .9s ease-out forwards;
+}
+@keyframes sig-scorch {
+  0% { opacity: 0; transform: scale(.3); }
+  25% { opacity: .9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+/* копьё, болт, нож, импульс луча, капля — летят через WAAPI (центр — margin) */
+.sig-lance {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 96px; height: 4px; margin: -2px 0 0 -48px; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, var(--fxc, #c8d0da) 55%, var(--fxl, #fff) 92%);
+  box-shadow: 0 0 10px var(--fxc, #c8d0da);
+}
+.sig-bolt {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 30px; height: 3px; margin: -1px 0 0 -15px; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--fxc, #c8d0da), var(--fxl, #fff));
+  box-shadow: 0 0 8px var(--fxc, #c8d0da);
+}
+.sig-knife {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 20px; height: 4px; margin: -2px 0 0 -10px;
+  background: linear-gradient(90deg, var(--fxc, #c8d0da), var(--fxl, #fff));
+  clip-path: polygon(0 30%, 75% 0, 100% 50%, 75% 100%, 0 70%);
+  filter: drop-shadow(0 0 4px var(--fxc, #c8d0da));
+}
+.sig-pulse {
+  position: fixed; z-index: 77; pointer-events: none;
+  width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+  background: radial-gradient(circle, var(--fxl, #fff) 0 25%, var(--fxc, #c8d0da) 55%, transparent 72%);
+  box-shadow: 0 0 14px var(--fxc, #c8d0da);
+}
+.sig-drop {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 9px; height: 9px; margin: -4px 0 0 -4px; border-radius: 50%;
+  background: var(--fxl, #fff); box-shadow: 0 0 8px var(--fxc, #c8d0da);
+}
+/* катящийся шар */
+.sig-orb {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, var(--fxl, #fff) 0 16%, var(--fxc, #4da3ff) 52%, transparent 74%);
+  box-shadow: 0 0 22px var(--fxc, #4da3ff), inset 0 0 12px var(--fxl, #fff);
+}
+.sig-orb::before {
+  content: ""; position: absolute; inset: 4px; border-radius: 50%;
+  background: repeating-conic-gradient(var(--fxl, #fff) 0 10deg, transparent 10deg 45deg);
+  opacity: .5; animation: sig-spin .5s linear infinite;
+}
+@keyframes sig-spin { to { transform: rotate(360deg); } }
+/* падение с неба */
+.sig-fall {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 36px; height: 6px; margin: -3px 0 0 -18px; border-radius: 3px;
+  background: linear-gradient(90deg, transparent, var(--fxc, #c8d0da) 60%, var(--fxl, #fff));
+  box-shadow: 0 0 10px var(--fxc, #c8d0da);
+}
+/* волна по земле и пыль */
+.sig-quake {
+  position: fixed; z-index: 70; pointer-events: none;
+  width: 40px; height: 14px; margin: -7px 0 0 -20px; border-radius: 50%;
+  border: 3px solid var(--fxc, #c8d0da);
+  box-shadow: 0 0 12px var(--fxc, #c8d0da);
+  animation: sig-quake .9s ease-out forwards;
+}
+@keyframes sig-quake {
+  0% { opacity: 1; transform: scale(.5); }
+  100% { opacity: 0; transform: scale(8); border-width: 1px; }
+}
+.sig-dust {
+  position: fixed; z-index: 71; pointer-events: none;
+  width: 60px; height: 30px; margin: -15px 0 0 -30px; border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--fxc, #c8d0da) 55%, #8a8070), transparent 70%);
+  animation: sig-dust .76s ease-out forwards;
+}
+@keyframes sig-dust {
+  0% { opacity: .9; transform: scale(.4) translateY(0); }
+  100% { opacity: 0; transform: scale(1.5) translateY(-10px); }
+}
+/* луч и нить (shamLinkLine: ширина и поворот задаются в коде) */
+.sig-channel {
+  position: fixed; z-index: 74; pointer-events: none;
+  height: 10px; margin-top: -5px; border-radius: 6px; transform-origin: left center;
+  background: linear-gradient(180deg, transparent, var(--fxc, #c8d0da) 25%, var(--fxl, #fff) 50%, var(--fxc, #c8d0da) 75%, transparent);
+  box-shadow: 0 0 16px var(--fxc, #c8d0da);
+  animation: sig-channel 1s ease-out forwards;
+}
+@keyframes sig-channel {
+  0% { opacity: 0; filter: brightness(1.8); }
+  10% { opacity: 1; }
+  50% { opacity: .8; filter: brightness(1.2); }
+  85% { opacity: 1; }
+  100% { opacity: 0; filter: brightness(1); }
+}
+.sig-tether {
+  position: fixed; z-index: 74; pointer-events: none;
+  height: 3px; margin-top: -1px; transform-origin: left center;
+  background: repeating-linear-gradient(90deg, var(--fxl, #fff) 0 6px, var(--fxc, #c8d0da) 6px 12px, transparent 12px 16px);
+  box-shadow: 0 0 8px var(--fxc, #c8d0da);
+  animation: sig-tether .9s ease-out forwards;
+}
+@keyframes sig-tether {
+  0% { opacity: 0; } 15% { opacity: 1; } 80% { opacity: .9; } 100% { opacity: 0; }
+}
+.sig-absorb {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%;
+  border: 3px solid var(--fxc, #c8d0da); box-shadow: 0 0 16px var(--fxc, #c8d0da), inset 0 0 16px var(--fxc, #c8d0da);
+  animation: sig-absorb .7s ease-in forwards;
+}
+@keyframes sig-absorb {
+  0% { opacity: .2; transform: scale(1.4); }
+  60% { opacity: 1; }
+  100% { opacity: 0; transform: scale(.3); }
+}
+/* столб с неба на цель */
+.sig-column {
+  position: fixed; z-index: 74; pointer-events: none;
+  width: 46px; height: 180px; margin: -172px 0 0 -23px;
+  border-radius: 8px 8px 50% 50% / 8px 8px 16% 16%;
+  background: linear-gradient(180deg, transparent, var(--fxc, #f0c14b) 45%, var(--fxl, #fff));
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 14px var(--fxc, #f0c14b));
+  transform-origin: top center;
+  animation: sig-column .7s ease-out forwards;
+}
+@keyframes sig-column {
+  0% { opacity: 0; transform: scaleY(0) scaleX(.5); }
+  25% { opacity: 1; transform: scaleY(1) scaleX(1); }
+  100% { opacity: 0; transform: scaleY(1) scaleX(.2); }
+}
+/* вихрь клинков */
+.sig-whirl {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 130px; height: 130px; margin: -65px 0 0 -65px; border-radius: 50%;
+  background: repeating-conic-gradient(var(--fxl, #fff) 0 7deg, var(--fxc, #c8d0da) 7deg 12deg, transparent 12deg 45deg);
+  -webkit-mask: radial-gradient(circle, transparent 46%, #000 50%, #000 66%, transparent 70%);
+  mask: radial-gradient(circle, transparent 46%, #000 50%, #000 66%, transparent 70%);
+  filter: drop-shadow(0 0 8px var(--fxc, #c8d0da));
+  animation: sig-whirl .8s ease-out forwards;
+}
+@keyframes sig-whirl {
+  0% { opacity: 0; transform: rotate(0deg) scale(.5); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(540deg) scale(1.35); }
+}
+/* руна на цели */
+.sig-sigil {
+  position: fixed; z-index: 74; pointer-events: none;
+  width: 86px; height: 86px; margin: -43px 0 0 -43px; border-radius: 50%;
+  border: 2px dashed var(--fxc, #9b59b6);
+  box-shadow: 0 0 12px var(--fxc, #9b59b6), inset 0 0 10px var(--fxc, #9b59b6);
+  animation: sig-sigil 1s ease-out forwards;
+}
+.sig-sigil::before {
+  content: ""; position: absolute; inset: 14px; border-radius: 50%;
+  border: 2px solid var(--fxl, #fff);
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  background: color-mix(in srgb, var(--fxc, #9b59b6) 30%, transparent);
+  animation: sig-spin 1.6s linear infinite reverse;
+}
+@keyframes sig-sigil {
+  0% { opacity: 0; transform: scale(1.6) rotate(-60deg); }
+  30% { opacity: 1; transform: scale(1) rotate(0deg); }
+  80% { opacity: .9; }
+  100% { opacity: 0; transform: scale(.85) rotate(90deg); }
+}
+/* лужа под врагами */
+.sig-pool {
+  position: fixed; z-index: 69; pointer-events: none;
+  width: 110px; height: 32px; margin: -16px 0 0 -55px; border-radius: 50%;
+  border: 2px solid var(--fxl, #fff);
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--fxc, #c8d0da) 60%, transparent), transparent 72%);
+  box-shadow: 0 0 14px var(--fxc, #c8d0da);
+  animation: sig-pool 1.1s ease-out forwards;
+}
+@keyframes sig-pool {
+  0% { opacity: 0; transform: scale(.3); }
+  25% { opacity: 1; transform: scale(1); }
+  80% { opacity: .85; transform: scale(1.04); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+/* бросок зверя и рывок — полосы (shamLinkLine) */
+.sig-pounce, .sig-dash {
+  position: fixed; z-index: 75; pointer-events: none;
+  height: 8px; margin-top: -4px; border-radius: 4px; transform-origin: left center;
+  background: linear-gradient(90deg, transparent, var(--fxc, #c8d0da) 60%, var(--fxl, #fff));
+  box-shadow: 0 0 12px var(--fxc, #c8d0da);
+  animation: sig-streak .34s ease-out forwards;
+}
+.sig-dash { height: 12px; margin-top: -6px; filter: blur(.5px); }
+@keyframes sig-streak {
+  0% { opacity: 0; clip-path: inset(0 100% 0 0); }
+  40% { opacity: 1; clip-path: inset(0 0 0 0); }
+  100% { opacity: 0; clip-path: inset(0 0 0 70%); }
+}
+/* цветение исцеления */
+.sig-bloom {
+  position: fixed; z-index: 73; pointer-events: none;
+  width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%;
+  border: 3px solid var(--fxl, #fff);
+  box-shadow: 0 0 18px var(--fxc, #3dd68c), inset 0 0 14px var(--fxc, #3dd68c);
+  animation: sig-bloom 1s ease-out forwards;
+}
+@keyframes sig-bloom {
+  0% { opacity: 1; transform: scale(.5); }
+  100% { opacity: 0; transform: scale(9); border-width: 1px; }
+}
+.sig-petal {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 11px; height: 6px; margin: -3px 0 0 -5px; border-radius: 50%;
+  background: linear-gradient(90deg, var(--fxl, #fff), var(--fxc, #3dd68c));
+  box-shadow: 0 0 6px var(--fxc, #3dd68c);
+  animation: sig-petal 1s ease-out both;
+}
+@keyframes sig-petal {
+  0% { opacity: 0; transform: translate(0, 0) rotate(var(--rot, 0deg)) scale(.5); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--mx, 0), var(--my, -50px)) rotate(calc(var(--rot, 0deg) + 200deg)) scale(1); }
+}
+/* навесная бомба и дым */
+.sig-bomb {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #8a8a90, #2a2a30 70%);
+  box-shadow: 0 0 10px var(--fxc, #ff6a20), 6px -6px 0 -4px var(--fxl, #fff0c0);
+}
+.sig-smoke {
+  position: fixed; z-index: 72; pointer-events: none;
+  width: 80px; height: 80px; margin: -40px 0 0 -40px; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--fxc, #ff6a20) 30%, #6a6a70), transparent 70%);
+  animation: sig-smoke .9s ease-out forwards;
+}
+@keyframes sig-smoke {
+  0% { opacity: .9; transform: scale(.4); }
+  100% { opacity: 0; transform: scale(1.6) translateY(-14px); }
+}
+/* портал призыва */
+.sig-portal {
+  position: fixed; z-index: 72; pointer-events: none;
+  width: 120px; height: 42px; margin: -21px 0 0 -60px; border-radius: 50%;
+  border: 3px dashed var(--fxl, #fff);
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--fxc, #a78bfa) 55%, transparent), transparent 72%);
+  box-shadow: 0 0 18px var(--fxc, #a78bfa), inset 0 0 14px var(--fxc, #a78bfa);
+  animation: sig-portal 1.1s ease-out forwards;
+}
+@keyframes sig-portal {
+  0% { opacity: 0; transform: scale(.2) rotate(0deg); }
+  30% { opacity: 1; transform: scale(1) rotate(60deg); }
+  80% { opacity: .9; transform: scale(1.05) rotate(140deg); }
+  100% { opacity: 0; transform: scale(.6) rotate(200deg); }
+}

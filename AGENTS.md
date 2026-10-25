@@ -63,7 +63,7 @@
 | Описания способностей | `js/systems/ability-data.js` |
 | Recount | `js/systems/meter.js` |
 | Карточки боя, панель 1–9 | `js/ui/combat-ui.js` (Тест: портрет врага — тон подземелья, рамка ранга, значок роли — `foeFaceHtml`, стили `.foe-face` в `css/extra.css`) |
-| Ролики способностей | таблицы `js/ui/skill-fx-<класс>.js` (школа / движение / попадание), рисует `js/ui/fx.js` `playSkillAnim`, стили `css/theme-controls.css`. Тест: попадания burst / ring / shard / flash (`spawnImpact`), короткая версия на 3–4× (`fxFast`), ближний бой по оружию (`meleeStyle`), баффы по смыслу (`buffKind`) |
+| Ролики способностей | таблицы `js/ui/skill-fx-<класс>.js` (школа / движение / попадание), рисует `js/ui/fx.js` `playSkillAnim`, стили `css/theme-controls.css`. Тест: попадания burst / ring / shard / flash (`spawnImpact`), короткая версия на 3–4× (`fxFast`), ближний бой по оружию (`meleeStyle`), баффы по смыслу (`buffKind`), фирменные ролики ключевых способностей — `js/ui/skill-fx-signature.js` (`SIG` «класс:id» → рецепт) |
 | Лобби, отряд, старт | `js/ui.js` |
 | Таверна, герой 1–40 | `js/leveling/` (сейв `igorHero_v1`) |
 | Деревья талантов героя | паладин — `js/leveling/hero-talents.js`; остальные классы (только Тест) — `js/leveling/class-talents.js`, эффекты `fx` применяет `hero-talents.js` |

@@ -14,6 +14,13 @@
 
   const DIVERGE_LOG = [
     {
+      id: 'fx-phase3',
+      name: 'Фирменные ролики способностей',
+      poured: 'no',
+      testVer: '5.4.9.48В',
+      text: 'js/ui/skill-fx-signature.js: SIG («класс:id» → рецепт, 111 способностей) и 19 рецептов (meteor, lance, volley, orbroll, skyfall, quake, channel, drain, smite, whirl, fan, sigil, pool, pounce, blossom, dash, lob, portal, bounce). Вызов в fx.js playSkillAnim до общих примитивов, тег в index.html после skill-fx-demonhunter.js. Стили .sig-* и школа fel в css/theme-controls.css.',
+    },
+    {
       id: 'fx-phase2',
       name: 'Ролики: оружие и баффы по смыслу',
       poured: 'no',
