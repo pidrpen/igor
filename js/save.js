@@ -55,6 +55,20 @@
       })),
       raid: !!run.raid,
       raidDiff: run.raid ? (run.raidDiff === 'heroic' ? 'heroic' : 'normal') : null,
+      raidPlay: (function () {
+        try {
+          if (typeof raidPlayerUid !== 'undefined' && raidPlayerUid && run && run.party) {
+            const u = run.party.find(p => p && String(p.uid) === String(raidPlayerUid));
+            if (u) return { classId: u.classId, specId: u.specId };
+          }
+        } catch (_) {}
+        try {
+          if (typeof autoPlayPick !== 'undefined' && autoPlayPick) {
+            return { classId: autoPlayPick.classId, specId: autoPlayPick.specId };
+          }
+        } catch (_) {}
+        return null;
+      })(),
       _roomArt: run._roomArt || {},
     };
   }
@@ -88,6 +102,11 @@
       payload.keyLevel = document.getElementById('key-level')?.value || null;
       payload.gameMode = (typeof gameMode === 'string' ? gameMode : 'key');
       payload.raidDiff = (typeof getRaidDiff === 'function' ? getRaidDiff() : 'normal');
+      if (typeof autoPlayPick !== 'undefined' && autoPlayPick && autoPlayPick.classId) {
+        payload.autoPlayPick = { classId: autoPlayPick.classId, specId: autoPlayPick.specId };
+      } else {
+        delete payload.autoPlayPick;
+      }
       if (typeof getSharedBag === 'function') payload.sharedBag = getSharedBag();
       localStorage.setItem(PROFILE_KEY, JSON.stringify(payload));
     } catch (_) { /* ignore */ }
@@ -126,6 +145,9 @@
         setGameMode('raid');
       }
       if (data.raidDiff && typeof setRaidDiff === 'function') setRaidDiff(data.raidDiff);
+      if (data.autoPlayPick && data.autoPlayPick.classId && data.autoPlayPick.specId) {
+        autoPlayPick = { classId: data.autoPlayPick.classId, specId: data.autoPlayPick.specId };
+      }
       if (Array.isArray(data.sharedBag) && typeof setSharedBag === 'function') {
         setSharedBag(data.sharedBag);
       }

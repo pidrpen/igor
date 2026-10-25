@@ -344,6 +344,11 @@
           return;
         }
         pickSpec = el.dataset.id;
+        if (pickClass && pickSpec) {
+          autoPlayPick = { classId: pickClass, specId: pickSpec };
+          try { savePartyProfile(); } catch (_) {}
+          try { renderParty(); } catch (_) {}
+        }
         sg.querySelectorAll('.pick-card').forEach(x => x.classList.toggle('selected', x.dataset.id === pickSpec));
         // баланс: класс + выбранный спек
         if (typeof syncBalanceFilterFromPick === 'function') {
@@ -562,7 +567,7 @@
     ensureSec(entry);
     if (!party.length) party.push(entry);
     else party[0] = Object.assign({}, party[0], entry);
-    autoPlayPick = { classId: h.classId, specId: h.specId };
+    if (!autoPlayPick) autoPlayPick = { classId: h.classId, specId: h.specId };
     if (typeof igorHeroStashGear === 'function') igorHeroStashGear();
   }
   function addToParty() {
@@ -650,7 +655,8 @@
     for (let i = 0; i < getPartySize(); i++) {
       const p = party[i];
       const div = document.createElement('div');
-      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '') + (raidLobby ? ' raid-member' : '');
+      const youPlay = !!(p && autoPlayPick && p.classId === autoPlayPick.classId && p.specId === autoPlayPick.specId);
+      div.className = 'slot' + (p ? ' filled' : ' empty-slot') + (editSlot === i ? ' active-edit' : '') + (raidLobby ? ' raid-member' : '') + ((i === 0 && heroPartyOn()) ? ' hero-locked' : '') + (youPlay ? ' you-play' : '');
       if (p) {
         ensureSec(p);
         p.gear = normalizeGear(p.gear);
@@ -683,7 +689,7 @@
             <div class="meta">
               <b>${(i === 0 && heroPartyOn() && typeof igorHeroGetActive === 'function' && igorHeroGetActive() && igorHeroGetActive().name)
                 ? (igorHeroGetActive().name + ' (' + cls.name + ' · ' + spec.name + ')')
-                : (cls.name + ' · ' + spec.name)}</b>
+                : (cls.name + ' · ' + spec.name)}${youPlay ? ' · ты' : ''}</b>
               <span class="${ROLE_CLASS[spec.role]}">${ROLE_LABEL[spec.role]}${res ? ' · ' + res : ''}</span>
             </div>
             <button type="button" class="btn btn-sm party-gear-btn" data-gear-idx="${i}">Шмот</button>
@@ -697,7 +703,7 @@
               <div class="meta">
                 <b>${(i === 0 && heroPartyOn() && typeof igorHeroGetActive === 'function' && igorHeroGetActive() && igorHeroGetActive().name)
                   ? (igorHeroGetActive().name + ' (' + cls.name + ' · ' + spec.name + ')')
-                  : (cls.name + ' · ' + spec.name)}</b>
+                  : (cls.name + ' · ' + spec.name)}${youPlay ? ' · ты' : ''}</b>
                 <span class="${ROLE_CLASS[spec.role]}">${ROLE_LABEL[spec.role]} · ур. вещей ${avgIlvl(p.gear)} · способностей: ${spec.abilities.length}</span>
                 <div class="res">${primary.icon} ${primary.name}${secondary ? ' · ' + secondary.icon + ' ' + secondary.name : ''}</div>
                 <button type="button" class="btn btn-sm party-gear-btn" data-gear-idx="${i}">Шмот · ${avgIlvl(p.gear) || 0}</button>
@@ -756,9 +762,21 @@
           </div>`;
       }
       div.addEventListener('click', () => {
+        if (i === 0 && heroPartyOn()) {
+          if (p) {
+            autoPlayPick = { classId: p.classId, specId: p.specId };
+            renderParty();
+            savePartyProfile();
+            toast('Играете: ' + (p.fullName || (WOW_MOP.getClass(p.classId)?.name || p.classId) + ' · ' + (WOW_MOP.getSpec(p.classId, p.specId)?.name || p.specId)));
+          } else {
+            toast('Слот 1 занят героем таверны');
+          }
+          return;
+        }
         editSlot = i;
         if (p) {
           pickClass = p.classId; pickSpec = p.specId;
+          autoPlayPick = { classId: p.classId, specId: p.specId };
           showSpecTab();
           document.querySelectorAll('#class-grid .pick-card').forEach(el => {
             el.classList.toggle('selected', el.dataset.id === pickClass);
@@ -769,7 +787,10 @@
         }
         renderParty();
         updatePreview();
-        toast('Слот ' + (i + 1) + ' — выберите класс/спек и «Добавить»');
+        if (p) savePartyProfile();
+        toast(p
+          ? ('Играете: ' + (WOW_MOP.getClass(p.classId)?.name || p.classId) + ' · ' + (WOW_MOP.getSpec(p.classId, p.specId)?.name || p.specId))
+          : ('Слот ' + (i + 1) + ' — выберите класс/спек и «Добавить»'));
       });
       slots.appendChild(div);
     }
@@ -1056,10 +1077,15 @@
       assignPartyUniqueNames(run.party);
       raidPlayerUid = (typeof pickAutoPlayerUid === 'function')
         ? pickAutoPlayerUid()
-        : (run.raid
-          ? (run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid)
-          : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid));
+        : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid);
       raidAutoAllies = true;
+      {
+        const me = (run.party || []).find(p => p && String(p.uid) === String(raidPlayerUid));
+        if (me) {
+          try { toast('Играете: ' + (me.fullName || me.name)); } catch (_) {}
+          try { log('Играете: ' + (me.fullName || me.name) + '. Клик по другому герою — взять его.', 'system'); } catch (_) {}
+        }
+      }
       resetRecount();
       beginRunScreen();
       applyDungeonTheme();
@@ -1146,11 +1172,12 @@
         });
       }
       assignPartyUniqueNames(run.party);
+      if (data.raidPlay && data.raidPlay.classId && data.raidPlay.specId) {
+        autoPlayPick = { classId: data.raidPlay.classId, specId: data.raidPlay.specId };
+      }
       raidPlayerUid = (typeof pickAutoPlayerUid === 'function')
         ? pickAutoPlayerUid()
-        : (run.raid
-          ? (run.party.find(p => p.role === 'tank')?.uid || run.party[0]?.uid)
-          : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid));
+        : (run.party.find(p => p.role === 'dps')?.uid || run.party[0]?.uid);
       raidAutoAllies = true;
       if (run.raid) {
         if (!run.route?.nodes || data.dungeonId === 'throne') {

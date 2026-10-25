@@ -145,19 +145,19 @@
         mech: { id: 'heat', kickCools: true },
         phases: [
           { at: 1, name: 'Искры', abilities: [
-            { id: 'l', name: 'Хлыст огня', cost: 0, cd: 0, type: 'damage', power: 1.25 },
-            { id: 'cast', name: 'Плавильный луч', cost: 12, cd: 2, type: 'cast_aoe', power: 0.88, castKind: 'kick', castPrio: 3 },
-            { id: 'r', name: 'Дождь искр', cost: 14, cd: 2, type: 'aoe', power: 0.65 },
+            { id: 'l', name: 'Хлыст огня', cost: 0, cd: 0, type: 'damage', power: 1.25, school: 'fire' },
+            { id: 'cast', name: 'Плавильный луч', cost: 12, cd: 2, type: 'cast_aoe', power: 0.88, castKind: 'kick', castPrio: 3, school: 'fire' },
+            { id: 'r', name: 'Дождь искр', cost: 14, cd: 2, type: 'aoe', power: 0.65, school: 'fire' },
           ]},
           { at: 0.55, name: 'Горн', abilities: [
-            { id: 'l', name: 'Хлыст огня', cost: 0, cd: 0, type: 'damage', power: 1.35 },
-            { id: 'buster', name: 'Молот кузни', cost: 14, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'buster', castPrio: 2 },
-            { id: 'r', name: 'Дождь искр', cost: 12, cd: 2, type: 'aoe', power: 0.75 },
+            { id: 'l', name: 'Хлыст огня', cost: 0, cd: 0, type: 'damage', power: 1.35, school: 'fire' },
+            { id: 'buster', name: 'Молот кузни', cost: 14, cd: 2, type: 'cast_aoe', power: 1.15, castKind: 'buster', castPrio: 2, school: 'fire' },
+            { id: 'r', name: 'Дождь искр', cost: 12, cd: 2, type: 'aoe', power: 0.75, school: 'fire' },
           ]},
           { at: 0.25, name: 'Инферно', abilities: [
-            { id: 'i', name: 'Инферно', cost: 0, cd: 0, type: 'aoe', power: 0.85 },
-            { id: 'w', name: 'Гнев пламени', cost: 12, cd: 1, type: 'damage', power: 1.6 },
-            { id: 'cast', name: 'Сверхнакал', cost: 14, cd: 2, type: 'cast_aoe', power: 1.0, castKind: 'aoe', castPrio: 4 },
+            { id: 'i', name: 'Инферно', cost: 0, cd: 0, type: 'aoe', power: 0.85, school: 'fire' },
+            { id: 'w', name: 'Гнев пламени', cost: 12, cd: 1, type: 'damage', power: 1.6, school: 'fire' },
+            { id: 'cast', name: 'Сверхнакал', cost: 14, cd: 2, type: 'cast_aoe', power: 1.0, castKind: 'aoe', castPrio: 4, school: 'fire' },
           ]},
         ]},
       tide: { id: 'th', name: 'Ужас Прилива', icon: '🌊', role: 'tank', hp: 590, atk: 19, def: 10, speed: 8, mana: 50,
@@ -276,12 +276,12 @@
         phases: [
           { at: 1, name: 'Стража', abilities: [
             { id: 's', name: 'Удар щитом', cost: 0, cd: 0, type: 'damage', power: 1.2 },
-            { id: 'cast', name: 'Каменный хор', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3, school: 'shadow' },
+            { id: 'cast', name: 'Каменный хор', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3, school: 'shadow', instFlag: 'crypt_choir' },
           ]},
           { at: 0.4, name: 'Срыв эха', abilities: [
             { id: 's', name: 'Удар щитом', cost: 0, cd: 0, type: 'damage', power: 1.35 },
             { id: 'buster', name: 'Сокрушение гробницы', cost: 12, cd: 2, type: 'cast_aoe', power: 1.05, castKind: 'buster', castPrio: 2 },
-            { id: 'cast', name: 'Каменный хор', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3, school: 'shadow' },
+            { id: 'cast', name: 'Каменный хор', cost: 12, cd: 3, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 3, school: 'shadow', instFlag: 'crypt_choir' },
           ]},
         ]},
       forge: { id: 'nk', name: 'Мастер горна', icon: '⚒️', role: 'dps', hp: 360, atk: 20, def: 6, speed: 10, mana: 45,
@@ -297,16 +297,19 @@
           ]},
         ]},
       tide: { id: 'pl', name: 'Жрец прилива', icon: '🐚', role: 'healer', hp: 340, atk: 16, def: 5, speed: 11, mana: 60,
+        mech: { id: 'tide_inst' },
         phases: [
-          { at: 1, name: 'Ритуал', abilities: [
-            { id: 'bolt', name: 'Волна', cost: 0, cd: 0, type: 'damage', power: 1.1 },
+          { at: 1, name: 'Литургия колодца', abilities: [
+            { id: 'bolt', name: 'Волна', cost: 0, cd: 0, type: 'damage', power: 1.1, school: 'frost' },
             { id: 'h', name: 'Исцеление глубин', cost: 12, cd: 2, type: 'heal', power: 0.35 },
-            { id: 'cast', name: 'Гимн моря', cost: 12, cd: 2, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 4 },
+            { id: 'cast', name: 'Гимн моря', cost: 12, cd: 2, type: 'cast_aoe', power: 0.8, castKind: 'kick', castPrio: 4, school: 'frost', instFlag: 'tide_hymn' },
+            { id: 'air', name: 'Отнять воздух', cost: 12, cd: 3, type: 'cast_aoe', power: 0.01, castKind: 'kick', castPrio: 5, school: 'frost', instFlag: 'tide_steal_air' },
           ]},
-          { at: 0.5, name: 'Шторм', abilities: [
-            { id: 'bolt', name: 'Волна', cost: 0, cd: 0, type: 'damage', power: 1.25 },
-            { id: 'cast', name: 'Цунами', cost: 12, cd: 2, type: 'cast_aoe', power: 0.9, castKind: 'aoe', castPrio: 3 },
+          { at: 0.5, name: 'Открытый шлюз', abilities: [
+            { id: 'bolt', name: 'Волна', cost: 0, cd: 0, type: 'damage', power: 1.25, school: 'frost' },
+            { id: 'cast', name: 'Цунами', cost: 12, cd: 2, type: 'cast_aoe', power: 0.9, castKind: 'aoe', castPrio: 3, school: 'frost', instFlag: 'tide_tsunami' },
             { id: 'h', name: 'Исцеление глубин', cost: 10, cd: 1, type: 'heal', power: 0.4 },
+            { id: 'air', name: 'Отнять воздух', cost: 12, cd: 2, type: 'cast_aoe', power: 0.01, castKind: 'kick', castPrio: 5, school: 'frost', instFlag: 'tide_steal_air' },
           ]},
         ]},
       jade: { id: 'as', name: 'Ученик ша', icon: '🧘', role: 'dps', hp: 350, atk: 19, def: 5, speed: 12, mana: 50,
@@ -335,16 +338,17 @@
           ]},
         ]},
       ember: { id: 'th', name: 'Пепельный Надсмотрщик', icon: '🔥', role: 'dps', hp: 370, atk: 20, def: 7, speed: 10, mana: 50,
+        mech: { id: 'ember_inst' },
         phases: [
           { at: 1, name: 'Тление', abilities: [
-            { id: 'h', name: 'Удар жара', cost: 0, cd: 0, type: 'damage', power: 1.25 },
-            { id: 'cast', name: 'Искра', cost: 12, cd: 2, type: 'cast_aoe', power: 0.85, castKind: 'kick', castPrio: 3 },
-            { id: 'aoe', name: 'Зола', cost: 10, cd: 2, type: 'aoe', power: 0.6 },
+            { id: 'h', name: 'Удар жара', cost: 0, cd: 0, type: 'damage', power: 1.25, school: 'fire' },
+            { id: 'cast', name: 'Искра', cost: 12, cd: 2, type: 'cast_aoe', power: 0.85, castKind: 'kick', castPrio: 3, school: 'fire', instFlag: 'ember_spark' },
+            { id: 'aoe', name: 'Зола', cost: 10, cd: 2, type: 'aoe', power: 0.6, school: 'fire' },
           ]},
           { at: 0.4, name: 'Разгон', abilities: [
-            { id: 'h', name: 'Удар жара', cost: 0, cd: 0, type: 'damage', power: 1.4 },
+            { id: 'h', name: 'Удар жара', cost: 0, cd: 0, type: 'damage', power: 1.4, school: 'fire' },
             { id: 'adds', name: 'Угольки', cost: 10, cd: 3, type: 'summon', power: 1 },
-            { id: 'cast', name: 'Взрыв углей', cost: 12, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 4 },
+            { id: 'cast', name: 'Взрыв углей', cost: 12, cd: 2, type: 'cast_aoe', power: 0.95, castKind: 'kick', castPrio: 4, school: 'fire', instFlag: 'ember_erupt' },
           ]},
         ]},
     },
@@ -612,7 +616,7 @@
     if (!combat) return;
     for (const boss of (combat.enemies || []).filter(e => e.isBoss && e.mech)) {
       const m = boss.mech;
-      if (m.id === 'soul_link' || m.id === 'rift_priority' || m.id === 'ember_feed') {
+      if (m.id === 'soul_link' || m.id === 'rift_priority') {
         const n = m.n || 1;
         for (let i = 0; i < n; i++) {
           const add = spawnMechAdd(boss, m);
@@ -633,7 +637,7 @@
         });
       }
       if (m.id === 'heat') {
-        applyStatus(boss, { id: 'heat', name: 'Перегрев', icon: '🔥', turns: 99, stacks: 0, tip: 'Кик сбивает жар. 3+ стака жгут отряд.' });
+        applyStatus(boss, { id: 'heat', name: 'Перегрев', icon: '🔥', turns: 99, stacks: 0, tip: 'Прерывание → клик по Королеве сбрасывает стаки. 3+ жгут 4% max HP. Пока жив Жаркий очаг — кик не сбрасывает.' });
       }
       if (m.id === 'thunder_king') {
         applyStatus(boss, {
@@ -696,14 +700,7 @@
           }
         }
       }
-      if (m.id === 'ember_feed') {
-        const feeds = (combat.enemies || []).filter(x => x.alive && x.mechRole === 'ember_feed');
-        if (feeds.length) {
-          const heal = Math.round(boss.maxHp * 0.035 * feeds.length);
-          boss.hp = Math.min(boss.maxHp, boss.hp + heal);
-          log(`${boss.name} питается углями +${fmt(heal)}`, 'enemy');
-        }
-      }
+      /* ember_feed: снято. Жар 0–8 и уголь — js/dungeon-inst.js */
       if (m.id === 'rift_priority') {
         const add = (combat.enemies || []).find(x => x.alive && x.mechRole === 'rift_priority');
         if (add) {
@@ -732,13 +729,7 @@
           }
         }
       }
-      if (m.id === 'drown_mark' && combat.round % 3 === 0) {
-        const t = lowest(livingHeroes());
-        if (t) {
-          applyStatus(t, { id: 'drown', name: 'Утопление', icon: '🌊', turns: 2, dmgTakenMod: 0.2, tip: 'Получает +20% урона' });
-          log(`${t.name} тонет — лечите / диспел`, 'enemy');
-        }
-      }
+      /* drown_mark: снято. Столб давления и Затопление лёгких — js/dungeon-inst.js */
       if (m.id === 'thunder_king') {
         tickThunderKing(boss, m);
       }

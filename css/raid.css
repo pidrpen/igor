@@ -1308,3 +1308,59 @@ body.raid-finale-on #phase-sub {
   pointer-events: none;
   z-index: 72;
 }
+
+/* ═══ Портрет врага: тон подземелья, рамка ранга, значок роли (combat-ui.js foeFaceHtml) ═══ */
+.unit .foe-face {
+  position: relative;
+  display: block;
+  width: max-content;
+  margin: 0 auto 4px;
+}
+.unit .foe-face > .portrait { margin: 0; }
+.foe-face.tone-crypt .art-img { filter: grayscale(.6) sepia(.25) hue-rotate(150deg) brightness(.92) contrast(1.1); }
+.foe-face.tone-forge .art-img { filter: sepia(.5) saturate(1.7) hue-rotate(-12deg); }
+.foe-face.tone-ember .art-img { filter: sepia(.45) saturate(1.8) hue-rotate(-30deg) brightness(.95); }
+.foe-face.tone-tide .art-img { filter: sepia(.3) hue-rotate(160deg) saturate(1.3); }
+.foe-face.tone-jade .art-img { filter: sepia(.35) hue-rotate(70deg) saturate(1.25); }
+.foe-face.tone-rift .art-img { filter: sepia(.3) hue-rotate(220deg) saturate(1.5); }
+/* Рамки ранга; при вспышке удара (.hit) уступают её подсветке */
+.unit:not(.hit) .foe-face.rank-normal .portrait { border: 2px solid #6a5634; box-shadow: none; }
+.unit:not(.hit) .foe-face.rank-elite .portrait {
+  border: 3px solid #c8d0da;
+  box-shadow: 0 0 0 2px #0b0d12, 0 0 0 3px rgba(200, 208, 218, .45);
+}
+.unit:not(.hit) .foe-face.rank-champ .portrait {
+  border: 3px solid #e3b65a;
+  box-shadow: 0 0 0 2px #0b0d12, 0 0 0 4px rgba(227, 182, 90, .55), 0 0 14px rgba(227, 182, 90, .35);
+}
+.unit:not(.hit) .foe-face.rank-boss .portrait {
+  border: 4px solid #e3b65a;
+  box-shadow: 0 0 0 2px #0b0d12, 0 0 22px rgba(239, 68, 68, .6);
+}
+.foe-face .foe-rank {
+  position: absolute; left: -3px; bottom: -3px;
+  width: 22px; height: 22px; box-sizing: border-box;
+  border-radius: 50%; background: #0b0d12;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; line-height: 1;
+  pointer-events: none;
+}
+.foe-face.rank-elite .foe-rank { border: 2px solid #c8d0da; color: #c8d0da; }
+.foe-face.rank-champ .foe-rank { border: 2px solid #e3b65a; color: #e3b65a; }
+.foe-face.rank-boss .foe-rank { border: 2px solid #e3b65a; box-shadow: 0 0 8px rgba(239, 68, 68, .6); }
+.foe-face.rank-boss .foe-rank svg { width: 14px; height: 10px; fill: #e3b65a; }
+.foe-face .foe-role {
+  position: absolute; right: -3px; bottom: -3px;
+  width: 22px; height: 22px; box-sizing: border-box;
+  border-radius: 50%; background: #0b0d12; border: 2px solid var(--dps);
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.foe-face .foe-role svg {
+  width: 12px; height: 12px;
+  fill: none; stroke: var(--dps); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.foe-face .foe-role.role-tank { border-color: var(--tank); }
+.foe-face .foe-role.role-tank svg { stroke: var(--tank); }
+.foe-face .foe-role.role-healer { border-color: var(--heal); }
+.foe-face .foe-role.role-healer svg { stroke: var(--heal); }

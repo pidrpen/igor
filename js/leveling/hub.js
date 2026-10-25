@@ -206,7 +206,7 @@
     var tiers = typeof G.igorHeroTalentTiers === 'function' ? G.igorHeroTalentTiers(h.classId) : [];
     return tiers.map(function (tier) {
       var picks = G.igorHeroTalentPicks(h.classId, h.specId, tier);
-      var chosen = h.talents && h.talents[tier.id];
+      var chosen = typeof G.igorHeroChosenPick === 'function' ? G.igorHeroChosenPick(h, tier) : (h.talents && h.talents[tier.id]);
       var open = h.level >= tier.level;
       return '<div class="tier"><div style="display:flex;justify-content:space-between;gap:.4rem">' +
         '<span class="section-title" style="margin:0">Ярус · ур. ' + tier.level + ' · ' + tier.title + '</span>' +

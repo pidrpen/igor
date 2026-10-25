@@ -60,8 +60,9 @@
         log('Удар по танку промахнулся мимо танка — +25%!', 'enemy');
       }
       const castCtx = { abilityName: c.name || 'Удар по танку' };
+      try { if (typeof playTelegraphFx === 'function') playTelegraphFx(actor, 'buster', [t], c); } catch (_) {}
       const dealt = dealDmg(t, dmg, actor, castCtx);
-      log(`${actor.name} завершает «${c.name}» → ${t.name} (−${fmt(dealt)})`, 'enemy');
+      log(`${actor.name} завершает «${c.name}» → ${t.name} (${hitText(t, dealt)})`, 'enemy');
       toast('Удар по танку: ' + c.name);
       return;
     }
@@ -71,6 +72,7 @@
     let partySoft = combat.softSave ? 0.7 : 1;
     const primary = getThreatTarget(actor);
     const aoeCtx = { abilityName: c.name || 'По области' };
+    try { if (typeof playTelegraphFx === 'function') playTelegraphFx(actor, kind, targets, c); } catch (_) {}
     for (const a of targets) {
       let dmg = Math.round(base * partySoft);
       if (primary && a.uid === primary.uid && primary.role !== 'tank') dmg = Math.round(dmg * 1.15);
@@ -128,6 +130,7 @@
     run.loot.push(item);
     run.keyPowers = run.keyPowers || {};
     for (const p of run.party) {
+      // Живые atk/hp/def (после applyGearToHero). Не в ability.power и не в голый sec.
       if (item.hpFlat) {
         const ratio = p.hp / Math.max(1, p.maxHp);
         p.maxHp = Math.round(p.maxHp * (1 + item.hpFlat));

@@ -93,6 +93,7 @@
         const a = Math.min(target.shield, dmg);
         target.shield -= a;
         dmg -= a;
+        target._lastAbsorbed = (target._lastAbsorbed || 0) + a;
       }
       return dmg;
     }
@@ -120,7 +121,16 @@
       creditShieldAbsorb(s, target, take);
     }
     syncUnitShield(target);
+    target._lastAbsorbed = (target._lastAbsorbed || 0) + (dmg - left);
     return left;
+  }
+
+  /** Текст удара для журнала: «−X», «−X · 🛡N» или «🛡 поглощено N», если всё съел щит. */
+  function hitText(target, dealt) {
+    const abs = (target && target._lastAbsorbed) || 0;
+    if (dealt > 0) return '−' + fmt(dealt) + (abs > 0 ? ' · 🛡' + fmt(abs) : '');
+    if (abs > 0) return '🛡 поглощено ' + fmt(abs);
+    return '−' + fmt(dealt || 0);
   }
 
   function triggerProtRevenge(tank) {
@@ -210,6 +220,11 @@
 
   function dealDmg(target, raw, attacker, ctx) {
     if (!target?.alive) return 0;
+    target._lastAbsorbed = 0;
+    if (typeof fieldBlocksHit === 'function' && fieldBlocksHit(attacker, target, ctx)) {
+      try { floatText(target.uid, 'МИМО', 'miss'); } catch (_) {}
+      return 0;
+    }
     if (attacker && attacker.buffs && attacker.buffs.length) {
       let cut = 0;
       for (const b of attacker.buffs) {
@@ -398,6 +413,7 @@
     floatText(target.uid, (crit ? 'КРИТ ' : '') + '−' + fmt(dmg), crit ? 'crit' : (blockedHit ? 'block-dmg' : 'dmg'));
     pulseUnit(target.uid, blockedHit ? 'blocked' : 'hit');
     if (crit) flashScreen(true);
+    else if (!blockedHit && dmg >= target.maxHp * 0.22) try { shakeArena(4); } catch (_) {}
     if (!blockedHit) sfx(crit ? 'crit' : 'hit');
     // Prot warrior: +3 rage per direct hit taken (not DoTs / dealTrue)
     if (
@@ -573,6 +589,13 @@
       return;
     }
     unit.alive = false; unit.hp = 0; unit.shield = 0; unit.shieldLayers = []; unit.casting = null;
+    if (unit.side === 'enemy') {
+      unit.buffs = [];
+      unit._deadAt = Date.now();
+      setTimeout(() => {
+        try { if (typeof renderCombat === 'function') renderCombat(); } catch (_) {}
+      }, 580);
+    }
     pulseUnit(unit.uid, 'dying');
     log((unit.isPet ? 'Питомец ' : '') + unit.name + ' погибает', 'system');
     // Pets: no death penalty. Основных (постоянных) оставляем как «труп» для воскрешения.

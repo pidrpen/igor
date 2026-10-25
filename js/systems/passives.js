@@ -57,6 +57,13 @@
     // Хмелевар
     if (classId === 'monk' && specId === 'brewmaster') {
       list.push({
+        id: 'brew_stagger',
+        name: 'Пошатывание',
+        icon: '🥴',
+        short: '35% в пул',
+        detail: 'Около 35% входящего урона уходит в пул «Пошатывание» и тикает по себе (25% пула за раунд). «Очищающий отвар» снимает долю пула в щит «Отвара неуловимости». Под «Отваром железной шкуры» в пул уходит больше (до 75%).',
+      });
+      list.push({
         id: 'brew_mastery_dodge',
         name: 'Неуловимый боец',
         icon: '💨',
@@ -77,6 +84,93 @@
         icon: '🍀',
         short: 'стаки',
         detail: 'Каждый пропущенный прямой удар делает следующий уклон вероятнее. После успешного уклонения эффект сбрасывается. Стаки видны на портрете.',
+      });
+      list.push({
+        id: 'brew_gift',
+        name: 'Дар хмелевара',
+        icon: '🍵',
+        short: 'крит-хил → хот',
+        detail: 'Когда вас лечат, есть шанс (равный шансу критического удара лечащего) повесить «Дар хмелевара»: 75% этого хила размазываются на 5 раундов. Повторный прок обновляет хот. Это не кнопка — только эффект на портрете.',
+      });
+    }
+    if (classId === 'priest' && specId === 'discipline') {
+      list.push({
+        id: 'atonement_passive',
+        name: 'Искупление',
+        icon: '✝️',
+        short: 'урон → хил',
+        detail: 'Щит, Молитва исцеления и урон Кары / Священного огня / Исповеди во врага / пета оставляют или кормят «Искупление»: доля урона лечит носителей.',
+      });
+    }
+    if (classId === 'monk' && specId === 'mistweaver') {
+      list.push({
+        id: 'renewing_echo',
+        name: 'Носители тумана',
+        icon: '✨',
+        short: '70% урона в хил',
+        detail: 'Союзники с «Заживляющим туманом» получают хил, равный 70% урона, который наносит ткач.',
+      });
+      list.push({
+        id: 'jade_tick',
+        name: 'Нефритовая змея',
+        icon: '🐍',
+        short: 'тик после хода',
+        detail: 'Пока жива змея, после хода каждого героя и моба она лечит выбранного «Успокаивающим туманом» на 3т и бьёт последнюю цель хозяина на 3т. Сама змея в очереди не стоит.',
+      });
+    }
+    if (classId === 'druid' && specId === 'balance') {
+      list.push({
+        id: 'eclipse_passive',
+        name: 'Затмение',
+        icon: '🌓',
+        short: 'полная шкала',
+        detail: 'Когда шкала затмения заполняется, вы получаете +20% атаки на 3 хода, шкала сбрасывается.',
+      });
+    }
+    if (classId === 'druid' && specId === 'feral') {
+      list.push({
+        id: 'combo_curve',
+        name: 'Серия приёмов',
+        icon: '🃏',
+        short: '0.22…1.55',
+        detail: 'Финишер ест всю серию. Цифра на кнопке — при 5 очках. Множители: 1 → 0.22, 2 → 0.42, 3 → 0.68, 4 → 1.05, 5 → 1.55. «Дикий рёв» серию не ест.',
+      });
+    }
+    if (classId === 'rogue') {
+      list.push({
+        id: 'combo_curve',
+        name: 'Серия приёмов',
+        icon: '🃏',
+        short: '0.22…1.55',
+        detail: 'Финишер ест всю серию. Цифра на кнопке — при 5 очках. Множители: 1 → 0.22, 2 → 0.42, 3 → 0.68, 4 → 1.05, 5 → 1.55.',
+      });
+    }
+    if (classId === 'mage' && specId === 'fire') {
+      list.push({
+        id: 'pyro_hot_passive',
+        name: 'Раскалённая глыба',
+        icon: '☄️',
+        short: 'крит шара',
+        detail: 'Крит «Огненного шара» вешает «Раскалённую глыбу»: следующая «Огненная глыба» стоит 10 маны и бьёт 90т. «Огненный столб» с 33% вешает «Раскалённый столб» — следующий шар критует.',
+      });
+    }
+    if (classId === 'mage' && specId === 'frost') {
+      list.push({
+        id: 'lance_aoe_passive',
+        name: 'Копьё — область',
+        icon: '🗡️',
+        short: '20% со стрелы',
+        detail: 'С «Ледяной стрелы» 20% шанс повесить «Копьё — область»: следующее «Ледяное копьё» бьёт всех врагов. Окно снимается после копья.',
+      });
+    }
+    // Шаман стихии
+    if (classId === 'shaman' && specId === 'elemental') {
+      list.push({
+        id: 'lava_shock_crit',
+        name: 'Выброс по шоку',
+        icon: '🌋',
+        short: 'крит по шоку',
+        detail: 'Пока на цели ваш «Огненный шок», «Выброс лавы» критует без броска.',
       });
     }
     // Шаман исцеление
@@ -239,7 +333,7 @@
         name: 'Кровотечение',
         icon: '🩸',
         short: '4 хода',
-        detail: '«Удар колосса», «Смертельный удар» и «Героический удар» накладывают «Кровотечение» на цель на 4 хода (периодический урон каждый раунд).',
+        detail: '«Удар колосса», «Смертельный удар» и «Героический удар» накладывают «Кровотечение»: 5т за раунд, 4 раунда. Свой экземпляр на каждого наложившего. Наведите на «Кровотечение» в подсказке способности, чтобы прочитать эффект.',
       });
       list.push({
         id: 'strikes_of_opportunity',
@@ -311,8 +405,10 @@
       ? containerEl.getBoundingClientRect()
       : { left: pad, top: pad, right: vw - pad, bottom: vh - pad, width: vw - pad * 2, height: vh - pad * 2 };
 
-    // Ширина: не шире контейнера / экрана
-    const maxW = Math.max(140, Math.min(bounds.width - pad * 2, containerEl ? bounds.width - pad * 2 : Math.min(300, vw * 0.8)));
+    const isAbilityTip = !!(tip && tip.classList.contains('ability-tip-float'));
+    const widthCap = isAbilityTip ? Math.min(560, vw * 0.92) : Math.min(300, vw * 0.8);
+    // Ширина: не шире контейнера / экрана (у подсказки способности шире — полный abilityDescribe)
+    const maxW = Math.max(140, Math.min(bounds.width - pad * 2, containerEl ? bounds.width - pad * 2 : widthCap));
     tip.style.boxSizing = 'border-box';
     tip.style.maxWidth = Math.round(maxW) + 'px';
     tip.style.width = 'auto';
@@ -321,6 +417,12 @@
     tip.style.whiteSpace = 'normal';
     tip.style.overflowWrap = 'anywhere';
     tip.style.wordBreak = 'break-word';
+    if (isAbilityTip) {
+      const maxH = Math.max(140, Math.min(vh - pad * 2, Math.round(vh * 0.72)));
+      tip.style.maxHeight = Math.round(maxH) + 'px';
+      tip.style.overflowX = 'hidden';
+      tip.style.overflowY = 'auto';
+    }
 
     // Переизмерить после maxWidth
     let tw = tip.offsetWidth || Math.min(240, maxW);
@@ -375,6 +477,63 @@
     document.querySelectorAll('.passive-chip.active-tip').forEach(c => c.classList.remove('active-tip'));
   }
 
+  function bindTipRefs(detailEl, extraEl) {
+    if (!detailEl || !extraEl) return;
+    detailEl.querySelectorAll('.tip-ref').forEach((sp) => {
+      const show = () => {
+        extraEl.classList.remove('hidden');
+        extraEl.replaceChildren();
+        const hn = document.createElement('div');
+        hn.className = 'pt-gloss-name';
+        hn.textContent = sp.dataset.glossName || '';
+        const hd = document.createElement('div');
+        hd.textContent = sp.dataset.gloss || '';
+        extraEl.appendChild(hn);
+        extraEl.appendChild(hd);
+      };
+      const hide = () => extraEl.classList.add('hidden');
+      sp.addEventListener('mouseenter', show);
+      sp.addEventListener('mouseleave', hide);
+      sp.addEventListener('focus', show);
+      sp.addEventListener('blur', hide);
+      sp.tabIndex = 0;
+    });
+  }
+
+  /** «Кавычки» → жёлтая строка; наведение раскрывает словарь эффекта. */
+  function fillQuotedText(targetEl, text) {
+    if (!targetEl) return;
+    targetEl.replaceChildren();
+    const src = String(text || '');
+    const re = /«([^»]+)»/g;
+    let last = 0;
+    let m;
+    while ((m = re.exec(src))) {
+      if (m.index > last) targetEl.appendChild(document.createTextNode(src.slice(last, m.index)));
+      const gloss = typeof effectGlossaryText === 'function' ? effectGlossaryText(m[1]) : '';
+      if (gloss) {
+        const sp = document.createElement('span');
+        sp.className = 'tip-ref';
+        sp.textContent = '«' + m[1] + '»';
+        sp.dataset.gloss = gloss;
+        sp.dataset.glossName = m[1];
+        targetEl.appendChild(sp);
+      } else {
+        targetEl.appendChild(document.createTextNode(m[0]));
+      }
+      last = m.index + m[0].length;
+    }
+    if (last < src.length) targetEl.appendChild(document.createTextNode(src.slice(last)));
+    if (!targetEl.childNodes.length) targetEl.textContent = src;
+  }
+
+  function makeGlossBox() {
+    const extra = document.createElement('div');
+    extra.className = 'pt-gloss hidden';
+    extra.setAttribute('aria-live', 'polite');
+    return extra;
+  }
+
   /** Описание пассивки в кармане — только нижняя панель, без fixed-окон. */
   function showPassivePocketTip(name, detail, panel) {
     panel = panel || document.getElementById('passive-pocket-tip');
@@ -393,9 +552,12 @@
     n.textContent = name || 'Пассивка';
     const d = document.createElement('div');
     d.className = 'pt-detail';
-    d.textContent = detail || 'Нет описания.';
+    fillQuotedText(d, detail || 'Нет описания.');
+    const extra = makeGlossBox();
     panel.appendChild(n);
     panel.appendChild(d);
+    panel.appendChild(extra);
+    bindTipRefs(d, extra);
     panel.classList.remove('hidden');
   }
 
@@ -414,16 +576,25 @@
     n.textContent = name || 'Пассивка';
     const d = document.createElement('div');
     d.className = 'pt-detail';
-    d.textContent = detail || '';
+    fillQuotedText(d, detail || '');
+    const extra = makeGlossBox();
     tip.appendChild(n);
     tip.appendChild(d);
+    tip.appendChild(extra);
+    bindTipRefs(d, extra);
     tip.classList.remove('hidden');
     positionUiTipFloat(tip, chip, null);
   }
 
+  let abilityTipHideTimer = null;
   function hideAbilityTipFloat() {
-    const el = document.getElementById('ability-tip-float');
-    if (el) el.classList.add('hidden');
+    clearTimeout(abilityTipHideTimer);
+    abilityTipHideTimer = setTimeout(() => {
+      const el = document.getElementById('ability-tip-float');
+      if (!el) return;
+      if (el.matches(':hover') || el.querySelector(':focus')) return;
+      el.classList.add('hidden');
+    }, 180);
   }
 
   function showAbilityTipFloat(anchor, name, detail) {
@@ -436,19 +607,27 @@
     const n = document.createElement('div');
     n.className = 'pt-name';
     n.textContent = name || 'Способность';
+    tip.appendChild(n);
     const d = document.createElement('div');
     d.className = 'pt-detail';
-    d.textContent = detail;
-    tip.appendChild(n);
+    fillQuotedText(d, detail || '');
     tip.appendChild(d);
+    const extra = makeGlossBox();
+    tip.appendChild(extra);
+    bindTipRefs(d, extra);
+    tip.onmouseenter = () => clearTimeout(abilityTipHideTimer);
+    tip.onmouseleave = () => hideAbilityTipFloat();
     tip.classList.remove('hidden');
     positionUiTipFloat(tip, anchor);
   }
 
   function bindPassiveChipTips(root) {
     if (!root) return;
-    const pocket = root.closest ? root.closest('.passive-pocket') : document.getElementById('passive-pocket');
-    const inPocket = !!(pocket && pocket.contains(root));
+    const pocket = root.closest ? root.closest('.passive-pocket') : null;
+    if (pocket && !pocket.dataset.tipLeaveBound) {
+      pocket.dataset.tipLeaveBound = '1';
+      pocket.addEventListener('mouseleave', () => hidePassiveTipFloat());
+    }
     root.querySelectorAll('.passive-chip').forEach(chip => {
       if (chip.dataset.tipBound) return;
       chip.dataset.tipBound = '1';
@@ -459,48 +638,17 @@
         chip.classList.add('active-tip');
         showPassiveTipFloat(chip, name, detail);
       };
-      if (inPocket) {
-        // В кармане ключа: описание только по нажатию (клик/Enter), не по наведению
-        chip.setAttribute('role', 'button');
-        chip.setAttribute('aria-pressed', 'false');
-        chip.title = 'Нажмите, чтобы открыть описание';
-        chip.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const already = chip.classList.contains('active-tip');
-          root.querySelectorAll('.passive-chip.active-tip').forEach(c => {
-            c.classList.remove('active-tip');
-            c.setAttribute('aria-pressed', 'false');
-          });
-          if (already) {
-            const panel = pocket ? pocket.querySelector('.passive-pocket-tip') : document.getElementById('passive-pocket-tip');
-            if (panel) {
-              panel.classList.add('hidden');
-              panel.replaceChildren();
-            }
-            return;
-          }
-          chip.classList.add('active-tip');
-          chip.setAttribute('aria-pressed', 'true');
-          showPassiveTipFloat(chip, name, detail);
+      const hide = () => {
+        chip.classList.remove('active-tip');
+        requestAnimationFrame(() => {
+          if (pocket && (pocket.matches(':hover') || pocket.querySelector(':focus'))) return;
+          if (!root.querySelector('.passive-chip:hover, .passive-chip:focus')) hidePassiveTipFloat();
         });
-        chip.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            chip.click();
-          }
-        });
-      } else {
-        const hide = () => {
-          chip.classList.remove('active-tip');
-          requestAnimationFrame(() => {
-            if (!root.querySelector('.passive-chip:hover, .passive-chip:focus')) hidePassiveTipFloat();
-          });
-        };
-        chip.addEventListener('mouseenter', show);
-        chip.addEventListener('mouseleave', hide);
-        chip.addEventListener('focus', show);
-        chip.addEventListener('blur', hide);
-      }
+      };
+      chip.addEventListener('mouseenter', show);
+      chip.addEventListener('mouseleave', hide);
+      chip.addEventListener('focus', show);
+      chip.addEventListener('blur', hide);
     });
   }
 
@@ -517,7 +665,9 @@
       return;
     }
     pocket.classList.remove('hidden');
-    if (pocket.dataset.userOpened === '0') pocket.classList.add('collapsed');
+    // Баффы отряда по умолчанию свёрнуты: раскрытые закрывают журнал и кнопки 1–9 на ноутбуке
+    const auraDefault = pocket.dataset.userOpened == null && pocket.classList.contains('aura-pocket');
+    if (pocket.dataset.userOpened === '0' || auraDefault) pocket.classList.add('collapsed');
     else {
       pocket.classList.remove('collapsed');
       pocket.dataset.userOpened = '1';

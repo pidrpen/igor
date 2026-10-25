@@ -540,12 +540,33 @@
     renderAllies();
     renderEnemies();
     bindUnitCardClicks();
+    fitUnitRows();
     updateUnitSelectionOnly();
     updateBossFrame();
     updateVignette();
     if (run?.raid && typeof refreshRaidAlerts === 'function') refreshRaidAlerts();
     try { updateTeleBanner(); } catch (_) {}
     try { if (typeof syncPassivePocket === 'function') syncPassivePocket(); } catch (_) {}
+  }
+
+  /**
+   * Ряд карточек шире поля (ноутбук, иконки баффов слева) — ужать ряд целиком,
+   * а не резать крайнюю карточку. Влез — без обрезки, чтобы выпад не упирался в край.
+   */
+  function fitUnitRows() {
+    if (run?.raid) return;
+    ['enemy-row', 'ally-row'].forEach((id) => {
+      const row = document.getElementById(id);
+      if (!row) return;
+      row.style.zoom = '';
+      const have = row.clientWidth;
+      const need = row.scrollWidth;
+      let z = 1;
+      if (have > 0 && need > have + 1) z = Math.max(0.72, (have - 2) / need);
+      row.style.zoom = z < 1 ? String(Math.round(z * 1000) / 1000) : '';
+      row.style.overflowX = (z < 1 && need * z > have + 1) ? '' : 'visible';
+      row.style.overflowY = row.style.overflowX === 'visible' ? 'visible' : '';
+    });
   }
 
   function bindUnitCardClicks() {
@@ -621,10 +642,16 @@
     return `<div class="pet-row">${pets.map(p => petPortraitHtml(p, actor)).join('')}</div>`;
   }
 
+  function isClassAuraBuff(b) {
+    if (!b) return false;
+    if (b.aura === true) return true;
+    return String(b.id || '').indexOf('aura_') === 0;
+  }
+
   function unitHasAuras(u) {
     if (!u) return false;
     if (u.thunderMark) return true;
-    return (u.buffs || []).some(b => b && (b.turns == null || Number(b.turns) > 0));
+    return (u.buffs || []).some(b => b && !isClassAuraBuff(b) && (b.turns == null || Number(b.turns) > 0));
   }
 
   function stackHtml(u, actor, withPets) {
@@ -720,6 +747,8 @@
     ].join('');
   }
 
+  const UNIT_FLASH_CLS = new Set(['hit', 'healed', 'shielded', 'parried', 'blocked', 'dodged', 'casting-skill', 'attacking']);
+
   function patchUnitStack(stack, u, actor, withPets) {
     const card = stack.querySelector(':scope > .unit');
     if (!card || stack.dataset.struct !== unitStructSig(u)) {
@@ -731,11 +760,22 @@
       stack.replaceWith(fresh);
       return fresh;
     }
+    // Короткие вспышки (удар, хил, щит) не срезать перерисовкой на полпути
+    const flashes = [...card.classList].filter(c => UNIT_FLASH_CLS.has(c) || c.indexOf('school-flash-') === 0);
     card.className = unitClassName(u, actor);
+    flashes.forEach(c => card.classList.add(c));
     card.style.setProperty('--cc', unitAccent(u));
     const hpPct = clamp(u.hp / Math.max(1, u.maxHp) * 100, 0, 100);
     const hpI = card.querySelector('.bar.hp > i');
     if (hpI) hpI.style.width = hpPct + '%';
+    setHpTrail(card, hpPct);
+    const chip = card.querySelector(':scope > .threat-chip');
+    const chipSig = threatChipSig(u);
+    if (chip && chip.dataset.sig !== chipSig) {
+      const w = document.createElement('div');
+      w.innerHTML = threatChipHtml(u);
+      if (w.firstElementChild) chip.replaceWith(w.firstElementChild);
+    }
     const hpLab = card.querySelector('.bar.hp')?.parentElement?.querySelector('.bar-label');
     if (hpLab) hpLab.textContent = fmt(u.hp) + '/' + fmt(u.maxHp);
     const isDk = !!(u.res?.runes && u.res.secondary?.type === 'runic_power');
@@ -860,12 +900,44 @@
     const row = document.getElementById('enemy-row');
     if (!row) return;
     if (!combat) { row.innerHTML = ''; return; }
-    syncUnitRow(row, combat.enemies.filter(u => !u.vaultAway), currentActor(), false);
+    const now = Date.now();
+    syncUnitRow(row, combat.enemies.filter(u => {
+      if (u.vaultAway) return false;
+      if (u.alive) return true;
+      if (!u._deadAt) u._deadAt = now;
+      return (now - u._deadAt) < 560;
+    }), currentActor(), false);
   }
 
   function unitAccent(u) {
     if (u.side === 'ally' && typeof classAccentColor === 'function') return classAccentColor(u.classId, u.specId);
     return CLASS_CSS[u.classId] || (u.side === 'enemy' ? '#a04040' : 'var(--gold)');
+  }
+
+  /** Портрет врага: тон подземелья, рамка ранга (обычный / элита / чемпион / босс), значок роли. */
+  const FOE_RANK_LABEL = { normal: 'Обычный', elite: 'Элита', champ: 'Чемпион', boss: 'Босс' };
+  const FOE_ROLE_SVG = {
+    tank: '<path d="M16 4l10 4v8c0 6-4.5 10-10 12-5.5-2-10-6-10-12V8z"/>',
+    healer: '<path d="M16 7v18M7 16h18"/>',
+    dps: '<path d="M26 4L12 18M8 16l8 8M6 26l4-4"/>',
+  };
+  function foeRank(u) {
+    if (u.isBoss || u.raidBoss) return 'boss';
+    if (u.isElite && / · СТ$/.test(String(u.name || ''))) return 'champ';
+    if (u.isElite) return 'elite';
+    return 'normal';
+  }
+  function foeFaceHtml(u, inner) {
+    if (!u || u.side !== 'enemy' || u.instObject || u.healOnly) return inner;
+    const rank = foeRank(u);
+    const tone = !run?.raid && run?.dungeon?.theme ? ' tone-' + run.dungeon.theme : '';
+    const role = FOE_ROLE_SVG[u.role] ? u.role : 'dps';
+    // Знак ранга — кружок слева снизу (сверху над портретом сидит значок угрозы)
+    const mark = rank === 'boss'
+      ? '<span class="foe-rank" aria-hidden="true"><svg viewBox="0 0 30 20"><path d="M2 18L4 5l7 6 4-9 4 9 7-6 2 13z"/></svg></span>'
+      : (rank === 'champ' || rank === 'elite' ? '<span class="foe-rank" aria-hidden="true">◆</span>' : '');
+    return `<span class="foe-face rank-${rank}${tone}" title="${FOE_RANK_LABEL[rank]} · ${ROLE_LABEL[role] || role}">${inner}${mark}`
+      + `<span class="foe-role role-${role}" aria-hidden="true"><svg viewBox="0 0 32 32">${FOE_ROLE_SVG[role]}</svg></span></span>`;
   }
 
   function unitClassName(u, actor) {
@@ -930,6 +1002,8 @@
 
   function auraDetailLines(b, u) {
     const lines = [];
+    const gloss = typeof effectGlossaryText === 'function' ? effectGlossaryText(b && b.name) : '';
+    if (gloss) lines.push(gloss);
     if (b.dot) {
       lines.push('Урон: ' + fmt(b.dot) + ' за раунд' + (b._linked ? ' (метки связаны, тик удвоен)' : ''));
     }
@@ -972,16 +1046,20 @@
     const seen = new Set();
     const push = (b) => {
       if (!b || !b.id) return;
+      if (isClassAuraBuff(b)) return;
       const key = String(b.id) + '@' + String(b.fromUid || '');
       if (seen.has(key)) return;
       seen.add(key);
       list.push(b);
     };
-    for (const b of (u.buffs || [])) push(b);
+    for (const b of (u.buffs || [])) {
+      if (b && b.turns != null && Number(b.turns) <= 0 && Number(b.turns) < 90) continue;
+      push(b);
+    }
     if (u.thunderMark && !list.some(b => b.id === 'storm_mark')) {
       push({ id: 'storm_mark', name: 'Метка молнии', icon: '🌩️', tip: 'Отмечен молнией' });
     }
-    return list.slice(0, 12);
+    return list;
   }
 
   function escAttr(s) {
@@ -1037,28 +1115,64 @@
   }
 
   function showAuraTip(anchor, name, detail) {
+    const lines = String(detail || '').split(' | ').map(s => s.trim()).filter(Boolean);
+    const body = lines.join(' ') || 'Нет описания';
+    if (typeof showAbilityTipFloat === 'function') {
+      showAbilityTipFloat(anchor, name || 'Эффект', body);
+      return;
+    }
     const tip = getUiTipFloat('ability-tip-float', 'ability-tip-float');
     tip.replaceChildren();
     const n = document.createElement('div');
     n.className = 'pt-name';
     n.textContent = name || 'Эффект';
     tip.appendChild(n);
-    const lines = String(detail || '').split(' | ').map(s => s.trim()).filter(Boolean);
-    if (!lines.length) {
-      const d = document.createElement('div');
-      d.className = 'pt-detail';
-      d.textContent = 'Нет описания';
-      tip.appendChild(d);
-    } else {
-      for (const line of lines) {
-        const d = document.createElement('div');
-        d.className = 'pt-detail' + (/^Урон:/.test(line) ? ' pt-dmg' : '');
-        d.textContent = line;
-        tip.appendChild(d);
-      }
-    }
+    const d = document.createElement('div');
+    d.className = 'pt-detail';
+    d.textContent = body;
+    tip.appendChild(d);
     tip.classList.remove('hidden');
     positionUiTipFloat(tip, anchor);
+  }
+
+  /**
+   * Кого бьёт враг: мини-портрет и имя цели по угрозе (та же цель, что берёт ИИ врага).
+   * Синий — держит танк, красный — враг ушёл с танка.
+   */
+  function threatChipSig(u) {
+    if (u.side !== 'enemy') return '';
+    const uid = topThreatUid(u);
+    return uid || '';
+  }
+  function threatChipHtml(u) {
+    const uid = threatChipSig(u);
+    if (!uid) return '';
+    const t = (run?.party || []).find(p => p.uid === uid)
+      || (typeof allUnits === 'function' ? allUnits().find(x => x.uid === uid) : null);
+    if (!t) return '';
+    const isTank = t.role === 'tank';
+    const nm = t.name || t.fullName || '';
+    const src = portraitSrc(t);
+    const face = src
+      ? `<img class="tc-face" src="${escAttr(src)}" alt="" onerror="this.remove()">`
+      : `<span class="tc-face tc-ico">${t.icon || '⚔'}</span>`;
+    const tip = (isTank ? 'Держит танк: ' : 'Ушёл с танка, бьёт: ') + (t.fullName || nm);
+    return `<div class="threat-chip${isTank ? ' tanking' : ' off-tank'}" data-sig="${escAttr(uid)}" title="${escAttr(tip)}">` +
+      `<span class="tc-arrow">⚔</span>${face}<span class="tc-name">${escAttr(nm)}</span></div>`;
+  }
+  /** Полоска «следа»: кусок снятого HP тает с задержкой, лечение сразу. */
+  function setHpTrail(card, hpPct) {
+    const trail = card && card.querySelector('.bar.hp > .hp-trail');
+    if (!trail) return;
+    const prev = parseFloat(trail.style.width);
+    if (!Number.isFinite(prev) || hpPct >= prev) {
+      trail.style.transition = 'none';
+      trail.style.width = hpPct + '%';
+      void trail.offsetWidth;
+      trail.style.transition = '';
+    } else {
+      trail.style.width = hpPct + '%';
+    }
   }
 
   function unitCard(u, actor) {
@@ -1081,11 +1195,7 @@
     const teleHtml = u.casting
       ? `<div class="tele-badge ${castKind === 'buster' ? 'buster' : castKind === 'aoe' ? 'aoe' : 'kick'}">${telegraphLabel(u.casting)}</div>`
       : '';
-    const topThreat = u.side === 'enemy' ? topThreatUid(u) : null;
-    const tankUids = new Set((run?.party || []).filter(p => p.role === 'tank').map(p => p.uid));
-    const threatHtml = (u.side === 'enemy' && topThreat)
-      ? `<div class="threat-chip${tankUids.has(topThreat) ? ' tanking' : ''}">${tankUids.has(topThreat) ? 'ТАНК' : 'ВТОР.'}</div>`
-      : '';
+    const threatHtml = threatChipHtml(u);
     const burstHtml = (u.burstStacks || 0) > 0
       ? `<div class="burst-chip">💥${u.burstStacks}</div>` : '';
     const runesHtml = runesRowHtml(u);
@@ -1104,9 +1214,9 @@
     const ico = u.side === 'ally' ? (u.icon || '⚔') : (u.icon || '💀');
     const roleLabel = (u.isElite ? '◆ Элита · ' : '') + (ROLE_LABEL[u.role] || u.role) + (u.enraged ? ' 🔥' : '');
     const pSrc = portraitSrc(u);
-    const portraitHtml = pSrc
+    const portraitHtml = foeFaceHtml(u, pSrc
       ? artHtml(pSrc, ico, 'portrait')
-      : `<div class="portrait"><span>${ico}</span></div>`;
+      : `<div class="portrait"><span>${ico}</span></div>`);
     const resBarTitle = isDkRunes
       ? `title="Сила рун ${Math.floor(u.res.secondary.current)}/${u.res.secondary.max}"`
       : '';
@@ -1116,7 +1226,7 @@
       <div class="u-name" title="${u.fullName || u.name}">${u.fullName || u.name}</div>
       <div class="u-role ${ROLE_CLASS[u.role] || ''}">${roleLabel}</div>
       <div class="bar-wrap">
-        <div class="bar hp${u.side === 'enemy' ? ' enemy-hp' : ''}"><i style="width:${hpPct}%"></i></div>
+        <div class="bar hp${u.side === 'enemy' ? ' enemy-hp' : ''}"><b class="hp-trail" style="width:${hpPct}%"></b><i style="width:${hpPct}%"></i></div>
         <span class="bar-label">${fmt(u.hp)}/${fmt(u.maxHp)}</span>
       </div>
       ${shieldHtml}

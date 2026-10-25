@@ -111,6 +111,17 @@
       }
     }
     if (u.enraged) atk *= 1.5;
+    // Питомец берёт усиления атаки хозяина (Героизм, Аватара, Гнев карателя…), кроме баффов отряда и того, что уже висит на нём самом
+    if (u.isPet && u.ownerUid != null && typeof run !== 'undefined' && run && run.party) {
+      const owner = run.party.find(p => p && p.uid === u.ownerUid);
+      if (owner && owner.buffs) {
+        for (const b of owner.buffs) {
+          if (!b || !b.atkMod || String(b.id || '').indexOf('aura_') === 0) continue;
+          if ((u.buffs || []).some(x => x && x.id === b.id)) continue;
+          atk *= (1 + b.atkMod);
+        }
+      }
+    }
     return { atk: Math.round(atk), def: Math.round(def), speed };
   }
   function buildTurnQueue() {
@@ -385,6 +396,7 @@
           isDot: true,
         });
         const left = Math.max(0, (Number(d.turns) || 1) - 1);
+        try { if (typeof playTickFx === 'function') playTickFx(u, d.school, 'dot'); } catch (_) {}
         log(`${u.name}: ${d.name} −${fmt(dealtDot || tickAmt)} · ${left}р`, u.side === 'ally' ? 'enemy' : 'player');
       }
       // HoT ticks — 1× per combat round per buff
@@ -404,7 +416,10 @@
           isHot: true,
         });
         const left = Math.max(0, (Number(h.turns) || 1) - 1);
-        if (healed > 0) log(`${u.name}: ${h.name} +${fmt(healed)} · ${left}р`, 'heal');
+        if (healed > 0) {
+          try { if (typeof playTickFx === 'function') playTickFx(u, 'heal', 'hot'); } catch (_) {}
+          log(`${u.name}: ${h.name} +${fmt(healed)} · ${left}р`, 'heal');
+        }
         else if (before >= u.maxHp) log(`${u.name}: ${h.name} (оверхил) · ${left}р`, 'heal');
       }
       // Brewmaster stagger ticks (~25% of pool per round)
