@@ -1049,14 +1049,8 @@
     if (b) b.textContent = 'Пауза';
     if (!recount) resetRecount();
     showRecountPanel(true);
+    // Таймер идёт за ходы, не в реальном времени: раунд списывает ROUND_SEC_* (chargeRoundTime в combat-loop.js)
     clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      if (!run || run.finished || paused) return;
-      run.timerLeft = Math.max(0, run.timerLeft - 1);
-      updateHud();
-      if (run.timerLeft % 8 === 0) saveRun();
-      if (run.timerLeft <= 0) endRun(false, run.raid ? 'Время вышло. Рейд провален.' : 'Время вышло. Ключ провален.');
-    }, 1000);
   }
 
   function startRun() {
@@ -1264,10 +1258,12 @@
       ? `<span class="rm-pct">+${n.forceBudget}%</span>`
       : `<span class="rm-pct rm-pct-0">${n.type === 'final' ? 'финал' : 'босс'}</span>`;
     const tag = st ? '<span class="rm-tag">СТ</span>' : (n.pack === 'aoe' ? '<span class="rm-tag aoe">AoE</span>' : '');
-    return `<div class="${cls}" data-node="${n.id}" title="${n.name}">
+    const rw = n.reward && FORK_REWARDS[n.reward];
+    const rwTag = rw ? `<span class="rm-tag rw${n.risk ? ' risk' : ''}" title="${rw.text}">${rw.icon}</span>` : '';
+    return `<div class="${cls}" data-node="${n.id}" title="${n.name}${rw ? ' — ' + rw.text : ''}">
       <span class="rm-ico">${m.icon}</span>
       <span class="rm-name">${n.name}${isCur ? ' <em class="rm-you">ты здесь</em>' : ''}</span>
-      ${tag}${pct}
+      ${tag}${rwTag}${pct}
     </div>`;
   }
   function renderPath() {
@@ -1437,7 +1433,7 @@
       btn.innerHTML = `${m.icon} <b>${n.name}</b>`
         + (n.forceBudget ? `<div class="rc-pct">⚔ ~${n.forceBudget}% сил в пулле</div>` : '')
         + (n.mopup ? `<div class="rc-pct">добор сил</div>` : '')
-        + (n.branch ? `<div class="rc-pct">ветка ${n.branch}</div>` : '');
+        + (n.reward && FORK_REWARDS[n.reward] ? `<div class="rc-pct rc-reward">${FORK_REWARDS[n.reward].icon} ${FORK_REWARDS[n.reward].text}</div>` : '');
       btn.onclick = () => {
         modal.classList.add('hidden');
         goToNode(n.id);

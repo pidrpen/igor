@@ -1,6 +1,10 @@
 /* state: shared runtime + combat constants */
   const HIST_KEY = 'mythicKeyHistory_v1';
   const DEATH_PENALTY = 5;
+  /** Время за ход: каждый раунд боя списывает столько секунд таймера, сколько бы игрок ни думал.
+   *  Рейд: героик толще (~19.5 млн HP против ~10.6 млн) при таймере 10:00, поэтому раунд дешевле. */
+  const ROUND_SEC_KEY = 10;
+  const ROUND_SEC_RAID = { normal: 10, heroic: 6 };
   /** Combat numbers in thousands: base 170 HP → 170000 (shown as 170т). */
   const STAT_SCALE = 1000;
   /**

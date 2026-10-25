@@ -14,6 +14,63 @@
 
   const DIVERGE_LOG = [
     {
+      id: 'hero-talents-all',
+      name: 'Таланты всем классам',
+      poured: 'no',
+      testVer: '5.4.9.44В',
+      text: 'Деревья 12 классов в js/leveling/class-talents.js (эффекты fx), движок в js/leveling/hero-talents.js (pickById / fxPicks), тег в index.html перед hero-talents.js. На основе у всех кроме паладина общая заглушка.',
+    },
+    {
+      id: 'fork-rewards',
+      name: 'Развилки с наградой',
+      poured: 'no',
+      testVer: '5.4.9.44В',
+      text: 'route.js assignForkRewards / FORK_REWARDS, награда в combat-flow.js onVictory, опасное логово ×1.25 в combat-loop.js startCombat, значки в ui.js (routeNodeCard, showRouteChoice) и css/extra.css.',
+    },
+    {
+      id: 'turn-timer',
+      name: 'Время за ход',
+      poured: 'no',
+      testVer: '5.4.9.44В',
+      text: 'state.js ROUND_SEC_KEY / ROUND_SEC_RAID, combat-loop.js chargeRoundTime в endRound; setInterval реального времени в ui.js убран.',
+    },
+    {
+      id: 'fighter-trap',
+      name: 'Ловушка бойца',
+      poured: 'no',
+      testVer: '5.4.9.44В',
+      text: 'js/systems/trap.js (trapTick из checkEnd, _trapId + обёртка fieldSameHall), проверка цели и область в abilities.js.',
+    },
+    {
+      id: 'auto-soak',
+      name: 'Сок в авто-ключе',
+      poured: 'no',
+      testVer: '5.4.9.44В',
+      text: 'dungeon-inst.js autoFillSoak перед resolveSoak.',
+    },
+    {
+      id: 'pet-owner-buffs',
+      name: 'Баффы хозяина питомцу',
+      poured: 'no',
+      testVer: '5.4.9.44В',
+      text: 'combat-loop.js getEff: питомец берёт atkMod баффов хозяина, кроме aura_*.',
+    },
+    {
+      id: 'log-absorb',
+      name: 'Журнал: поглощение щитом',
+      poured: 'no',
+      testVer: '5.4.9.44В',
+      text: 'damage.js hitText / _lastAbsorbed, строки журнала в abilities.js, ai.js, telegraph-loot.js; party-ai.js без «ИИ ошибка».',
+    },
+    {
+      id: 'tank-wipe',
+      name: 'Вайп одних танков',
+      poured: 'yes',
+      pourVer: '5.4.9.44',
+      testVer: '5.4.9.44В',
+      text: 'combat-flow.js checkEnd: живы одни танки и нет Камня возврата — вайп. Сразу в обоих деревьях.',
+    },
+    {
       id: 'combat-juice',
       name: 'Сочность боя и цель врага',
       poured: 'no',

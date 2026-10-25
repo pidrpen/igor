@@ -61,7 +61,7 @@
       }
       const castCtx = { abilityName: c.name || 'Удар по танку' };
       const dealt = dealDmg(t, dmg, actor, castCtx);
-      log(`${actor.name} завершает «${c.name}» → ${t.name} (−${fmt(dealt)})`, 'enemy');
+      log(`${actor.name} завершает «${c.name}» → ${t.name} (${hitText(t, dealt)})`, 'enemy');
       toast('Удар по танку: ' + c.name);
       return;
     }

@@ -43,10 +43,18 @@
       }
     } else if (rule === 'enemy') {
       // цель до payAbility — иначе при fail ресурс уже списан / freeAction ломается
-      const foesPre = actor.side === 'ally' ? living('enemy') : living('ally');
+      const foesPre = (actor.side === 'ally' ? living('enemy') : living('ally'))
+        .filter(u => typeof fieldSameHall !== 'function' || fieldSameHall(actor, u));
       target = target || lowest(foesPre);
       if (!target) {
         log(ability.name + ': нет цели', 'system');
+        return;
+      }
+      // Ловушка (systems/trap.js): запертый бьёт только тюремщиков, снаружи их не достать
+      if (typeof fieldSameHall === 'function' && !fieldSameHall(actor, target)) {
+        const why = actor._trapId ? 'ты в ловушке — бей тюремщиков' : 'цель в ловушке, не достать';
+        log(ability.name + ': ' + why, 'system');
+        try { toast(why); } catch (_) {}
         return;
       }
       if (typeof fieldReachWhy === 'function') {
@@ -116,7 +124,8 @@
     if (!actor.buffs) actor.buffs = [];
     const eff = getEff(actor);
     const friends = actor.side === 'ally' ? living('ally') : living('enemy');
-    const foes = actor.side === 'ally' ? living('enemy') : living('ally');
+    const foes = (actor.side === 'ally' ? living('enemy') : living('ally'))
+      .filter(u => typeof fieldSameHall !== 'function' || fieldSameHall(actor, u));
     // Guard against missing/NaN power (would make DoT ticks falsy and never fire)
     let power = Number(ability.power);
     if (!Number.isFinite(power) || power <= 0) power = 1;
@@ -151,7 +160,7 @@
           }
           target.hp = Math.max(0, target.hp - raw);
           try { floatText(target.uid, '−' + Math.round(pct * 100) + '%', 'dmg'); } catch (_) {}
-          log(`${actor.name}: ${ability.name} → ${target.name} (−${fmt(raw)})`, cls);
+          log(`${actor.name}: ${ability.name} → ${target.name} (${hitText(target, raw)})`, cls);
           if (target.hp <= 0) {
             target.hp = 0;
             if (typeof killUnit === 'function') killUnit(target, actor);
@@ -203,7 +212,7 @@
           totalDealt += dealDmg(target, dmg, actor, dmgCtx);
         }
         const hitNote = hits > 1 ? ` ×${hits}` : '';
-        log(`${actor.name}: ${ability.name} → ${target.name} (−${fmt(totalDealt)}${hitNote})`, cls);
+        log(`${actor.name}: ${ability.name} → ${target.name} (${hitText(target, totalDealt)}${hitNote})`, cls);
         if (pyroHot) {
           actor.buffs = (actor.buffs || []).filter(b => !b || b.id !== 'pyro_hot');
         }
@@ -233,7 +242,7 @@
             for (const e of foes) {
               if (!e.alive || e.uid === target.uid) continue;
               const sd = dealDmg(e, splash, actor, dmgCtx);
-              if (sd) log(`${actor.name}: ${ability.name} (область) → ${e.name} (−${fmt(sd)})`, cls);
+              if (sd) log(`${actor.name}: ${ability.name} (область) → ${e.name} (${hitText(e, sd)})`, cls);
             }
             actor.buffs = (actor.buffs || []).filter(b => !b || b.id !== 'lance_aoe');
           }
@@ -254,7 +263,7 @@
                 type: 'damage', abilityId: ability.id, abilityName: ability.name + ' (освящ.)',
                 school, skipBlock: true,
               });
-              if (sd) log(`${actor.name}: ${ability.name} → ${e.name} (−${fmt(sd)}, освящ.)`, cls);
+              if (sd) log(`${actor.name}: ${ability.name} → ${e.name} (${hitText(e, sd)}, освящ.)`, cls);
             }
           }
         }
@@ -298,7 +307,7 @@
             const sd = dealDmg(e, extraRaw, actor, dmgCtx);
             if (sd) {
               extras++;
-              log(`${actor.name}: ${ability.name} (разложение) → ${e.name} (−${fmt(sd)})`, cls);
+              log(`${actor.name}: ${ability.name} (разложение) → ${e.name} (${hitText(e, sd)})`, cls);
             }
           }
           if (ability.rpPerExtra && extras > 0) addRunicPower(actor, extras * Number(ability.rpPerExtra));
@@ -312,7 +321,7 @@
             const side = foes[j];
             if (!side?.alive) continue;
             const sd = dealDmg(side, sideRaw, actor, dmgCtx);
-            if (sd) log(`${actor.name}: ${ability.name} (бок) → ${side.name} (−${fmt(sd)})`, cls);
+            if (sd) log(`${actor.name}: ${ability.name} (бок) → ${side.name} (${hitText(side, sd)})`, cls);
           }
         }
         // Splash на всех остальных (Щит праведника: 30т второстепенным)
@@ -324,7 +333,7 @@
               type: 'damage', abilityId: ability.id, abilityName: ability.name + ' (второст.)',
               school, skipBlock: false,
             });
-            if (sd) log(`${actor.name}: ${ability.name} → ${e.name} (−${fmt(sd)}, второст.)`, cls);
+            if (sd) log(`${actor.name}: ${ability.name} → ${e.name} (${hitText(e, sd)}, второст.)`, cls);
           }
         }
         // Щит праведника: + «Щит света» (броня)
@@ -429,7 +438,7 @@
                 type: 'damage', abilityId: ability.id, abilityName: ability.name + ' (размах)',
                 school, skipBlock: false,
               });
-              if (sd) log(`${actor.name}: ${ability.name} (размах) → ${e.name} (−${fmt(sd)})`, cls);
+              if (sd) log(`${actor.name}: ${ability.name} (размах) → ${e.name} (${hitText(e, sd)})`, cls);
               if (splashBleedTick > 0 && e.alive && ability.applyDot) {
                 const ad = ability.applyDot;
                 const turns = Math.max(1, Number(ad.turns) || 4);
@@ -462,7 +471,7 @@
                 const pd = dealDmg(t2, petDmg, p, {
                   type: 'damage', abilityId: ability.id, abilityName: ability.name, isPet: true,
                 });
-                if (pd) log(`${p.name}: Удар → ${t2.name} (−${fmt(pd)})`, 'player');
+                if (pd) log(`${p.name}: Удар → ${t2.name} (${hitText(t2, pd)})`, 'player');
               }
             }
           }
@@ -533,7 +542,7 @@
               raw = scaleByComboIfFinisher(actor, ability, raw);
               total += dealDmg(enemy, raw, actor, aoeCtx);
             }
-            if (total > 0) log(`${actor.name}: ${ability.name} → ${enemy.name} (−${fmt(total)})`, cls);
+            if (total > 0) log(`${actor.name}: ${ability.name} → ${enemy.name} (${hitText(enemy, total)})`, cls);
           }
           totalAll += total;
           // Щит мстителя: гарантированный сбитие только у кликнутой; остальные — с шансом
@@ -577,7 +586,7 @@
                 buff.turns = Math.max(0, (Number(buff.turns) || 1) - 1);
               }
               if (dealtDot > 0) {
-                log(`${actor.name}: ${ability.name} → ${enemy.name} (−${fmt(dealtDot)})`, cls);
+                log(`${actor.name}: ${ability.name} → ${enemy.name} (${hitText(enemy, dealtDot)})`, cls);
               }
             }
           }
@@ -796,7 +805,7 @@
           const dealt = dealDmg(target, raw, actor, {
             type: 'damage', abilityId: ability.id, abilityName: ability.name, school: 'holy',
           });
-          log(`${actor.name}: ${ability.name} → ${target.name} (−${fmt(dealt)})`, cls);
+          log(`${actor.name}: ${ability.name} → ${target.name} (${hitText(target, dealt)})`, cls);
           break;
         }
         if (ability.holyShock && target && target.side !== actor.side && target.alive) {
@@ -815,7 +824,7 @@
             turns: Number(ability.applyHot && ability.applyHot.turns) || 5,
             dot: periodicTickFromFlat(actor, hotFlat), fromUid: actor.uid, periodic: true, school: 'holy',
           });
-          log(`${actor.name}: ${ability.name} → ${target.name} (−${fmt(dealt)} + период.)`, cls);
+          log(`${actor.name}: ${ability.name} → ${target.name} (${hitText(target, dealt)} + период.)`, cls);
           break;
         }
         if (abilityTargetRule(ability) === 'self_only') target = actor;
@@ -1340,7 +1349,7 @@
           }
           hitRaw = scaleByComboIfFinisher(actor, ability, hitRaw);
           const dealt = dealDmg(target, hitRaw, actor, dotCtx);
-          log(`${actor.name}: ${ability.name} → ${target.name} (−${fmt(dealt)}, период. ${fmt(tick)}/р · ${turns}р)`, cls);
+          log(`${actor.name}: ${ability.name} → ${target.name} (${hitText(target, dealt)}, период. ${fmt(tick)}/р · ${turns}р)`, cls);
         } else {
           log(`${actor.name}: ${ability.name} → ${target.name} (период. ${fmt(tick)}/р · ${turns}р)`, cls);
         }
@@ -1454,7 +1463,7 @@
           const d = dealDmg(t, Math.round(getEff(pet).atk * 1.05), pet, {
             type: 'aoe', isAoe: true, abilityId: 'felstorm', abilityName: ability.name || 'Буря Скверны', isPet: true,
           });
-          log(`${pet.name}: Буря Скверны → ${t.name} (−${fmt(d)})`, 'player');
+          log(`${pet.name}: Буря Скверны → ${t.name} (${hitText(t, d)})`, 'player');
         }
       }
     }
@@ -1549,7 +1558,7 @@
         type: 'damage', isPet: true,
         abilityName: 'Гений инженерии', abilityId: 'genius_tune',
       });
-      log(`${actor.name}: Гений инженерии → ${pet.name} → ${t.name} (−${fmt(d)})`, 'player');
+      log(`${actor.name}: Гений инженерии → ${pet.name} → ${t.name} (${hitText(t, d)})`, 'player');
     }
     toast('⚙️ Гений инженерии!');
     floatText(pet.uid, 'гений!', 'buff');
@@ -1584,7 +1593,7 @@
         type: 'aoe', isAoe: true, abilityId: ability.id,
         abilityName: ability.name + ' (нарезка)', school,
       });
-      if (sd) log(`${actor.name}: ${ability.name} (нарезка) → ${e.name} (−${fmt(sd)})`, cls || 'player');
+      if (sd) log(`${actor.name}: ${ability.name} (нарезка) → ${e.name} (${hitText(e, sd)})`, cls || 'player');
       if (splashTick > 0 && e.alive && ad) {
         applyStatus(e, {
           id: 'dot_' + (ad.id || ability.id),
@@ -1731,7 +1740,7 @@
       });
       b.turns = 0;
       any = true;
-      if (d) log(`${actor.name}: Вспышка болезни сбрасывает дот → ${e.name} (−${fmt(d)})`, 'player');
+      if (d) log(`${actor.name}: Вспышка болезни сбрасывает дот → ${e.name} (${hitText(e, d)})`, 'player');
     }
     if (!any) log(`${actor.name}: Вспышка болезни — нечего сбрасывать`, 'system');
   }
@@ -1810,7 +1819,7 @@
         isHavocEcho: true,
         skipCrit: true,
       });
-      if (d) log(`${attacker.name}: Хаос → ${e.name} (−${fmt(d)})`, 'player');
+      if (d) log(`${attacker.name}: Хаос → ${e.name} (${hitText(e, d)})`, 'player');
     }
   }
 

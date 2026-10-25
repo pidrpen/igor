@@ -1215,10 +1215,20 @@
     log(unit.name + ' в соке (' + inst.soak.picked.length + '/' + inst.soak.need + ')', 'system');
     return true;
   }
+  /** Авто-ключ: если игрок не назначил нужное число, союзники встают в сок сами — самые полные по HP, танк последним. */
+  function autoFillSoak(s) {
+    if (!s || s.picked.length >= s.need) return;
+    const heroes = livingHeroes();
+    if (typeof isAutoAlly !== 'function' || !heroes.some(h => isAutoAlly(h))) return;
+    const pool = heroes.filter(h => !s.picked.includes(h.uid))
+      .sort((a, b) => ((a.role === 'tank') - (b.role === 'tank')) || (b.hp / b.maxHp - a.hp / a.maxHp));
+    while (s.picked.length < s.need && pool.length) pickSoak(pool.shift());
+  }
   function resolveSoak() {
     const inst = instCombat();
     const s = inst.soak;
     if (!s) return;
+    autoFillSoak(s);
     const n = s.picked.length;
     const heroes = livingHeroes();
     const picked = heroes.filter(h => s.picked.includes(h.uid));

@@ -1380,9 +1380,6 @@
     if (intentProtected(intent, usable, foes, friends)) return intent;
     var worse = pickWorse(intent, actor, usable, kit, foes, friends, prio);
     if (!worse || !worse.ab || worse.ab.id === intent.ab.id) return intent;
-    if (typeof log === 'function') {
-      log('ИИ ошибка: ' + actor.name + ' жмёт ' + (worse.ab.name || worse.ab.id));
-    }
     return worse;
   }
 

@@ -67,6 +67,7 @@
       mop2:     { id: 'mop2',     type: 'elite', pack: 'st',    name: 'Добор: чемпион · СТ', loc: 'annex',    next: ['mop3'], forceBudget: 18, mopup: true },
       mop3:     { id: 'mop3',     type: 'trash', pack: 'mixed', name: 'Добор: склеп',        loc: 'gallery',  next: ['mop1'], forceBudget: 12, mopup: true },
     };
+    assignForkRewards(nodes);
     return {
       nodes,
       currentId: 'start',
@@ -75,6 +76,25 @@
       mopupMode: false,
       seedMeta: { layout: 'descent-v2' },
     };
+  }
+  /** Награды развилок: видны на кнопке развилки и на карте, выдаются после победы (onVictory). */
+  const FORK_REWARDS = {
+    time:  { icon: '⏱', text: '+40 с к таймеру' },
+    power: { icon: '✨', text: 'сила ключа 1 из 3' },
+    rez:   { icon: '💎', text: 'Камень возврата' },
+    gear:  { icon: '🎁', text: 'шмот 1 из 3' },
+    risky: { icon: '☠', text: 'враги +25% HP и атаки · шмот и сила ключа' },
+  };
+  /** Короткая ветка — срез / сила ключа / Камень возврата. СТ — шмот, в 40% ключей «опасное логово». */
+  function assignForkRewards(nodes) {
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    ['fork1a', 'fork2a'].forEach((id) => { if (nodes[id]) nodes[id].reward = pick(['time', 'power', 'rez']); });
+    ['fork1b', 'fork2b'].forEach((id) => {
+      if (!nodes[id]) return;
+      const risky = Math.random() < 0.4;
+      nodes[id].reward = risky ? 'risky' : 'gear';
+      if (risky) nodes[id].risk = 1.25;
+    });
   }
   function routeNode(id) {
     return run?.route?.nodes?.[id] || null;

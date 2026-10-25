@@ -106,6 +106,18 @@
   border-color: #4a70b0;
   color: #c8dcff;
 }
+/* Награда развилки на карте; «опасное логово» — красная */
+.rm-node .rm-tag.rw {
+  background: color-mix(in oklab, #c8a040 22%, #14120c);
+  border-color: #a08030;
+  color: #ffe6a8;
+}
+.rm-node .rm-tag.rw.risk {
+  background: color-mix(in oklab, #ef4444 25%, #1a0c0c);
+  border-color: #c03030;
+  color: #ffc8c8;
+}
+.route-choice .rc-reward { color: #ffe6a8; font-weight: 600; }
 .rm-here {
   text-align: center;
   font-family: Cinzel, serif;

@@ -93,6 +93,7 @@
         const a = Math.min(target.shield, dmg);
         target.shield -= a;
         dmg -= a;
+        target._lastAbsorbed = (target._lastAbsorbed || 0) + a;
       }
       return dmg;
     }
@@ -120,7 +121,16 @@
       creditShieldAbsorb(s, target, take);
     }
     syncUnitShield(target);
+    target._lastAbsorbed = (target._lastAbsorbed || 0) + (dmg - left);
     return left;
+  }
+
+  /** Текст удара для журнала: «−X», «−X · 🛡N» или «🛡 поглощено N», если всё съел щит. */
+  function hitText(target, dealt) {
+    const abs = (target && target._lastAbsorbed) || 0;
+    if (dealt > 0) return '−' + fmt(dealt) + (abs > 0 ? ' · 🛡' + fmt(abs) : '');
+    if (abs > 0) return '🛡 поглощено ' + fmt(abs);
+    return '−' + fmt(dealt || 0);
   }
 
   function triggerProtRevenge(tank) {
@@ -210,6 +220,7 @@
 
   function dealDmg(target, raw, attacker, ctx) {
     if (!target?.alive) return 0;
+    target._lastAbsorbed = 0;
     if (typeof fieldBlocksHit === 'function' && fieldBlocksHit(attacker, target, ctx)) {
       try { floatText(target.uid, 'МИМО', 'miss'); } catch (_) {}
       return 0;

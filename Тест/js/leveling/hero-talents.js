@@ -1,4 +1,4 @@
-/* Дерево героя: 5 ярусов, один из трёх, 8/16/24/32/40. Паладин — из концепта. Остальные — общая заглушка. S37 без своей ветки. */
+/* Дерево героя: 5 ярусов, один из трёх, 8/16/24/32/40. Паладин — из концепта, остальные классы — js/leveling/class-talents.js (эффекты fx). */
 (function (G) {
   var PALADIN_TIERS = [
     {
@@ -104,7 +104,43 @@
   }
 
   function tiersFor(classId) {
-    return isPaladin(classId) ? PALADIN_TIERS : GENERIC_TIERS;
+    if (isPaladin(classId)) return PALADIN_TIERS;
+    var t = G.IGOR_CLASS_TALENT_TIERS && G.IGOR_CLASS_TALENT_TIERS[classId];
+    return t || GENERIC_TIERS;
+  }
+
+  /* Эффекты fx классовых деревьев: id выбора → выбор (с fx, именем, иконкой). */
+  var PICK_BY_ID = null;
+  function pickById() {
+    if (PICK_BY_ID) return PICK_BY_ID;
+    PICK_BY_ID = {};
+    var trees = G.IGOR_CLASS_TALENT_TIERS || {};
+    Object.keys(trees).forEach(function (cls) {
+      trees[cls].forEach(function (tier) {
+        var lists = tier.bySpec ? Object.keys(tier.bySpec).map(function (k) { return tier.bySpec[k]; }) : [tier.picks || []];
+        lists.forEach(function (list) {
+          list.forEach(function (p) { if (p && p.fx) PICK_BY_ID[p.id] = p; });
+        });
+      });
+    });
+    return PICK_BY_ID;
+  }
+  function fxPicks(u) {
+    if (!u || !u._isHero) return [];
+    if (u._heroFx) return u._heroFx;
+    var map = pickById();
+    var out = [];
+    talentSet(u).forEach(function (id) { if (map[id]) out.push(map[id]); });
+    u._heroFx = out;
+    return out;
+  }
+  function fxSum(u, key) {
+    return fxPicks(u).reduce(function (n, p) { return n + (Number(p.fx[key]) || 0); }, 0);
+  }
+  function fxAbMult(u, abId, kind) {
+    var m = 1;
+    fxPicks(u).forEach(function (p) { if (p.fx.ab && p.fx.ab.id === abId && p.fx.ab[kind]) m *= p.fx.ab[kind]; });
+    return m;
   }
 
   function talentPicks(classId, specId, tier) {
@@ -153,9 +189,16 @@
     var tiers = tiersFor(hero.classId);
     for (var i = 0; i < tiers.length; i++) {
       var t = tiers[i];
-      if (hero.level >= t.level && !(hero.talents && hero.talents[t.id])) return t;
+      if (hero.level >= t.level && !chosenPick(hero, t)) return t;
     }
     return null;
+  }
+
+  /** Выбор яруса, если он есть в текущем дереве. Старый общий талант или t3 другого спека — как не выбранный (перевыбор). */
+  function chosenPick(hero, tier) {
+    var id = hero && hero.talents && hero.talents[tier.id];
+    if (!id) return null;
+    return talentPicks(hero.classId, hero.specId, tier).some(function (p) { return p.id === id; }) ? id : null;
   }
 
   function cloneAb(o) {
@@ -212,6 +255,31 @@
         desc: 'Раз в бой: щит 20% максимального здоровья',
       }));
     }
+    // Приём классового дерева: те же три механики, имя и иконка из выбора
+    fxPicks(unit).forEach(function (p) {
+      var act = p.fx.active;
+      if (act === 'stand' && !has('hero_last_stand')) {
+        unit.abilities.push(cloneAb({
+          id: 'hero_last_stand', name: p.name, icon: p.icon,
+          type: 'buff', freeAction: true, cd: 99, dmgReduce: 0.4, buffTurns: 2,
+          desc: 'Раз в бой: −40% входящего, 2 хода',
+        }));
+      }
+      if (act === 'burst' && !has('hero_burst')) {
+        unit.abilities.push(cloneAb({
+          id: 'hero_burst', name: p.name, icon: p.icon,
+          type: 'buff', freeAction: true, cd: 99, atkMod: 0.2, buffTurns: 2,
+          desc: 'Раз в бой: +20% атаки, 2 хода',
+        }));
+      }
+      if (act === 'guard' && !has('hero_guard')) {
+        unit.abilities.push(cloneAb({
+          id: 'hero_guard', name: p.name, icon: p.icon,
+          type: 'shield', freeAction: true, cd: 99,
+          desc: 'Раз в бой: щит 20% максимального здоровья',
+        }));
+      }
+    });
   }
 
   function tweakAbilities(unit, ids) {
@@ -224,6 +292,23 @@
       if (ids.has('holy_bulwark') && a.id === 'avengers') a.shieldFromDmg = 0.4;
       if (ids.has('gen_hoard') && a.costSec >= 2) a.costSec = a.costSec - 1;
     });
+    // Классовое дерево: откат способности, цена основного и вторичного ресурса
+    var picks = fxPicks(unit);
+    if (!picks.length) return;
+    var costPct = fxSum(unit, 'costPct');
+    var secCost = fxSum(unit, 'secCost');
+    (unit.abilities || []).forEach(function (a) {
+      if (!a) return;
+      picks.forEach(function (p) {
+        var x = p.fx.ab;
+        if (x && x.cd && x.id === a.id && a.cd > 1) {
+          a.cd = Math.max(1, a.cd - x.cd);
+          a.baseCd = a.cd;
+        }
+      });
+      if (costPct > 0 && a.cost > 0) a.cost = Math.max(1, Math.round(a.cost * (1 - costPct)));
+      if (secCost > 0 && a.costSec >= 2) a.costSec = Math.max(1, a.costSec - secCost);
+    });
   }
 
   function applyTalents(unit, hero) {
@@ -231,6 +316,7 @@
     var rec = hero || (typeof G.igorHeroGetActive === 'function' ? G.igorHeroGetActive() : null);
     var ids = talentSet(rec || unit);
     unit._heroTalentIds = ids;
+    unit._heroFx = null;
     tweakAbilities(unit, ids);
     injectTalentAbs(unit, ids);
     applyStatTalents(unit);
@@ -264,6 +350,16 @@
     if (ids.has('gen_focus')) bumpAtk(1.08);
     if (ids.has('gen_ward')) bumpDef(1.10);
     if (ids.has('gen_grip')) { bumpHp(1.06); bumpAtk(1.04); }
+    fxPicks(unit).forEach(function (p) {
+      var f = p.fx;
+      if (f.speed) {
+        unit.speed = (unit.speed || 0) + f.speed;
+        if (unit._baseSpeed != null) unit._baseSpeed += f.speed;
+      }
+      if (f.hpPct) bumpHp(1 + f.hpPct);
+      if (f.defPct) bumpDef(1 + f.defPct);
+      if (f.atkPct) bumpAtk(1 + f.atkPct);
+    });
     unit._heroTalentStatsApplied = true;
   }
 
@@ -294,6 +390,10 @@
         if (hasTalent(u, 'gen_strike') && typeof combat !== 'undefined' && combat && combat.round <= 2) {
           e.atk = Math.round(e.atk * 1.06);
         }
+        var op = fxSum(u, 'atkOpener');
+        if (op && typeof combat !== 'undefined' && combat && combat.round <= 2) e.atk = Math.round(e.atk * (1 + op));
+        var hi = fxSum(u, 'atkHighHp');
+        if (hi && u.maxHp && u.hp / u.maxHp > 0.8) e.atk = Math.round(e.atk * (1 + hi));
         return e;
       };
     });
@@ -302,6 +402,7 @@
       return function (u) {
         var c = orig(u);
         if (hasTalent(u, 'blade_justice') || hasTalent(u, 'gen_edge')) c += 0.04;
+        c += fxSum(u, 'critAdd');
         return typeof clamp === 'function' ? clamp(c, 0.05, 0.75) : Math.max(0.05, Math.min(0.75, c));
       };
     });
@@ -309,6 +410,8 @@
     wrap('critMult', function (orig) {
       return function (u) {
         if (hasTalent(u, 'fierce_light') && u && u._heroLastSchool === 'holy') return 1.75;
+        var cs = fxPicks(u).find(function (p) { return p.fx.critSchool && p.fx.critSchool.school === (u && u._heroLastSchool); });
+        if (cs) return cs.fx.critSchool.mult;
         return orig(u);
       };
     });
@@ -318,6 +421,7 @@
         if (u && u._isHero && (u._heroLevel || 40) < 10) return 0;
         var p = orig(u);
         if (hasTalent(u, 'master_light') || hasTalent(u, 'gen_master')) p += 0.08;
+        p += fxSum(u, 'mastery');
         return p;
       };
     });
@@ -326,6 +430,7 @@
       return function (actor, ab, mult) {
         var m = mult == null ? 1 : mult;
         if (ab && ab.id === 'templar' && hasTalent(actor, 'blade_of_light')) m *= 1.15;
+        if (ab && actor && actor._isHero) m *= fxAbMult(actor, ab.id, 'dmg') * (1 + fxSum(actor, 'dmgDone'));
         return orig(actor, ab, m);
       };
     });
@@ -334,6 +439,7 @@
       return function (actor, ab, target) {
         var v = orig(actor, ab, target);
         if (ab && ab.id === 'divine_prot' && hasTalent(actor, 'sacred_shield')) v = Math.round(v * 1.5);
+        if (ab && actor && actor._isHero) v = Math.round(v * fxAbMult(actor, ab.id, 'shield'));
         return v;
       };
     });
@@ -393,6 +499,10 @@
       return function (t, amount, healer, opts) {
         if (healer && hasTalent(healer, 'selfless') && opts && opts.abilityId === 'holy_shock') {
           amount = Math.round(amount * 1.2);
+        }
+        if (healer && healer._isHero && amount > 0) {
+          var hm = (opts && opts.abilityId ? fxAbMult(healer, opts.abilityId, 'heal') : 1) * (1 + fxSum(healer, 'healDone'));
+          if (hm !== 1) amount = Math.round(amount * hm);
         }
         var healed = orig(t, amount, healer, opts);
         if (healed > 0 && healer && hasTalent(healer, 'eternal_flame') && opts && opts.abilityId === 'word_glory' && typeof applyStatus === 'function') {
@@ -501,6 +611,10 @@
         if (hasTalent(u, 'gen_tide') && ab.genSec > 0 && u.res && u.res.secondary) {
           u.res.secondary.current = Math.min(u.res.secondary.max, u.res.secondary.current + 1);
         }
+        var sg = fxSum(u, 'secGen');
+        if (sg && ab.genSec > 0 && u.res && u.res.secondary) {
+          u.res.secondary.current = Math.min(u.res.secondary.max, u.res.secondary.current + sg);
+        }
       };
     });
 
@@ -521,6 +635,10 @@
             var add = Math.max(1, Math.round(miss * 0.06));
             actor.hp = Math.min(actor.maxHp, actor.hp + add);
           }
+        }
+        var rg = fxSum(actor, 'regenMissing');
+        if (rg && actor.alive && actor.maxHp && actor.hp < actor.maxHp) {
+          actor.hp = Math.min(actor.maxHp, actor.hp + Math.max(1, Math.round((actor.maxHp - actor.hp) * rg)));
         }
       };
     });
@@ -548,6 +666,7 @@
   G.igorHeroPicksForHero = picksForHero;
   G.igorHeroHasTalent = hasTalent;
   G.igorHeroPendingTier = pendingTier;
+  G.igorHeroChosenPick = chosenPick;
   G.igorHeroApplyTalents = applyTalents;
   G.igorHeroApplyStatTalents = applyStatTalents;
 

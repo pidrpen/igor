@@ -60,6 +60,9 @@
   }
 
   function checkEnd() {
+    if (typeof trapTick === 'function') {
+      try { trapTick(); } catch (e) { console.error('[trap]', e); }
+    }
     if (typeof raidVaultMaybeAdvance === 'function') {
       try { raidVaultMaybeAdvance(); } catch (e) { console.error('[vault]', e); }
     }
@@ -83,9 +86,14 @@
       setTimeout(() => onVictory(), 550);
       return true;
     }
-    if (!livingHeroes().length) {
+    // Вайп: никого нет — или живы одни танки, а поднять павших нечем (иначе бой без урона и лечения тянется вечно)
+    const alive = livingHeroes();
+    const canRez = !!(run.keyPowers && run.keyPowers.battle_rez && (run.keyPowers.battle_rez.charges || 0) > 0);
+    if (!alive.length || (!canRez && alive.every(h => h.role === 'tank'))) {
       combat.over = true;
-      endRun(false, run.raid ? 'Вайп. Рейд провален.' : 'Вайп. Ключ провален.');
+      endRun(false, alive.length
+        ? (run.raid ? 'Вайп: в живых одни танки. Рейд провален.' : 'Вайп: в живых один танк. Ключ провален.')
+        : (run.raid ? 'Вайп. Рейд провален.' : 'Вайп. Ключ провален.'));
       return true;
     }
     return false;
@@ -120,14 +128,36 @@
     const node = currentRouteNode();
     const type = node?.type || 'trash';
     const afterLoot = () => {
-      // Без межкомнатных баффов/талантов — сразу следующая комната.
       advanceRoom();
+    };
+    // Награда развилки (route.js assignForkRewards): срез, сила ключа, Камень возврата, логово — шмот и сила
+    const giveForkReward = (next) => {
+      const reward = node && node.reward;
+      if (reward === 'time') {
+        run.timerLeft = Math.min(run.timerMax, run.timerLeft + 40);
+        log('Срез пути: +40 с к таймеру', 'system');
+        toast('⏱ +40 с');
+        try { updateHud(); } catch (_) {}
+        next();
+      } else if (reward === 'rez') {
+        run.keyPowers = run.keyPowers || {};
+        const kp = run.keyPowers.battle_rez || (run.keyPowers.battle_rez = { charges: 0, usedThisCombat: false });
+        kp.charges = (kp.charges || 0) + 1;
+        log('Камень возврата +1', 'system');
+        toast('💎 Камень возврата');
+        try { renderPowers(); } catch (_) {}
+        next();
+      } else if (reward === 'power' || reward === 'risky') {
+        openTalent(next);
+      } else {
+        next();
+      }
     };
     // Шмот только с элиты / стража / финала. Треш не спамит.
     if (type === 'boss' || type === 'final' || type === 'elite') {
-      grantLoot(afterLoot);
+      grantLoot(() => giveForkReward(afterLoot));
     } else {
-      afterLoot();
+      giveForkReward(afterLoot);
     }
   }
 

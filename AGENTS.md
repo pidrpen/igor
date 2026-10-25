@@ -47,7 +47,9 @@
 | Цвета, портреты, темы данжей, `PATCHED_SPECS` | `js/core.js` |
 | Враги, аффиксы, Лэй Шэнь | `js/enemies.js` |
 | Инсты ключа (паки, механики комнат) | `js/dungeon-inst.js` |
-| Маршрут ключа, силы ключа | `js/route.js` |
+| Маршрут ключа, силы ключа | `js/route.js` (Тест: награды развилок `FORK_REWARDS` / `assignForkRewards`, выдача в `combat-flow.js` `onVictory`) |
+| Время за ход (только Тест) | `js/state.js` `ROUND_SEC_KEY` / `ROUND_SEC_RAID`, списание `chargeRoundTime` в `combat-loop.js` |
+| Ловушка бойца на мид-боссе (только Тест) | `js/systems/trap.js` (`trapTick` из `checkEnd`, `_trapId` + обёртка `fieldSameHall`) |
 | Рейд 10 | `js/raid.js`, `js/raid-catacombs.js` (сплит `raid-split.js` и погоня `raid-finale.js` выключены) |
 | Шмот, драфт 1 из 3 | `js/gear.js` |
 | Ход / раунд, авто-союзники | `js/systems/combat-loop.js` |
@@ -64,6 +66,7 @@
 | Ролики способностей | `js/ui/fx.js` + `js/ui/skill-fx-*.js` |
 | Лобби, отряд, старт | `js/ui.js` |
 | Таверна, герой 1–40 | `js/leveling/` (сейв `igorHero_v1`) |
+| Деревья талантов героя | паладин — `js/leveling/hero-talents.js`; остальные классы (только Тест) — `js/leveling/class-talents.js`, эффекты `fx` применяет `hero-talents.js` |
 | Сейв | `js/save.js` |
 | Журнал патчей в лобби | `js/ui/balance-panel.js` |
 | Стили | `css/main.css`; рейд и прочее — Тест `css/extra.css`, основа `css/raid.css` |

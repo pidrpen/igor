@@ -16,6 +16,15 @@
     }
     resetKeyPowersForCombat();
     const enemies = spawnPack(type);
+    // Развилка «опасное логово»: враги толще и злее, зато награда двойная (combat-flow onVictory)
+    const riskNode = !run.raid && typeof currentRouteNode === 'function' ? currentRouteNode() : null;
+    if (riskNode && riskNode.risk > 1) {
+      enemies.forEach((e) => {
+        e.maxHp = Math.round(e.maxHp * riskNode.risk);
+        e.hp = e.maxHp;
+        e.atk = Math.round(e.atk * riskNode.risk);
+      });
+    }
     for (const p of run.party) {
       if (p.hp <= 0) { p.alive = false; p.hp = 0; } else p.alive = true;
       p.shield = 0;
@@ -112,6 +121,17 @@
       }
     }
     if (u.enraged) atk *= 1.5;
+    // Питомец берёт усиления атаки хозяина (Героизм, Аватара, Гнев карателя…), кроме баффов отряда и того, что уже висит на нём самом
+    if (u.isPet && u.ownerUid != null && typeof run !== 'undefined' && run && run.party) {
+      const owner = run.party.find(p => p && p.uid === u.ownerUid);
+      if (owner && owner.buffs) {
+        for (const b of owner.buffs) {
+          if (!b || !b.atkMod || String(b.id || '').indexOf('aura_') === 0) continue;
+          if ((u.buffs || []).some(x => x && x.id === b.id)) continue;
+          atk *= (1 + b.atkMod);
+        }
+      }
+    }
     return { atk: Math.round(atk), def: Math.round(def), speed };
   }
   function buildTurnQueue() {
@@ -325,12 +345,23 @@
     }
   }
 
+  /** Время за ход: раунд боя списывает фиксированные секунды таймера ключа / рейда. */
+  function chargeRoundTime() {
+    if (!run || run.finished) return;
+    const sec = run.raid ? (ROUND_SEC_RAID[run.raidDiff] || ROUND_SEC_RAID.normal) : ROUND_SEC_KEY;
+    run.timerLeft = Math.max(0, run.timerLeft - sec);
+    try { updateHud(); } catch (_) {}
+    if (run.timerLeft <= 0) endRun(false, run.raid ? 'Время вышло. Рейд провален.' : 'Время вышло. Ключ провален.');
+  }
+
   function endRound() {
     // Guard: exactly one periodic pass per combat round (not per hero turn)
     if (!combat || combat._roundTicking) return;
     combat._roundTicking = true;
     combat.round++;
     combat.turnIndex = 0;
+    chargeRoundTime();
+    if (!combat || !run || run.finished) return; // время вышло — endRun уже снял бой
     try { if (typeof fieldOnRoundEnd === 'function') fieldOnRoundEnd(); } catch (e) { console.error('[field round]', e); }
     // Демонология: пассивный бес каждые 5 раундов
     if (run?.party && combat.round > 0 && combat.round % 5 === 0) {

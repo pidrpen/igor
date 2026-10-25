@@ -67,7 +67,7 @@
       const d = dealDmg(foe, abilityDamageRaw(owner, { flat: 3 }), serpent, {
         type: 'damage', isPet: true, abilityId: 'serpent_spit', abilityName: 'Туман змеи',
       });
-      if (d) log(`${serpent.name}: → ${foe.name} (−${fmt(d)})`, 'player');
+      if (d) log(`${serpent.name}: → ${foe.name} (${hitText(foe, d)})`, 'player');
     }
   }
 
@@ -285,7 +285,7 @@
             const d = dealDmg(tt, raw, actor, {
               type: 'damage', isPet: true, abilityId: 'bot_hit', abilityName: 'Гидравлика',
             });
-            if (d) log(`${actor.name}: → ${tt.name} (−${fmt(d)})`, 'player');
+            if (d) log(`${actor.name}: → ${tt.name} (${hitText(tt, d)})`, 'player');
           }
         }
         return;

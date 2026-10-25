@@ -83,9 +83,14 @@
       setTimeout(() => onVictory(), 550);
       return true;
     }
-    if (!livingHeroes().length) {
+    // Вайп: никого нет — или живы одни танки, а поднять павших нечем (иначе бой без урона и лечения тянется вечно)
+    const alive = livingHeroes();
+    const canRez = !!(run.keyPowers && run.keyPowers.battle_rez && (run.keyPowers.battle_rez.charges || 0) > 0);
+    if (!alive.length || (!canRez && alive.every(h => h.role === 'tank'))) {
       combat.over = true;
-      endRun(false, run.raid ? 'Вайп. Рейд провален.' : 'Вайп. Ключ провален.');
+      endRun(false, alive.length
+        ? (run.raid ? 'Вайп: в живых одни танки. Рейд провален.' : 'Вайп: в живых один танк. Ключ провален.')
+        : (run.raid ? 'Вайп. Рейд провален.' : 'Вайп. Ключ провален.'));
       return true;
     }
     return false;
