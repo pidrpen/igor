@@ -423,6 +423,7 @@
           isDot: true,
         });
         const left = Math.max(0, (Number(d.turns) || 1) - 1);
+        try { if (typeof playTickFx === 'function') playTickFx(u, d.school, 'dot'); } catch (_) {}
         log(`${u.name}: ${d.name} −${fmt(dealtDot || tickAmt)} · ${left}р`, u.side === 'ally' ? 'enemy' : 'player');
       }
       // HoT ticks — 1× per combat round per buff
@@ -442,7 +443,10 @@
           isHot: true,
         });
         const left = Math.max(0, (Number(h.turns) || 1) - 1);
-        if (healed > 0) log(`${u.name}: ${h.name} +${fmt(healed)} · ${left}р`, 'heal');
+        if (healed > 0) {
+          try { if (typeof playTickFx === 'function') playTickFx(u, 'heal', 'hot'); } catch (_) {}
+          log(`${u.name}: ${h.name} +${fmt(healed)} · ${left}р`, 'heal');
+        }
         else if (before >= u.maxHp) log(`${u.name}: ${h.name} (оверхил) · ${left}р`, 'heal');
       }
       // Brewmaster stagger ticks (~25% of pool per round)

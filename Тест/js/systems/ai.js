@@ -236,6 +236,7 @@
         const owner = run?.party?.find(p => p.uid === actor.ownerUid);
         const extra = Math.round(((owner && owner.purifyCleared) || 0) * 0.5);
         const base = owner ? abilityDamageRaw(owner, { flat: 10 }) : 10000;
+        try { if (typeof playPetFx === 'function') playPetFx(actor, foes); } catch (_) {}
         let total = 0;
         for (const e of foes.slice()) {
           if (!e.alive) continue;
@@ -250,6 +251,7 @@
       if (actor.petKey === 'xuen') {
         const owner = run?.party?.find(p => p.uid === actor.ownerUid);
         const raw = owner ? abilityDamageRaw(owner, { flat: 10 }) : 10000;
+        try { if (typeof playPetFx === 'function') playPetFx(actor, foes); } catch (_) {}
         let total = 0;
         for (const e of foes.slice()) {
           if (!e.alive) continue;
@@ -269,6 +271,7 @@
           && (b.turns == null || Number(b.turns) > 0));
         const raw = abilityDamageRaw(actor, { flat: 25 });
         if ((siege || actor.attackMode === 'aoe') && foes.length) {
+          try { if (typeof playPetFx === 'function') playPetFx(actor, foes); } catch (_) {}
           let total = 0;
           for (const e of foes.slice()) {
             if (!e.alive) continue;
@@ -282,6 +285,7 @@
           let tt = owner?.lastAttackUid ? foes.find(e => e.uid === owner.lastAttackUid) : null;
           tt = tt || lowest(foes) || pick(foes);
           if (tt) {
+            try { if (typeof playPetFx === 'function') playPetFx(actor, [tt]); } catch (_) {}
             const d = dealDmg(tt, raw, actor, {
               type: 'damage', isPet: true, abilityId: 'bot_hit', abilityName: 'Гидравлика',
             });
@@ -291,6 +295,7 @@
         return;
       }
       if (actor.attackMode === 'aoe' && foes.length) {
+        try { if (typeof playPetFx === 'function') playPetFx(actor, foes); } catch (_) {}
         const raw = Math.max(1, Math.round(getEff(actor).atk * 0.95));
         let total = 0;
         for (const e of foes.slice()) {

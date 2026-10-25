@@ -14,6 +14,13 @@
 
   const DIVERGE_LOG = [
     {
+      id: 'fx-phase4',
+      name: 'Ролики: телеграфы, питомцы, тики',
+      poured: 'no',
+      testVer: '5.4.9.49В',
+      text: 'js/ui/fx.js: playTelegraphFx (вызов в telegraph-loot.js resolveCasting), playPetFx и PET_STYLE (крючок в playSkillAnim + особые питомцы в ai.js), playTickFx (тики дотов и хотов в combat-loop.js endRound). Стили .tick-puff .tg-windup .tg-crush .tg-wave .tg-nova .tg-sweep в css/theme-controls.css.',
+    },
+    {
       id: 'fx-phase3',
       name: 'Фирменные ролики способностей',
       poured: 'no',

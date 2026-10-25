@@ -1056,6 +1056,154 @@
     return Math.max(life, list.length ? 900 : 0, 1100);
   }
 
+  // ── Фаза 4: тики дотов / хотов, сработавшие телеграфы боссов, атаки питомцев ──
+  /** Школа статуса → класс school-*: физические доты — кровь, magic — тайная магия. */
+  const TICK_SCHOOL = { physical: 'blood', magic: 'arcane', bleed: 'blood', poison: 'nature' };
+  function fxLayer() { return document.getElementById('skill-fx-layer'); }
+  function fxHitAt(layer, x, y, school, impact) {
+    laterRm(shamEl(layer, 'fx-hit school-' + school + (impact && impact !== 'hit' ? ' impact-' + impact : ''), x, y), 720);
+    shamSparks(layer, 'fx-spark school-' + school, x, y, impact === 'explode' ? 9 : 5, impact === 'explode' ? 30 : 18, 560);
+  }
+
+  /** Тик дота / хота: вспышка цветом школы, у хота — искры вверх. */
+  function playTickFx(unit, school, kind) {
+    if (!juiceOk() || !unit) return;
+    const layer = fxLayer();
+    const c = unitCenter(unit.uid);
+    if (!layer || !c) return;
+    const sc = kind === 'hot' ? 'heal' : (TICK_SCHOOL[school] || school || 'shadow');
+    const x = c.x + (Math.random() * 30 - 15), y = c.y + (Math.random() * 20 - 10);
+    laterRm(shamEl(layer, 'tick-puff school-' + sc, x, y), 620);
+    if (kind === 'hot') {
+      for (let i = 0; i < 3; i++) {
+        const m = shamEl(layer, 'fx-mote school-heal', x + (i - 1) * 10, y + 6);
+        m.style.setProperty('--mx', ((i - 1) * 4) + 'px');
+        m.style.setProperty('--my', (-24 - i * 6) + 'px');
+        m.style.animationDelay = (i * 60) + 'ms';
+        laterRm(m, 900);
+      }
+    } else {
+      shamSparks(layer, 'fx-spark school-' + sc, x, y, 3, 12, 420);
+    }
+  }
+
+  /** Сработавший телеграф босса: удар по танку — тяжёлый удар в цель; по области — волна по ряду; непрерванный каст — снаряды в каждого. */
+  function playTelegraphFx(actor, kind, targets, cast) {
+    if (!juiceOk() || !actor) return;
+    const layer = fxLayer();
+    if (!layer) return;
+    const from = unitCenter(actor.uid);
+    const list = (targets || []).filter(Boolean);
+    const sc = (cast && cast.school && cast.school !== 'magic' && cast.school !== 'none')
+      ? cast.school
+      : (kind === 'buster' ? 'blood' : (kind === 'kick' ? 'arcane' : 'shadow'));
+    const fast = fxFast();
+    if (from && list[0]) { try { lungeUnit(actor.uid, list[0].uid); } catch (_) {} }
+    if (kind === 'buster') {
+      const t = list[0];
+      const to = t && unitCenter(t.uid);
+      if (!to) return;
+      const land = () => {
+        laterRm(shamEl(layer, 'tg-crush school-' + sc, to.x, to.y), 700);
+        [-30, 10, 55].forEach((rot) => {
+          const cr = shamEl(layer, 'fx-crack school-' + sc, to.x, to.y + 20);
+          cr.style.rotate = rot + 'deg';
+          laterRm(cr, 700);
+        });
+        laterRm(shamEl(layer, 'fx-burst school-' + sc, to.x, to.y), 620);
+        fxHitAt(layer, to.x, to.y, sc, 'explode');
+        try { shakeArena(8); } catch (_) {}
+      };
+      if (fast || !from) land();
+      else {
+        laterRm(shamEl(layer, 'tg-windup school-' + sc, from.x, from.y), 380);
+        setTimeout(land, 220);
+      }
+      return;
+    }
+    if (from && !fast) laterRm(shamEl(layer, (kind === 'kick' ? 'tg-nova' : 'tg-wave') + ' school-' + sc, from.x, from.y), 900);
+    list.forEach((t, i) => setTimeout(() => {
+      const to = unitCenter(t.uid);
+      if (!to) return;
+      if (kind === 'kick' && from && !fast) {
+        shamFly(layer, 'sig-pulse school-' + sc, from.x, from.y, to.x, to.y, 260, () => fxHitAt(layer, to.x, to.y, sc, 'splash'));
+      } else {
+        laterRm(shamEl(layer, 'tg-sweep school-' + sc, to.x, to.y), 620);
+        fxHitAt(layer, to.x, to.y, sc, 'splash');
+      }
+    }, fast ? 0 : 160 + i * 70));
+    try { shakeArena(kind === 'kick' ? 4 : 5); } catch (_) {}
+  }
+
+  /** Питомец бьёт по-своему: звери когтями, демоны топором, маги снарядом школы, механизмы очередью, бомбы взрывом. */
+  const PET_STYLE = {
+    hunter_pet: ['claws', 'physical'], hunter_bear: ['claws', 'physical'], hunter_raptor: ['claws', 'nature'],
+    dire: ['claws', 'physical'], wolf: ['claws', 'nature'], ghoul: ['claws', 'shadow'], frost_ghoul: ['claws', 'frost'],
+    hunter_hawk: ['dive', 'physical'],
+    felguard: ['axe', 'fel'], voidwalker: ['axe', 'shadow'], infernal: ['axe', 'fire'],
+    imp: ['bolt', 'fire'], imp_boss: ['bolt', 'fire'], fire_ele: ['bolt', 'fire'], shadowfiend: ['bolt', 'shadow'],
+    hellfiend: ['bolt', 'shadow'], water_ele: ['bolt', 'frost'], water_totem: ['bolt', 'frost'], mirror: ['bolt', 'arcane'],
+    gargoyle: ['bolt', 'shadow'],
+    combat_bot: ['rivets', 'physical'], pocket_bot: ['rivets', 'physical'], turret: ['rivets', 'physical'],
+    siege_walker: ['rivets', 'fire'], scrap_bot: ['rivets', 'physical'], world_destroyer: ['rivets', 'arcane'],
+    bomb_drone: ['boom', 'fire'], rocket_chicken: ['boom', 'fire'],
+    niuzao: ['stomp', 'chi'], xuen: ['stomp', 'nature'],
+  };
+  function playPetFx(pet, targets) {
+    if (!juiceOk() || !pet || !pet.isPet) return 0;
+    const st = PET_STYLE[pet.petKey];
+    const layer = fxLayer();
+    const list = (targets || []).filter(Boolean);
+    if (!st || !layer || !list.length) return 0;
+    const kind = st[0], sc = st[1], cls = ' school-' + sc;
+    const from = unitCenter(pet.uid) || (pet.ownerUid != null ? unitCenter(pet.ownerUid) : null);
+    const fast = fxFast();
+    if (kind === 'stomp') {
+      list.forEach((t, i) => setTimeout(() => {
+        const to = unitCenter(t.uid);
+        if (!to) return;
+        laterRm(shamEl(layer, 'sig-quake' + cls, to.x, to.y + 20), 900);
+        laterRm(shamEl(layer, 'fx-crack' + cls, to.x, to.y + 20), 700);
+        fxHitAt(layer, to.x, to.y, sc, 'splash');
+      }, fast ? 0 : i * 60));
+      try { shakeArena(4); } catch (_) {}
+      return 900;
+    }
+    list.forEach((t, i) => setTimeout(() => {
+      const to = unitCenter(t.uid);
+      if (!to) return;
+      if (kind === 'claws') {
+        laterRm(shamEl(layer, 'fx-claw' + cls, to.x, to.y), 520);
+        fxHitAt(layer, to.x, to.y, sc);
+      } else if (kind === 'axe') {
+        laterRm(shamEl(layer, 'fx-great' + cls, to.x, to.y), 620);
+        fxHitAt(layer, to.x, to.y, sc);
+      } else if (kind === 'dive') {
+        if (!fast) shamLinkLine(layer, to.x - 34, to.y - 96, to.x, to.y, 'sig-pounce' + cls, 340);
+        setTimeout(() => {
+          laterRm(shamEl(layer, 'fx-claw' + cls, to.x, to.y), 520);
+          fxHitAt(layer, to.x, to.y, sc);
+        }, fast ? 0 : 150);
+      } else if (kind === 'bolt') {
+        if (from && !fast) shamFly(layer, 'sig-pulse' + cls, from.x, from.y, to.x, to.y, 280, () => fxHitAt(layer, to.x, to.y, sc, 'splash'));
+        else fxHitAt(layer, to.x, to.y, sc, 'splash');
+      } else if (kind === 'rivets') {
+        for (let k = 0; k < 3; k++) {
+          setTimeout(() => {
+            const px = to.x + (k - 1) * 8, py = to.y + (k % 2 ? 6 : -6);
+            if (from && !fast) shamFly(layer, 'sig-drop' + cls, from.x, from.y, px, py, 200, () => fxHitAt(layer, px, py, sc));
+            else fxHitAt(layer, px, py, sc);
+          }, k * 70);
+        }
+      } else if (kind === 'boom') {
+        laterRm(shamEl(layer, 'sig-smoke' + cls, to.x, to.y), 900);
+        fxHitAt(layer, to.x, to.y, sc, 'explode');
+        try { shakeArena(3); } catch (_) {}
+      }
+    }, fast ? 0 : i * 70));
+    return 700 + Math.max(0, list.length - 1) * 70;
+  }
+
   function playSkillAnim(actor, ability, targets) {
     if (!juiceOk() || !actor) return 0;
     const layer = document.getElementById('skill-fx-layer');
@@ -1337,6 +1485,12 @@
         if (list.length) hitPulse(t);
       }, i * 40));
       return noteSkillAnimMs(Math.max(animMs, 260 + staggerMs(40, hitList.length)));
+    }
+
+    // Питомцы бьют по-своему (playPetFx), а не общим выводом по названию
+    if (actor.isPet && list.length && !(type === 'heal' || type === 'heal_aoe' || type === 'shield' || type === 'buff' || type === 'summon')) {
+      const petMs = playPetFx(actor, list.filter(t => t && t.side !== actor.side));
+      if (petMs) return noteSkillAnimMs(Math.max(animMs, petMs));
     }
 
     // Фирменные ролики ключевых способностей (js/ui/skill-fx-signature.js)
