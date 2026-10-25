@@ -14,6 +14,13 @@
 
   const DIVERGE_LOG = [
     {
+      id: 'fx-phase1',
+      name: 'Ролики: попадания, школы, 3–4×',
+      poured: 'no',
+      testVer: '5.4.9.46В',
+      text: 'js/ui/fx.js: spawnImpact (burst / ring / shard / flash), fxFast и короткая версия в playSkillAnim, старая карта SKILL_FX сжата до 2 записей (остальное — skill-fx-*.js). Стили в css/theme-controls.css (--fxc / --fxl, .fx-burst .fx-wave .fx-shard .fx-flash, школы орбиты / прокола / дождя / вихря / вспышки, #skill-fx-layer.fx-fast). Дубль .skill-slash убран из main.css.',
+    },
+    {
       id: 'foe-portraits',
       name: 'Портреты врагов: тон и ранг',
       poured: 'no',

@@ -1416,15 +1416,6 @@
       background: radial-gradient(circle at 30% 30%, #e8fff4, #3dd68c 55%, transparent 70%);
       box-shadow: 0 0 14px #3dd68c, 0 0 24px rgba(61,214,140,.5);
     }
-    .skill-slash {
-      position: fixed; z-index: 72; width: 78px; height: 5px; pointer-events: none;
-      --slash-rot: -36deg;
-      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.95) 30%, #f0c14b 65%, transparent 100%);
-      border-radius: 3px; transform-origin: center;
-      animation: skillSlash .58s cubic-bezier(.15,.7,.2,1) forwards;
-      box-shadow: 0 0 14px #f0c14b, 0 0 6px #fff;
-      filter: brightness(1.15);
-    }
     .skill-burst {
       position: fixed; z-index: 71; width: 20px; height: 20px; border-radius: 50%;
       pointer-events: none; transform: translate(-50%, -50%);

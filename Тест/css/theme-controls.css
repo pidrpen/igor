@@ -699,3 +699,106 @@ a.test-build-link:focus-visible {
   /* keep existing if any — no override */
 }
 
+
+/* ═══ Фаза 1 роликов: цвет школы, 4 типа попадания, недостающие школы, короткая версия 3–4× ═══ */
+#skill-fx-layer .school-physical, #skill-fx-layer .school-none { --fxc: #c8d0da; --fxl: #ffffff; }
+#skill-fx-layer .school-fire { --fxc: #ff6a20; --fxl: #fff0c0; }
+#skill-fx-layer .school-frost { --fxc: #4da3ff; --fxl: #e8f6ff; }
+#skill-fx-layer .school-shadow { --fxc: #9b59b6; --fxl: #ecd8ff; }
+#skill-fx-layer .school-holy { --fxc: #f0c14b; --fxl: #fff8d8; }
+#skill-fx-layer .school-nature { --fxc: #2ecc71; --fxl: #dcffe0; }
+#skill-fx-layer .school-arcane { --fxc: #a78bfa; --fxl: #f0e8ff; }
+#skill-fx-layer .school-chi { --fxc: #00c78c; --fxl: #d8fff2; }
+#skill-fx-layer .school-blood { --fxc: #c41f3b; --fxl: #ffd0d0; }
+#skill-fx-layer .school-heal { --fxc: #3dd68c; --fxl: #e8fff4; }
+
+/* burst — вспыхивающий диск */
+.fx-burst {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%;
+  background: radial-gradient(circle, var(--fxl, #fff) 0%, var(--fxc, #f0c14b) 34%, transparent 68%);
+  mix-blend-mode: screen;
+  animation: fx-burst .58s cubic-bezier(.2,.8,.3,1) forwards;
+}
+@keyframes fx-burst {
+  0% { opacity: 1; transform: scale(.2); }
+  35% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+/* ring — ударная волна */
+.fx-wave {
+  position: fixed; z-index: 74; pointer-events: none;
+  width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%;
+  border: 3px solid var(--fxc, #f0c14b);
+  box-shadow: 0 0 12px var(--fxc, #f0c14b), inset 0 0 8px var(--fxc, #f0c14b);
+  animation: fx-wave .72s ease-out forwards;
+}
+@keyframes fx-wave {
+  0% { opacity: 1; transform: scale(.4); border-width: 4px; }
+  100% { opacity: 0; transform: scale(5.5); border-width: 1px; }
+}
+/* shard — осколки разлетаются */
+.fx-shard {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 14px; height: 4px; margin: -2px 0 0 -7px;
+  background: linear-gradient(90deg, var(--fxl, #fff), var(--fxc, #c8d0da));
+  clip-path: polygon(0 50%, 30% 0, 100% 50%, 30% 100%);
+  box-shadow: 0 0 6px var(--fxc, #c8d0da);
+  animation: fx-shard .58s cubic-bezier(.15,.75,.3,1) forwards;
+}
+@keyframes fx-shard {
+  0% { opacity: 1; transform: translate(0, 0) rotate(var(--rot, 0deg)) scale(.6); }
+  100% { opacity: 0; transform: translate(var(--sx), var(--sy)) rotate(var(--rot, 0deg)) scale(1.1); }
+}
+/* flash — короткая четырёхлучевая звезда */
+.fx-flash {
+  position: fixed; z-index: 76; pointer-events: none;
+  width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  background:
+    linear-gradient(90deg, transparent 46%, var(--fxl, #fff) 50%, transparent 54%),
+    linear-gradient(0deg, transparent 46%, var(--fxl, #fff) 50%, transparent 54%),
+    radial-gradient(circle, var(--fxl, #fff) 0%, var(--fxc, #f0c14b) 18%, transparent 42%);
+  filter: drop-shadow(0 0 8px var(--fxc, #f0c14b));
+  animation: fx-flash .36s ease-out forwards;
+}
+@keyframes fx-flash {
+  0% { opacity: 0; transform: scale(.3) rotate(0deg); }
+  30% { opacity: 1; transform: scale(1.1) rotate(20deg); }
+  100% { opacity: 0; transform: scale(.7) rotate(45deg); }
+}
+
+/* Недостающие школы: орбита (доты), прокол, дождь, вихрь, вспышка */
+.skill-orbit.physical { background:#d0d8e0; box-shadow:0 0 10px #94a3b8; }
+.skill-orbit.frost { background:#7ec8ff; box-shadow:0 0 10px #4da3ff; }
+.skill-orbit.nature { background:#5fdc8a; box-shadow:0 0 10px #2ecc71; }
+.skill-orbit.holy { background:#ffe08a; box-shadow:0 0 10px #f0c14b; }
+.skill-orbit.heal { background:#8af5c8; box-shadow:0 0 10px #3dd68c; }
+.skill-orbit.blood { background:#e04a5a; box-shadow:0 0 10px #c41f3b; }
+.skill-pierce.fire { background: linear-gradient(90deg,#fff0c0,#ff6a20,transparent); box-shadow:0 0 8px #ff6a20; }
+.skill-pierce.frost { background: linear-gradient(90deg,#fff,#4da3ff,transparent); box-shadow:0 0 8px #7ec8ff; }
+.skill-pierce.arcane { background: linear-gradient(90deg,#f0e8ff,#a78bfa,transparent); box-shadow:0 0 8px #a78bfa; }
+.skill-pierce.nature { background: linear-gradient(90deg,#dcffe0,#2ecc71,transparent); box-shadow:0 0 8px #2ecc71; }
+.skill-pierce.chi { background: linear-gradient(90deg,#d8fff2,#00c78c,transparent); box-shadow:0 0 8px #00c78c; }
+.skill-pierce.heal { background: linear-gradient(90deg,#e8fff4,#3dd68c,transparent); box-shadow:0 0 8px #3dd68c; }
+.skill-rain-drop.physical { background: linear-gradient(#fff,#94a3b8); box-shadow:0 0 6px #c8d0da; }
+.skill-rain-drop.arcane { background: linear-gradient(#f0e8ff,#7c5cd6); box-shadow:0 0 6px #a78bfa; }
+.skill-rain-drop.chi { background: linear-gradient(#d8fff2,#00a070); box-shadow:0 0 6px #00c78c; }
+.skill-rain-drop.heal { background: linear-gradient(#e8fff4,#2aa86a); box-shadow:0 0 6px #3dd68c; }
+.skill-rain-drop.blood { background: linear-gradient(#ffd0d0,#8a1020); box-shadow:0 0 6px #c41f3b; }
+.skill-swirl.frost { border-color:#7ec8ff; box-shadow:0 0 14px #4da3ff; }
+.skill-swirl.nature { border-color:#2ecc71; box-shadow:0 0 14px #2ecc71; }
+.skill-swirl.holy { border-color:#f0c14b; box-shadow:0 0 14px #f0c14b; }
+.skill-swirl.arcane { border-color:#a78bfa; box-shadow:0 0 14px #a78bfa; }
+.skill-swirl.heal { border-color:#3dd68c; box-shadow:0 0 14px #3dd68c; }
+.skill-swirl.blood { border-color:#c41f3b; box-shadow:0 0 14px #e74c3c; }
+.skill-burst.holy { border-color: #f0c14b; box-shadow: 0 0 18px #f0c14b; }
+.skill-burst.arcane { border-color: #a78bfa; box-shadow: 0 0 18px #a78bfa; }
+.skill-burst.chi { border-color: #00c78c; box-shadow: 0 0 16px #00c78c; }
+.skill-burst.blood { border-color: #c41f3b; box-shadow: 0 0 18px #e74c3c; }
+.skill-burst.physical { border-color: #d0d8e0; box-shadow: 0 0 14px #94a3b8; }
+
+/* Снаряды крупнее: 18×12 px на экране почти не видно */
+.fx-orb { scale: 1.6; }
+
+/* 3–4×: всё в слое эффектов проигрывается коротко */
+#skill-fx-layer.fx-fast > * { animation-duration: .32s !important; animation-delay: 0s !important; }

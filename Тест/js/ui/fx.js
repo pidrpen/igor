@@ -1,6 +1,10 @@
 /* ui/fx: skill VFX, banners, vignette, boss frame */
   function juiceOk() {
-    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches && gameSpeed <= 2;
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+  /** 3–4×: короткая версия роликов — без полёта, сразу попадание (playSkillAnim, .fx-fast). */
+  function fxFast() {
+    return typeof gameSpeed === 'number' && gameSpeed > 2;
   }
   let lastSkillAnimMs = 0;
   function noteSkillAnimMs(ms) {
@@ -223,206 +227,11 @@
   }
 
   // ── Skill FX constructor (A) + signature map (B) ──
+  // Основная карта — js/ui/skill-fx-<класс>.js (window.SKILL_FX, перекрывает эту).
+  // Здесь только то, чего нет в китах классов; остальное — вывод по id / имени / типу ниже.
   const SKILL_FX = {
-      // Gnome Engineer — unique jab-style geometric FX per skill
-      wrench_bash: { motion: "slash", school: "physical", impact: "hit" },
-      rivet_gun: { motion: "pierce", school: "physical", impact: "hit" },
-      plasma_cutter: { motion: "beam", school: "arcane", impact: "hit" },
-      deploy_turret: { motion: "nova", school: "physical", impact: "splash" },
-      overclock: { motion: "orbit", school: "arcane", impact: "hit" },
-      emergency_repair: { motion: "swirl", school: "heal", impact: "splash" },
-      call_siege_walker: { motion: "slam", school: "physical", impact: "explode" },
-      scrap_shot: { motion: "bolt", school: "physical", impact: "hit" },
-      shock_wrench: { motion: "slash", school: "arcane", impact: "hit" },
-      sticky_bomb: { motion: "arc", school: "fire", impact: "explode" },
-      shrapnel_blast: { motion: "nova", school: "fire", impact: "splash" },
-      cluster_bomb: { motion: "rain", school: "fire", impact: "explode" },
-      deploy_bomb_drone: { motion: "orbit", school: "fire", impact: "splash" },
-      rocket_barrage: { motion: "pierce", school: "fire", impact: "explode" },
-      remote_charge: { motion: "bolt", school: "fire", impact: "explode" },
-      demolish: { motion: "slam", school: "fire", impact: "explode" },
-      nitro_boosts: { motion: "swirl", school: "fire", impact: "hit" },
-      zap_gun: { motion: "bolt", school: "arcane", impact: "hit" },
-      flux_bolt: { motion: "arc", school: "arcane", impact: "splash" },
-      death_ray: { motion: "beam", school: "shadow", impact: "drain" },
-      rocket_chicken: { motion: "arc", school: "fire", impact: "splash" },
-      world_destroyer: { motion: "nova", school: "physical", impact: "explode" },
-      shrink_ray: { motion: "beam", school: "arcane", impact: "drain" },
-      magnetic_grip: { motion: "orbit", school: "physical", impact: "hit" },
-      scrap_swarm: { motion: "swirl", school: "physical", impact: "splash" },
-
-    // Warrior
-    mortal_strike: { motion: 'slash', school: 'physical', impact: 'hit' },
-    overpower: { motion: 'slash', school: 'physical', impact: 'hit' },
-    colossus: { motion: 'slam', school: 'physical', impact: 'explode' },
-    execute: { motion: 'slash', school: 'blood', impact: 'explode' },
-    whirlwind: { motion: 'swirl', school: 'physical', impact: 'splash' },
-    bladestorm: { motion: 'swirl', school: 'physical', impact: 'splash' },
-    thunder_clap: { motion: 'nova', school: 'physical', impact: 'splash' },
-    shield_slam: { motion: 'slam', school: 'physical', impact: 'hit' },
-    revenge: { motion: 'slash', school: 'physical', impact: 'hit' },
-    heroic_strike: { motion: 'slash', school: 'physical', impact: 'hit' },
-    charge: { motion: 'pierce', school: 'physical', impact: 'hit' },
-    pummel: { motion: 'slam', school: 'physical', impact: 'hit' },
-    // Paladin
-    crusader: { motion: 'slash', school: 'holy', impact: 'hit' },
-    templar: { motion: 'slash', school: 'holy', impact: 'explode' },
-    judgment: { motion: 'bolt', school: 'holy', impact: 'hit' },
-    exorcism: { motion: 'bolt', school: 'holy', impact: 'explode' },
-    divine_storm: { motion: 'swirl', school: 'holy', impact: 'splash' },
-    holy_shock: { motion: 'bolt', school: 'holy', impact: 'hit' },
-    flash_light: { motion: 'beam', school: 'holy', impact: 'hit' },
-    holy_light: { motion: 'beam', school: 'holy', impact: 'hit' },
-    light_dawn: { motion: 'nova', school: 'holy', impact: 'splash' },
-    word_glory: { motion: 'beam', school: 'holy', impact: 'hit' },
-    shield_righteous: { motion: 'nova', school: 'holy', impact: 'hit' },
-    rebuke: { motion: 'slam', school: 'holy', impact: 'hit' },
-    // Hunter
-    arcane_shot: { motion: 'bolt', school: 'arcane', impact: 'hit' },
-    steady: { motion: 'bolt', school: 'physical', impact: 'hit' },
-    aimed: { motion: 'pierce', school: 'physical', impact: 'explode' },
-    multi: { motion: 'rain', school: 'physical', impact: 'splash' },
-    kill_shot: { motion: 'pierce', school: 'physical', impact: 'explode' },
-    kill_cmd: { motion: 'slash', school: 'physical', impact: 'hit' },
-    serpent: { motion: 'bolt', school: 'nature', impact: 'hit' },
-    black_arrow: { motion: 'bolt', school: 'shadow', impact: 'hit' },
-    explosive: { motion: 'bolt', school: 'fire', impact: 'explode' },
-    // Rogue
-    mutilate: { motion: 'slash', school: 'physical', impact: 'hit' },
-    envenom: { motion: 'slash', school: 'nature', impact: 'splash' },
-    eviscerate: { motion: 'slash', school: 'physical', impact: 'explode' },
-    rupture: { motion: 'slash', school: 'blood', impact: 'hit' },
-    garrote: { motion: 'slash', school: 'blood', impact: 'hit' },
-    ambush: { motion: 'pierce', school: 'physical', impact: 'explode' },
-    sinister: { motion: 'slash', school: 'physical', impact: 'hit' },
-    fan_knives: { motion: 'rain', school: 'physical', impact: 'splash' },
-    dispatch: { motion: 'slash', school: 'physical', impact: 'explode' },
-    kick: { motion: 'slam', school: 'physical', impact: 'hit' },
-    // Priest
-    smite: { motion: 'bolt', school: 'holy', impact: 'hit' },
-    mind_blast: { motion: 'bolt', school: 'shadow', impact: 'hit' },
-    mind_spike: { motion: 'bolt', school: 'shadow', impact: 'hit' },
-    swp: { motion: 'orbit', school: 'shadow', impact: 'hit' },
-    vt: { motion: 'orbit', school: 'shadow', impact: 'drain' },
-    devouring: { motion: 'orbit', school: 'shadow', impact: 'drain' },
-    mind_flay: { motion: 'beam', school: 'shadow', impact: 'drain' },
-    flash_heal: { motion: 'beam', school: 'holy', impact: 'hit' },
-    greater_heal: { motion: 'beam', school: 'holy', impact: 'hit' },
-    renew: { motion: 'orbit', school: 'holy', impact: 'hit' },
-    pw_shield: { motion: 'nova', school: 'holy', impact: 'hit' },
-    shield: { motion: 'nova', school: 'holy', impact: 'hit' },
-    penance: { motion: 'rain', school: 'holy', impact: 'hit' },
-    holy_fire: { motion: 'bolt', school: 'holy', impact: 'explode' },
-    // DK
-    obliterate: { motion: 'slash', school: 'frost', impact: 'explode' },
-    frost_strike: { motion: 'slash', school: 'frost', impact: 'hit' },
-    howling: { motion: 'nova', school: 'frost', impact: 'splash' },
-    death_coil: { motion: 'bolt', school: 'shadow', impact: 'hit' },
-    death_strike: { motion: 'slash', school: 'blood', impact: 'drain' },
-    heart: { motion: 'slash', school: 'blood', impact: 'hit' },
-    blood_boil: { motion: 'nova', school: 'blood', impact: 'splash' },
-    scourge: { motion: 'slash', school: 'shadow', impact: 'hit' },
-    festering: { motion: 'slash', school: 'shadow', impact: 'hit' },
-    outbreak: { motion: 'nova', school: 'shadow', impact: 'splash' },
-    plague_strike: { motion: 'slash', school: 'shadow', impact: 'hit' },
-    mind_freeze: { motion: 'slam', school: 'frost', impact: 'hit' },
-    // Shaman
-    lightning: { motion: 'chain', school: 'nature', impact: 'hit' },
-    chain_light: { motion: 'chain', school: 'nature', impact: 'hit' },
-    lava_burst: { motion: 'bolt', school: 'fire', impact: 'explode' },
-    lv: { motion: 'bolt', school: 'fire', impact: 'explode' },
-    lb: { motion: 'chain', school: 'nature', impact: 'hit' },
-    flame_shock: { motion: 'bolt', school: 'fire', impact: 'hit' },
-    earth_shock: { motion: 'slam', school: 'nature', impact: 'hit' },
-    frost_shock: { motion: 'bolt', school: 'frost', impact: 'hit' },
-    lava_lash: { motion: 'slash', school: 'fire', impact: 'explode' },
-    stormstrike: { motion: 'slash', school: 'nature', impact: 'hit' },
-    thunderstorm: { motion: 'nova', school: 'nature', impact: 'splash' },
-    ele_blast: { motion: 'bolt', school: 'nature', impact: 'explode' },
-    fire_ele: { motion: 'nova', school: 'fire', impact: 'explode' },
-    ascendance: { motion: 'nova', school: 'nature', impact: 'splash' },
-    feral_spirit: { motion: 'slash', school: 'physical', impact: 'hit' },
-    healing_wave: { motion: 'beam', school: 'nature', impact: 'hit' },
-    hw: { motion: 'wave', school: 'heal', impact: 'hit' },
-    healing_wave: { motion: 'wave', school: 'heal', impact: 'hit' },
-    riptide: { motion: 'tide', school: 'heal', impact: 'hit' },
-    chw: { motion: 'surge', school: 'heal', impact: 'hit' },
-    ch: { motion: 'chain', school: 'heal', impact: 'hit' },
-    chain_heal: { motion: 'chain', school: 'heal', impact: 'hit' },
-    chain: { motion: 'chain', school: 'nature', impact: 'hit' },
-    hs: { motion: 'rain', school: 'heal', impact: 'splash' },
-    healing_rain: { motion: 'rain', school: 'heal', impact: 'splash' },
-    hst: { motion: 'totem', school: 'heal', impact: 'splash' },
-    spirit_link: { motion: 'linkweb', school: 'heal', impact: 'hit' },
-    unleash: { motion: 'unleash', school: 'heal', impact: 'hit' },
     party_dispel: { motion: 'cleanse', school: 'holy', impact: 'hit' },
     party_purge: { motion: 'purge', school: 'nature', impact: 'hit' },
-    kick: { motion: 'windcut', school: 'nature', impact: 'hit' },
-    fire_nova: { motion: 'nova', school: 'fire', impact: 'explode' },
-    wind_shear: { motion: 'slash', school: 'nature', impact: 'hit' },
-    // Mage
-    fireball: { motion: 'bolt', school: 'fire', impact: 'explode' },
-    pyroblast: { motion: 'bolt', school: 'fire', impact: 'explode' },
-    scorch: { motion: 'bolt', school: 'fire', impact: 'hit' },
-    living_bomb: { motion: 'orbit', school: 'fire', impact: 'explode' },
-    combust: { motion: 'nova', school: 'fire', impact: 'explode' },
-    frostbolt: { motion: 'bolt', school: 'frost', impact: 'hit' },
-    ice_lance: { motion: 'pierce', school: 'frost', impact: 'hit' },
-    frozen_orb: { motion: 'orbit', school: 'frost', impact: 'splash' },
-    blizzard: { motion: 'rain', school: 'frost', impact: 'splash' },
-    arcane_blast: { motion: 'bolt', school: 'arcane', impact: 'hit' },
-    arcane_missiles: { motion: 'rain', school: 'arcane', impact: 'hit' },
-    arcane_barrage: { motion: 'bolt', school: 'arcane', impact: 'explode' },
-    arcane_explosion: { motion: 'nova', school: 'arcane', impact: 'splash' },
-    counterspell: { motion: 'slam', school: 'arcane', impact: 'hit' },
-    // Warlock
-    shadow_bolt: { motion: 'bolt', school: 'shadow', impact: 'hit' },
-    incinerate: { motion: 'bolt', school: 'fire', impact: 'hit' },
-    chaos_bolt: { motion: 'bolt', school: 'fire', impact: 'explode' },
-    immolate: { motion: 'orbit', school: 'fire', impact: 'hit' },
-    corruption: { motion: 'orbit', school: 'shadow', impact: 'hit' },
-    agony: { motion: 'orbit', school: 'shadow', impact: 'drain' },
-    ua: { motion: 'orbit', school: 'shadow', impact: 'drain' },
-    drain_life: { motion: 'beam', school: 'shadow', impact: 'drain' },
-    drain_soul: { motion: 'beam', school: 'shadow', impact: 'drain' },
-    hand_guldan: { motion: 'rain', school: 'shadow', impact: 'explode' },
-    conflagrate: { motion: 'bolt', school: 'fire', impact: 'explode' },
-    rain_fire: { motion: 'rain', school: 'fire', impact: 'splash' },
-    soul_fire: { motion: 'bolt', school: 'fire', impact: 'explode' },
-    // Monk
-    jab: { motion: 'slash', school: 'chi', impact: 'hit' },
-    tiger: { motion: 'slash', school: 'chi', impact: 'hit' },
-    rsk: { motion: 'slash', school: 'chi', impact: 'explode' },
-    fists: { motion: 'swirl', school: 'chi', impact: 'splash' },
-    blackout: { motion: 'slash', school: 'chi', impact: 'hit' },
-    keg_smash: { motion: 'slam', school: 'physical', impact: 'splash' },
-    breath_fire: { motion: 'beam', school: 'fire', impact: 'splash' },
-    spinning: { motion: 'swirl', school: 'chi', impact: 'splash' },
-    chi_wave: { motion: 'chain', school: 'chi', impact: 'hit' },
-    enveloping: { motion: 'orbit', school: 'chi', impact: 'hit' },
-    soothing: { motion: 'beam', school: 'chi', impact: 'hit' },
-    renewing: { motion: 'orbit', school: 'chi', impact: 'hit' },
-    spear_hand: { motion: 'pierce', school: 'chi', impact: 'hit' },
-    // Druid
-    wrath: { motion: 'bolt', school: 'nature', impact: 'hit' },
-    starfire: { motion: 'bolt', school: 'arcane', impact: 'explode' },
-    moonfire: { motion: 'orbit', school: 'arcane', impact: 'hit' },
-    sunfire: { motion: 'orbit', school: 'nature', impact: 'hit' },
-    starsurge: { motion: 'bolt', school: 'arcane', impact: 'explode' },
-    hurricane: { motion: 'swirl', school: 'nature', impact: 'splash' },
-    rake: { motion: 'slash', school: 'physical', impact: 'hit' },
-    shred: { motion: 'slash', school: 'physical', impact: 'hit' },
-    rip: { motion: 'slash', school: 'blood', impact: 'hit' },
-    ferocious: { motion: 'slash', school: 'physical', impact: 'explode' },
-    mangle: { motion: 'slash', school: 'physical', impact: 'hit' },
-    thrash: { motion: 'swirl', school: 'physical', impact: 'splash' },
-    swipe: { motion: 'arc', school: 'physical', impact: 'splash' },
-    maul: { motion: 'slash', school: 'physical', impact: 'hit' },
-    reju: { motion: 'orbit', school: 'nature', impact: 'hit' },
-    regrowth: { motion: 'beam', school: 'nature', impact: 'hit' },
-    healing_touch: { motion: 'beam', school: 'nature', impact: 'hit' },
-    wild_growth: { motion: 'nova', school: 'nature', impact: 'splash' },
-    lifebloom: { motion: 'orbit', school: 'nature', impact: 'hit' },
   };
 
   function skillFxStyle(ability) {
@@ -1250,13 +1059,15 @@
       }
     }
 
-    const tag = document.createElement('div');
-    tag.className = 'skill-name-tag' + (school ? ' school-' + school : '');
-    tag.textContent = ability.name || '';
-    tag.style.left = from.x + 'px';
-    tag.style.top = (from.y - 28) + 'px';
-    layer.appendChild(tag);
-    setTimeout(() => tag.remove(), 1200);
+    if (!fxFast()) {
+      const tag = document.createElement('div');
+      tag.className = 'skill-name-tag' + (school ? ' school-' + school : '');
+      tag.textContent = ability.name || '';
+      tag.style.left = from.x + 'px';
+      tag.style.top = (from.y - 28) + 'px';
+      layer.appendChild(tag);
+      setTimeout(() => tag.remove(), 1200);
+    }
 
     const spawnBurst = (x, y, kind, impact) => {
       const b = document.createElement('div');
@@ -1268,6 +1079,10 @@
       b.style.top = y + 'px';
       layer.appendChild(b);
       setTimeout(() => b.remove(), 900);
+      if (impact === 'burst' || impact === 'ring' || impact === 'shard' || impact === 'flash') {
+        spawnImpact(x, y, impact);
+        return;
+      }
       if (impact === 'explode' || school === 'frost' || school === 'holy') {
         const r = document.createElement('div');
         r.className = 'skill-ring' + (school ? ' ' + school : '');
@@ -1277,7 +1092,7 @@
         setTimeout(() => r.remove(), 900);
       } else if (impact === 'drain' || school === 'shadow' || school === 'blood') {
         const o = document.createElement('div');
-        o.className = 'skill-orbit' + (school && school !== 'physical' ? ' ' + school : ' shadow');
+        o.className = 'skill-orbit' + (school && school !== 'physical' ? ' ' + school : ' physical');
         o.style.left = x + 'px';
         o.style.top = y + 'px';
         layer.appendChild(o);
@@ -1350,7 +1165,7 @@
       const count = n || 6;
       for (let i = 0; i < count; i++) {
         const d = document.createElement('div');
-        d.className = 'skill-rain-drop' + (school && school !== 'physical' ? ' ' + school : ' fire');
+        d.className = 'skill-rain-drop' + (school && school !== 'physical' ? ' ' + school : ' physical');
         d.style.left = (x + (Math.random() * 50 - 25)) + 'px';
         d.style.top = (y + (Math.random() * 20 - 30)) + 'px';
         d.style.animationDelay = (i * 0.04) + 's';
@@ -1361,7 +1176,7 @@
     const spawnOrbit = (x, y) => {
       for (let i = 0; i < 3; i++) {
         const o = document.createElement('div');
-        o.className = 'skill-orbit' + (school && school !== 'physical' ? ' ' + school : ' shadow');
+        o.className = 'skill-orbit' + (school && school !== 'physical' ? ' ' + school : ' physical');
         o.style.left = x + 'px';
         o.style.top = y + 'px';
         o.style.animationDelay = (i * 0.06) + 's';
@@ -1383,10 +1198,35 @@
       setTimeout(() => p.remove(), 650);
     };
     const drawnSchool = (school && school !== 'none') ? school : (style || 'physical');
+    const spawnImpact = (x, y, impact) => {
+      const sc = ' school-' + drawnSchool;
+      if (impact === 'burst') {
+        laterRm(shamEl(layer, 'fx-burst' + sc, x, y), 620);
+        shamSparks(layer, 'fx-spark' + sc, x, y, 8, 36, 600);
+      } else if (impact === 'ring') {
+        laterRm(shamEl(layer, 'fx-wave' + sc, x, y), 760);
+        shamSparks(layer, 'fx-spark' + sc, x, y, 4, 16, 520);
+      } else if (impact === 'shard') {
+        for (let i = 0; i < 7; i++) {
+          const ang = (i / 7) * Math.PI * 2 + Math.random() * 0.4;
+          const dist = 26 + Math.random() * 18;
+          const el = shamEl(layer, 'fx-shard' + sc, x, y);
+          el.style.setProperty('--sx', Math.cos(ang) * dist + 'px');
+          el.style.setProperty('--sy', Math.sin(ang) * dist + 'px');
+          el.style.setProperty('--rot', (ang * 180 / Math.PI) + 'deg');
+          laterRm(el, 620);
+        }
+      } else if (impact === 'flash') {
+        laterRm(shamEl(layer, 'fx-flash' + sc, x, y), 420);
+        shamSparks(layer, 'fx-spark' + sc, x, y, 4, 14, 420);
+      } else {
+        const n = impact === 'explode' ? 9 : (impact === 'splash' ? 7 : 5);
+        shamSparks(layer, 'fx-spark' + sc, x, y, n, impact === 'explode' ? 30 : 18, 580);
+      }
+    };
     const spawnDrawnHit = (x, y, impact) => {
       laterRm(shamEl(layer, 'fx-hit school-' + drawnSchool + (impact && impact !== 'hit' ? ' impact-' + impact : ''), x, y), 720);
-      const n = impact === 'explode' ? 9 : (impact === 'splash' ? 7 : 5);
-      shamSparks(layer, 'fx-spark school-' + drawnSchool, x, y, n, impact === 'explode' ? 30 : 18, 580);
+      spawnImpact(x, y, impact);
       if (drawnSchool === 'heal' || type === 'heal' || type === 'heal_aoe' || type === 'shield') {
         const plus = shamEl(layer, 'chain-plus school-heal', x, y - 8);
         plus.textContent = '+';
@@ -1411,6 +1251,18 @@
       else pulseUnit(t.uid, 'hit');
     };
     const staggerMs = (step, n) => Math.max(0, (Math.max(1, n) - 1) * step);
+
+    layer.classList.toggle('fx-fast', fxFast());
+    if (fxFast()) {
+      const hitList = list.length ? list : [actor];
+      hitList.forEach((t, i) => setTimeout(() => {
+        const to = unitCenter(t.uid);
+        if (!to) return;
+        spawnDrawnHit(to.x, to.y, fx.impact);
+        if (list.length) hitPulse(t);
+      }, i * 40));
+      return noteSkillAnimMs(Math.max(animMs, 260 + staggerMs(40, hitList.length)));
+    }
 
     const shamMs = playShamanSkillFx(layer, from, list, ability, hitPulse, actor);
     if (shamMs) return noteSkillAnimMs(Math.max(animMs, shamMs));
