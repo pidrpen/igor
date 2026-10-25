@@ -329,6 +329,38 @@
     return { motion, school, impact, shape };
   }
 
+  /** Чем бьёт герой в ближнем бою: клинки / двуручник / щит / кулаки / когти / глефы. null — обычный разрез. */
+  function meleeStyle(actor) {
+    if (!actor || actor.side !== 'ally' || actor.isPet) return null;
+    const c = actor.classId, s = actor.specId;
+    if (c === 'rogue') return 'blades';
+    if (c === 'monk') return 'fists';
+    if (c === 'demonhunter') return 'glaive';
+    if (c === 'hunter') return 'claws';
+    if (c === 'druid') return (s === 'feral' || s === 'guardian') ? 'claws' : null;
+    if (c === 'warrior') return s === 'protection' ? 'shield' : (s === 'fury' ? 'blades' : 'great');
+    if (c === 'paladin') return s === 'protection' ? 'shield' : 'great';
+    if (c === 'deathknight') return s === 'frost' ? 'blades' : 'great';
+    if (c === 'shaman') return s === 'enhancement' ? 'blades' : null;
+    if (c === 'engineer') return 'great';
+    return null;
+  }
+
+  /** Бафф по смыслу: крылья / рёв / купол / камень / столб / искры. null — не бафф. */
+  const BUFF_WINGS = new Set(['avenging', 'metamorphosis', 'metamorph_havoc', 'metamorph_veng']);
+  const BUFF_PILLAR = new Set(['reck', 'horn', 'dark_trans', 'unleash', 'evocation', 'ascendance']);
+  function buffKind(ab) {
+    if (!ab) return null;
+    const t = ab.type;
+    if (t !== 'buff' && t !== 'shield' && t !== 'taunt') return null;
+    if (BUFF_WINGS.has(ab.id)) return 'wings';
+    if (t === 'taunt') return 'roar';
+    if (t === 'shield') return 'dome';
+    if (ab.dmgReduce || ab.blockChanceAdd || ab.maxHpPct || ab.armorMod || ab.staggerBonus) return 'bastion';
+    if (ab.atkMod || ab.critMod || BUFF_PILLAR.has(ab.id)) return 'pillar';
+    return 'motes';
+  }
+
   const CHAIN_PAL = {
     heal:   { core: '#f7fff9', mid: '#8af5c8', glow: '#3dd68c', deep: '#0f6a3a', spark: '#e8fff2', drop: '#7ef0c0' },
     nature: { core: '#f4ffd4', mid: '#9cff60', glow: '#6fdc3c', deep: '#2a7010', spark: '#e8ffc4', drop: '#9cff60' },
@@ -1233,6 +1265,49 @@
         laterRm(plus, 700);
       }
     };
+    const weapon = meleeStyle(actor);
+    const spawnMelee = (x, y, motion) => {
+      const sc = ' school-' + drawnSchool;
+      if (weapon === 'blades') {
+        [-52, 28, -12].forEach((rot, i) => setTimeout(() => {
+          const el = shamEl(layer, 'fx-blade' + sc, x + (i - 1) * 6, y + (i - 1) * 5);
+          el.style.setProperty('--rot', rot + 'deg');
+          laterRm(el, 420);
+        }, i * 70));
+      } else if (weapon === 'great') {
+        laterRm(shamEl(layer, 'fx-great' + sc, x, y), 620);
+        laterRm(shamEl(layer, 'fx-crack' + sc, x, y + 20), 640);
+      } else if (weapon === 'shield') {
+        laterRm(shamEl(layer, 'fx-shieldbash' + sc, x, y), 560);
+        laterRm(shamEl(layer, 'fx-wave' + sc, x, y), 760);
+      } else if (weapon === 'fists') {
+        for (let i = 0; i < 4; i++) {
+          setTimeout(() => laterRm(shamEl(layer, 'fx-fist' + sc, x + (Math.random() * 28 - 14), y + (Math.random() * 24 - 12)), 380), i * 60);
+        }
+      } else if (weapon === 'claws') {
+        laterRm(shamEl(layer, 'fx-claw' + sc, x, y), 520);
+      } else if (weapon === 'glaive') {
+        laterRm(shamEl(layer, 'fx-glaive' + sc, x, y), 600);
+      } else {
+        spawnSlash(x, y);
+      }
+      if (motion === 'slam' && weapon !== 'shield') spawnRing(x, y, true);
+    };
+    const spawnBuffFx = (kind, x, y) => {
+      const sc = ' school-' + drawnSchool;
+      if (kind === 'motes') {
+        for (let i = 0; i < 7; i++) {
+          const el = shamEl(layer, 'fx-mote' + sc, x + (Math.random() * 40 - 20), y + 10);
+          el.style.setProperty('--mx', (Math.random() * 24 - 12) + 'px');
+          el.style.setProperty('--my', (-40 - Math.random() * 34) + 'px');
+          el.style.animationDelay = (i * 60) + 'ms';
+          laterRm(el, 1000);
+        }
+        return;
+      }
+      laterRm(shamEl(layer, 'fx-' + kind + sc, x, y), (kind === 'dome' || kind === 'bastion') ? 1200 : 1050);
+      if (kind === 'roar') laterRm(shamEl(layer, 'fx-wave' + sc, x, y), 760);
+    };
     const spawnProjectile = (to, onHit) => {
       const dx = to.x - from.x, dy = to.y - from.y;
       const ang = Math.atan2(dy, dx) * 180 / Math.PI;
@@ -1284,7 +1359,9 @@
     }
 
     if (type === 'buff' || type === 'taunt' || (type === 'shield' && !list.length) || fx.motion === 'nova' && !list.length) {
-      spawnRing(from.x, from.y, fx.motion === 'nova');
+      const bk = buffKind(ability);
+      if (bk) spawnBuffFx(bk, from.x, from.y);
+      else spawnRing(from.x, from.y, fx.motion === 'nova');
       spawnBurst(from.x, from.y, style || (type === 'shield' ? 'heal' : ''), fx.impact);
       if (type === 'shield') pulseUnit(actor.uid, 'shielded');
       if (type === 'taunt' || type === 'aoe' || type === 'cast_aoe') {
@@ -1359,6 +1436,7 @@
         if (motion === 'beam' || type === 'heal' || type === 'shield') {
           spawnBeam(from.x, from.y, to.x, to.y);
           spawnDrawnHit(to.x, to.y, fx.impact);
+          if (type === 'shield') spawnBuffFx('dome', to.x, to.y);
           hitPulse(t);
           return;
         }
@@ -1369,14 +1447,14 @@
           return;
         }
         if (motion === 'slash' || motion === 'slam') {
-          spawnSlash(to.x, to.y);
-          if (motion === 'slam') spawnRing(to.x, to.y, true);
+          spawnMelee(to.x, to.y, motion);
           spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;
         }
         if (motion === 'arc') {
-          spawnArc(to.x, to.y);
+          if (weapon === 'claws' || weapon === 'great' || weapon === 'glaive') spawnMelee(to.x, to.y, motion);
+          else spawnArc(to.x, to.y);
           spawnDrawnHit(to.x, to.y, fx.impact);
           hitPulse(t);
           return;

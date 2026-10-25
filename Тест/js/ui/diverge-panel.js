@@ -14,6 +14,13 @@
 
   const DIVERGE_LOG = [
     {
+      id: 'fx-phase2',
+      name: 'Ролики: оружие и баффы по смыслу',
+      poured: 'no',
+      testVer: '5.4.9.47В',
+      text: 'js/ui/fx.js: meleeStyle (клинки / двуручник / щит / кулаки / когти / глефы) и spawnMelee, buffKind (крылья / рёв / купол / камень / столб / искры) и spawnBuffFx, купол на цели щита. Стили .fx-blade .fx-great .fx-crack .fx-shieldbash .fx-fist .fx-claw .fx-glaive .fx-dome .fx-bastion .fx-pillar .fx-wings .fx-roar .fx-mote в css/theme-controls.css.',
+    },
+    {
       id: 'fx-phase1',
       name: 'Ролики: попадания, школы, 3–4×',
       poured: 'no',

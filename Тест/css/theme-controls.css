@@ -802,3 +802,193 @@ a.test-build-link:focus-visible {
 
 /* 3–4×: всё в слое эффектов проигрывается коротко */
 #skill-fx-layer.fx-fast > * { animation-duration: .32s !important; animation-delay: 0s !important; }
+
+/* ═══ Фаза 2 роликов: ближний бой по оружию (fx.js meleeStyle) ═══ */
+/* клинки — три быстрых тонких надреза */
+.fx-blade {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 66px; height: 2px; margin: -1px 0 0 -33px; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--fxl, #fff) 35%, var(--fxc, #c8d0da) 70%, transparent);
+  box-shadow: 0 0 8px var(--fxc, #c8d0da);
+  animation: fx-blade .34s cubic-bezier(.2,.8,.3,1) forwards;
+}
+@keyframes fx-blade {
+  0% { opacity: 0; transform: rotate(var(--rot, -40deg)) scaleX(.1); }
+  30% { opacity: 1; transform: rotate(var(--rot, -40deg)) scaleX(1.15); }
+  100% { opacity: 0; transform: rotate(var(--rot, -40deg)) scaleX(1.3); }
+}
+/* двуручник — тяжёлая широкая дуга и трещина по земле */
+.fx-great {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%;
+  border: 7px solid transparent; border-top-color: var(--fxl, #fff); border-right-color: var(--fxc, #c8d0da);
+  filter: drop-shadow(0 0 10px var(--fxc, #c8d0da));
+  animation: fx-great .56s cubic-bezier(.3,.6,.2,1) forwards;
+}
+@keyframes fx-great {
+  0% { opacity: 0; transform: rotate(-110deg) scale(.7); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(40deg) scale(1.05); }
+}
+.fx-crack {
+  position: fixed; z-index: 74; pointer-events: none;
+  width: 96px; height: 3px; margin: -1px 0 0 -48px;
+  background: linear-gradient(90deg, transparent, var(--fxc, #c8d0da), var(--fxl, #fff), var(--fxc, #c8d0da), transparent);
+  box-shadow: 0 0 8px var(--fxc, #c8d0da);
+  animation: fx-crack .6s ease-out .12s both;
+}
+@keyframes fx-crack {
+  0% { opacity: 0; transform: scaleX(0); }
+  30% { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1.15) scaleY(.4); }
+}
+/* щит — удар круглым щитом с умбоном */
+.fx-shieldbash {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%;
+  border: 4px solid var(--fxl, #fff);
+  background: radial-gradient(circle, var(--fxl, #fff) 0 12%, var(--fxc, #c8d0da) 14% 30%, transparent 62%);
+  box-shadow: 0 0 14px var(--fxc, #c8d0da);
+  animation: fx-shieldbash .5s cubic-bezier(.2,.9,.3,1) forwards;
+}
+@keyframes fx-shieldbash {
+  0% { opacity: 0; transform: translateY(22px) scale(.4); }
+  35% { opacity: 1; transform: translateY(0) scale(1.15); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+/* кулаки — серия коротких ударов */
+.fx-fist {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
+  background: radial-gradient(circle, var(--fxl, #fff) 0 22%, var(--fxc, #c8d0da) 42%, transparent 70%);
+  box-shadow: 0 0 10px var(--fxc, #c8d0da);
+  animation: fx-fist .32s ease-out forwards;
+}
+@keyframes fx-fist {
+  0% { opacity: 1; transform: scale(.3); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+/* когти — три параллельных росчерка */
+.fx-claw {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 64px; height: 64px; margin: -32px 0 0 -32px;
+  background: repeating-linear-gradient(90deg, transparent 0 9px, var(--fxl, #fff) 9px 12px, var(--fxc, #c8d0da) 12px 14px, transparent 14px 21px);
+  clip-path: polygon(8% 0, 72% 0, 92% 100%, 28% 100%);
+  filter: drop-shadow(0 0 6px var(--fxc, #c8d0da));
+  transform-origin: top center;
+  animation: fx-claw .46s cubic-bezier(.2,.8,.3,1) forwards;
+}
+@keyframes fx-claw {
+  0% { opacity: 0; transform: rotate(-24deg) scaleY(0); }
+  35% { opacity: 1; transform: rotate(-24deg) scaleY(1); }
+  100% { opacity: 0; transform: rotate(-24deg) scaleY(1.1) translateY(6px); }
+}
+/* глефы — вращающийся полумесяц проходит сквозь цель */
+.fx-glaive {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%;
+  border: 4px solid transparent; border-top-color: var(--fxl, #fff); border-bottom-color: var(--fxc, #c8d0da);
+  filter: drop-shadow(0 0 8px var(--fxc, #c8d0da));
+  animation: fx-glaive .56s linear forwards;
+}
+@keyframes fx-glaive {
+  0% { opacity: 0; transform: translateX(-56px) rotate(0deg); }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(56px) rotate(900deg); }
+}
+
+/* ═══ Фаза 2: баффы по смыслу (fx.js buffKind) ═══ */
+/* купол — щит-поглощение */
+.fx-dome {
+  position: fixed; z-index: 74; pointer-events: none;
+  width: 104px; height: 104px; margin: -52px 0 0 -52px; border-radius: 50%;
+  border: 2px solid var(--fxl, #fff);
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, .55), transparent 26%);
+  box-shadow: inset 0 0 24px var(--fxc, #c8d0da), 0 0 16px var(--fxc, #c8d0da);
+  animation: fx-dome 1.1s ease-out forwards;
+}
+@keyframes fx-dome {
+  0% { opacity: 0; transform: scale(.3); }
+  25% { opacity: .9; transform: scale(1.04); }
+  70% { opacity: .75; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.12); }
+}
+/* камень — шестигранник защиты (снижение урона, блок, броня) */
+.fx-bastion {
+  position: fixed; z-index: 74; pointer-events: none;
+  width: 96px; height: 96px; margin: -48px 0 0 -48px;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+  background:
+    radial-gradient(circle, transparent 54%, var(--fxc, #c8d0da) 56%, var(--fxl, #fff) 61%, var(--fxc, #c8d0da) 66%, transparent 68%),
+    radial-gradient(circle, color-mix(in srgb, var(--fxc, #c8d0da) 22%, transparent), transparent 70%);
+  filter: drop-shadow(0 0 8px var(--fxc, #c8d0da));
+  animation: fx-bastion 1.1s ease-out forwards;
+}
+@keyframes fx-bastion {
+  0% { opacity: 0; transform: scale(1.5) rotate(-30deg); }
+  30% { opacity: 1; transform: scale(1) rotate(0deg); }
+  75% { opacity: .9; transform: scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: scale(.9) rotate(15deg); }
+}
+/* столб силы — усиление атаки / крита */
+.fx-pillar {
+  position: fixed; z-index: 74; pointer-events: none;
+  width: 36px; height: 150px; margin: -128px 0 0 -18px;
+  border-radius: 50% 50% 8px 8px / 18% 18% 8px 8px;
+  background: linear-gradient(0deg, var(--fxc, #c8d0da), var(--fxl, #fff) 40%, transparent);
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 12px var(--fxc, #c8d0da));
+  transform-origin: bottom center;
+  animation: fx-pillar 1s ease-out forwards;
+}
+@keyframes fx-pillar {
+  0% { opacity: 0; transform: scaleY(0) scaleX(.6); }
+  30% { opacity: .95; transform: scaleY(1) scaleX(1); }
+  100% { opacity: 0; transform: scaleY(1.1) scaleX(.4); }
+}
+/* крылья — Гнев карателя, Метаморфозы */
+.fx-wings {
+  position: fixed; z-index: 73; pointer-events: none;
+  width: 140px; height: 76px; margin: -58px 0 0 -70px;
+  animation: fx-wings 1.05s ease-out forwards;
+}
+.fx-wings::before, .fx-wings::after {
+  content: ""; position: absolute; top: 0; width: 66px; height: 76px;
+  background: linear-gradient(160deg, var(--fxl, #fff), var(--fxc, #c8d0da) 55%, transparent 90%);
+  filter: drop-shadow(0 0 10px var(--fxc, #c8d0da));
+}
+.fx-wings::before { left: 0; border-radius: 100% 0 70% 30% / 90% 0 60% 40%; transform-origin: right bottom; }
+.fx-wings::after { right: 0; border-radius: 0 100% 30% 70% / 0 90% 40% 60%; transform-origin: left bottom; }
+@keyframes fx-wings {
+  0% { opacity: 0; transform: scaleX(.1) translateY(10px); }
+  35% { opacity: 1; transform: scaleX(1.08) translateY(0); }
+  75% { opacity: .9; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1.15) translateY(-8px); }
+}
+/* рёв — провокация, дуги в сторону врагов */
+.fx-roar {
+  position: fixed; z-index: 74; pointer-events: none;
+  width: 90px; height: 46px; margin: -60px 0 0 -45px;
+  border: 4px solid transparent; border-top-color: var(--fxc, #c8d0da);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  box-shadow: 0 -10px 0 -6px var(--fxl, #fff);
+  filter: drop-shadow(0 0 8px var(--fxc, #c8d0da));
+  animation: fx-roar .9s ease-out forwards;
+}
+@keyframes fx-roar {
+  0% { opacity: 1; transform: translateY(10px) scale(.5); }
+  100% { opacity: 0; transform: translateY(-48px) scale(1.7); }
+}
+/* искры — прочие баффы */
+.fx-mote {
+  position: fixed; z-index: 75; pointer-events: none;
+  width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+  background: var(--fxl, #fff); box-shadow: 0 0 8px var(--fxc, #c8d0da);
+  animation: fx-mote .9s ease-out both;
+}
+@keyframes fx-mote {
+  0% { opacity: 0; transform: translate(0, 0) scale(.5); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--mx, 0), var(--my, -50px)) scale(1); }
+}
